@@ -5,7 +5,7 @@
  * element interaction, and CDP lifecycle management.
  */
 
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
+import { describe, it, expect, mock } from 'bun:test'
 
 // Mock logger before import
 mock.module('../logger', () => {

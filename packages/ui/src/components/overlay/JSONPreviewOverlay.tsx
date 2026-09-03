@@ -5,7 +5,6 @@
  * Wraps PreviewOverlay for consistent presentation with other overlays.
  */
 
-import * as React from 'react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import JsonView from '@uiw/react-json-view'

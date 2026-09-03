@@ -213,9 +213,9 @@ export function processEvent(
       return handleMessagesRewound(state, event)
 
     default: {
+      void (event satisfies never)
       // Unknown event type - return state unchanged but as new reference
       // to ensure atom sync detects the "change"
-      const _exhaustiveCheck: never = event
       return {
         state: { ...state, session: { ...state.session } },
         effects: [],

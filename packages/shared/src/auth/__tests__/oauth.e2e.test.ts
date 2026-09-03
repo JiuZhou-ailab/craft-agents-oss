@@ -14,38 +14,6 @@ import { discoverOAuthMetadata, getMcpBaseUrl } from '../oauth';
 
 const E2E_TEST_TIMEOUT_MS = 30000;
 
-// Helper to check if a URL is reachable
-async function isReachable(url: string, timeoutMs = 5000): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const response = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response.status < 500;
-  } catch {
-    return false;
-  }
-}
-
-// Helper to conditionally skip tests based on server reachability
-function describeIfReachable(name: string, mcpUrl: string, fn: () => void) {
-  describe(name, () => {
-    // Check reachability once - if unreachable, all tests in this describe will run but assertions will be skipped
-    let reachable = true;
-    it('should be reachable', async () => {
-      const origin = getMcpBaseUrl(mcpUrl);
-      reachable = await isReachable(origin);
-      if (!reachable) {
-        console.log(`Skipping ${name}: server unreachable`);
-      }
-    });
-    fn();
-  });
-}
-
 describe('E2E: OAuth Metadata Discovery', () => {
   describe('GitHub MCP (api.githubcopilot.com)', () => {
     const MCP_URL = 'https://api.githubcopilot.com/mcp/';

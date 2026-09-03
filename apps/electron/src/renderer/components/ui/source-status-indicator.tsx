@@ -10,7 +10,6 @@
  * Hovering shows a tooltip with the status description.
  */
 
-import * as React from 'react'
 import { cn } from '@/lib/utils'
 import {
   Tooltip,

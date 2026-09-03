@@ -12,7 +12,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { McpClientConfig, PoolClient } from '@craft-agent/shared/mcp';
+import type { McpClientConfig } from '@craft-agent/shared/mcp';
 
 /**
  * Sensitive environment variables that should NOT be passed to MCP subprocesses.

@@ -32,15 +32,12 @@ import { normalizeThinkingLevel } from '../agent/thinking-levels.ts';
 import { detectWritingProject } from '../writing/manifest.ts';
 import type {
   WorkspaceConfig,
-  CreateWorkspaceInput,
   LoadedWorkspace,
 } from './types.ts';
 import {
   getExistingWorkspaceConfigPath,
   getExistingWorkspaceSessionsPath,
   getExistingWorkspaceSourcesPath,
-  getLegacyCraftWorkspaceSkillsPath,
-  getLegacyWorkspaceSkillsPath,
   getLegacyWorkspaceConfigPath,
   getWorkspaceConfigPath,
   getWorkspaceAgentsPath,
@@ -51,7 +48,6 @@ import {
   getWorkspacePackLockPath,
   getWorkspaceReadmePath,
   getWorkspaceSessionsPath,
-  getWorkspaceSkillsPath,
   getWorkspaceSourcesPath,
   getWorkspaceStatePath,
   getWorkspaceStatusConfigPath,

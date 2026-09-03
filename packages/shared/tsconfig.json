@@ -18,7 +18,7 @@
     "types": ["bun"],
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
@@ -30,5 +30,5 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/automations/**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "src/automations/**/*.test.ts", "src/agent/__tests__/__tmp_build_call_llm__"]
 }

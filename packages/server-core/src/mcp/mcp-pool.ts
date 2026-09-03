@@ -28,7 +28,6 @@ import type {
   SdkMcpServerConfig,
 } from '@craft-agent/shared/mcp';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiOperationPermission } from '@craft-agent/shared/sources/types';
 import { guardLargeResult } from '@craft-agent/shared/utils';
 import {

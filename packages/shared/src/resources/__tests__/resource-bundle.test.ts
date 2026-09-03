@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, 
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { exportResources, importResources, validateResourceBundle } from '../resource-bundle'
-import type { ResourceBundle, SourceBundleEntry, SkillBundleEntry, AutomationBundleEntry } from '../types'
+import type { ResourceBundle, AutomationBundleEntry } from '../types'
 import type { FolderSourceConfig } from '../../sources/types'
 import type { AutomationMatcher } from '../../automations/types'
 
@@ -146,7 +146,7 @@ describe('resource-bundle', () => {
         lastTestedAt: 12345,
       })
 
-      const { bundle, warnings } = exportResources(wsDir, { sources: 'all' })
+      const { bundle } = exportResources(wsDir, { sources: 'all' })
 
       expect(bundle.version).toBe(1)
       expect(bundle.resources.sources).toHaveLength(1)

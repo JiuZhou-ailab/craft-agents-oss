@@ -3,12 +3,12 @@
 // pos: Portable session bundle contract tests
 
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { serializeSession, validateBundle, MAX_BUNDLE_SIZE_BYTES } from '../bundle'
+import { serializeSession, validateBundle } from '../bundle'
 import { writeSessionJsonl } from '../jsonl'
-import type { StoredSession, SessionHeader } from '../types'
+import type { StoredSession } from '../types'
 
 // ============================================================
 // Helpers

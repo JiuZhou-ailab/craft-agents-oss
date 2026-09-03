@@ -31,7 +31,6 @@ import { validateAutomationsConfig } from '../automations/validation.ts'
 import { generateShortId, resolveAutomationOwnedPath } from '../automations/resolve-config-path.ts'
 import { withRetryQueueMutation } from '../automations/retry-scheduler.ts'
 import { VALID_EVENTS } from '../automations/schemas.ts'
-import { debug } from '../utils/debug.ts'
 import { isValidSkillSlug, validateSkillDocumentForSlug } from '../skills/storage.ts'
 import { portablePathCollisionKey } from './portable-path.ts'
 

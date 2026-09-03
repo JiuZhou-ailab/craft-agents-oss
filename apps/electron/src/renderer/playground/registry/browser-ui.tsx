@@ -1,12 +1,8 @@
 import { useCallback, useState } from 'react'
-import * as Icons from 'lucide-react'
 import type { ComponentEntry } from './types'
 import {
   BrowserControls,
   BrowserEmptyStateCard,
-  TurnCard,
-  type ActivityItem,
-  type ResponseContent,
 } from '@craft-agent/ui'
 import { AnimatePresence, motion } from 'motion/react'
 import { EMPTY_STATE_PROMPT_SAMPLES } from '@/components/browser/empty-state-prompts'
@@ -14,20 +10,11 @@ import { BROWSER_LIVE_FX_BORDER, getBrowserLiveFxCornerRadii } from '../../../sh
 import { routes } from '../../../shared/routes'
 import { isLinux, isMac, isWindows } from '@/lib/platform'
 
-interface BrowserTraceSidebarSampleProps {
-  scenario: 'core' | 'all-native-tools' | 'browser-tool-wrapper' | 'full-matrix'
-  runState: 'completed' | 'running' | 'failed'
-  sidebarWidth: number
-  hdrEffect: boolean
-  cursorPulse: boolean
-}
-
-type RunState = BrowserTraceSidebarSampleProps['runState']
-type Scenario = BrowserTraceSidebarSampleProps['scenario']
+type RunState = 'completed' | 'running' | 'failed'
+type Scenario = 'core' | 'all-native-tools' | 'browser-tool-wrapper' | 'full-matrix'
 type AgentVisualState = 'idle' | 'active' | 'failed'
 type BrowserSurfaceMode = 'content' | 'empty-state'
 
-const now = Date.now()
 const PLAYGROUND_LIVE_FX_CORNERS = getBrowserLiveFxCornerRadii(
   isMac
     ? 'darwin'
@@ -37,130 +24,6 @@ const PLAYGROUND_LIVE_FX_CORNERS = getBrowserLiveFxCornerRadii(
         ? 'linux'
         : 'other',
 )
-
-const CORE_TURN: ActivityItem[] = [
-  {
-    id: 'browser-open-1',
-    type: 'tool',
-    status: 'completed',
-    toolName: 'browser_open',
-    toolInput: {},
-    intent: 'Open in-app browser window',
-    timestamp: now - 5000,
-  },
-  {
-    id: 'browser-navigate-1',
-    type: 'tool',
-    status: 'completed',
-    toolName: 'browser_navigate',
-    toolInput: { url: 'https://news.ycombinator.com' },
-    intent: 'Navigate to Hacker News',
-    timestamp: now - 4200,
-  },
-  {
-    id: 'browser-snapshot-1',
-    type: 'tool',
-    status: 'completed',
-    toolName: 'browser_snapshot',
-    toolInput: {},
-    intent: 'Get accessibility refs for interactive elements',
-    timestamp: now - 3500,
-  },
-  {
-    id: 'browser-click-1',
-    type: 'tool',
-    status: 'completed',
-    toolName: 'browser_click',
-    toolInput: { ref: '@e12' },
-    intent: 'Open top story',
-    timestamp: now - 3000,
-  },
-  {
-    id: 'browser-screenshot-1',
-    type: 'tool',
-    status: 'completed',
-    toolName: 'browser_screenshot',
-    toolInput: { mode: 'agent', refs: ['@e12'], includeMetadata: true },
-    intent: 'Capture agent-mode screenshot with semantic annotation',
-    timestamp: now - 2500,
-  },
-]
-
-const ALL_NATIVE_TOOLS_TURN: ActivityItem[] = [
-  { id: 'native-open', type: 'tool', status: 'completed', toolName: 'browser_open', toolInput: {}, intent: 'Open browser window', timestamp: now - 5200 },
-  { id: 'native-navigate', type: 'tool', status: 'completed', toolName: 'browser_navigate', toolInput: { url: 'https://example.com' }, intent: 'Navigate to target URL', timestamp: now - 4900 },
-  { id: 'native-snapshot', type: 'tool', status: 'completed', toolName: 'browser_snapshot', toolInput: {}, intent: 'Capture a11y tree refs', timestamp: now - 4600 },
-  { id: 'native-click', type: 'tool', status: 'completed', toolName: 'browser_click', toolInput: { ref: '@e12' }, intent: 'Click interactive element', timestamp: now - 4300 },
-  { id: 'native-fill', type: 'tool', status: 'completed', toolName: 'browser_fill', toolInput: { ref: '@e5', value: 'balint@example.com' }, intent: 'Fill input field', timestamp: now - 4000 },
-  { id: 'native-select', type: 'tool', status: 'completed', toolName: 'browser_select', toolInput: { ref: '@e9', value: 'pro' }, intent: 'Select dropdown option', timestamp: now - 3700 },
-  { id: 'native-scroll', type: 'tool', status: 'completed', toolName: 'browser_scroll', toolInput: { direction: 'down', amount: 800 }, intent: 'Scroll for more content', timestamp: now - 3400 },
-  { id: 'native-back', type: 'tool', status: 'completed', toolName: 'browser_back', toolInput: {}, intent: 'Navigate back in history', timestamp: now - 3100 },
-  { id: 'native-forward', type: 'tool', status: 'completed', toolName: 'browser_forward', toolInput: {}, intent: 'Navigate forward in history', timestamp: now - 2800 },
-  { id: 'native-evaluate', type: 'tool', status: 'completed', toolName: 'browser_evaluate', toolInput: { expression: 'document.title' }, intent: 'Run JS extraction in page context', timestamp: now - 2500 },
-  { id: 'native-screenshot', type: 'tool', status: 'completed', toolName: 'browser_screenshot', toolInput: { mode: 'agent', includeMetadata: true }, intent: 'Capture visual proof with metadata', timestamp: now - 2200 },
-]
-
-const WRAPPER_COMMANDS_TURN: ActivityItem[] = [
-  { id: 'wrapper-open', type: 'tool', status: 'completed', toolName: 'browser_tool', toolInput: { command: 'open' }, intent: 'Wrapper: open browser', timestamp: now - 4200 },
-  { id: 'wrapper-navigate', type: 'tool', status: 'completed', toolName: 'browser_tool', toolInput: { command: 'navigate https://example.com' }, intent: 'Wrapper: navigate to URL', timestamp: now - 3900 },
-  { id: 'wrapper-snapshot', type: 'tool', status: 'completed', toolName: 'browser_tool', toolInput: { command: 'snapshot' }, intent: 'Wrapper: list refs', timestamp: now - 3600 },
-  { id: 'wrapper-fill', type: 'tool', status: 'completed', toolName: 'browser_tool', toolInput: { command: 'fill @e5 hello@craft.do' }, intent: 'Wrapper: fill text field', timestamp: now - 3300 },
-  { id: 'wrapper-click', type: 'tool', status: 'completed', toolName: 'browser_tool', toolInput: { command: 'click @e8' }, intent: 'Wrapper: click target', timestamp: now - 3000 },
-  { id: 'wrapper-scroll', type: 'tool', status: 'completed', toolName: 'browser_tool', toolInput: { command: 'scroll down 600' }, intent: 'Wrapper: scroll viewport', timestamp: now - 2700 },
-  { id: 'wrapper-evaluate', type: 'tool', status: 'completed', toolName: 'browser_tool', toolInput: { command: 'evaluate document.title' }, intent: 'Wrapper: evaluate expression', timestamp: now - 2400 },
-]
-
-function applyRunState(activities: ActivityItem[], runState: RunState): ActivityItem[] {
-  if (runState === 'completed') return activities
-
-  return activities.map((activity, index) => {
-    if (runState === 'running' && index === activities.length - 1) {
-      return { ...activity, status: 'running' }
-    }
-    if (runState === 'failed' && index === activities.length - 1) {
-      return { ...activity, status: 'error' }
-    }
-    return { ...activity, status: 'completed' }
-  })
-}
-
-function getScenarioTurns(scenario: Scenario): ActivityItem[][] {
-  switch (scenario) {
-    case 'core':
-      return [CORE_TURN]
-    case 'all-native-tools':
-      return [ALL_NATIVE_TOOLS_TURN]
-    case 'browser-tool-wrapper':
-      return [WRAPPER_COMMANDS_TURN]
-    case 'full-matrix':
-      return [ALL_NATIVE_TOOLS_TURN, WRAPPER_COMMANDS_TURN]
-    default:
-      return [CORE_TURN]
-  }
-}
-
-function getScenarioResponse(scenario: Scenario, runState: RunState): ResponseContent {
-  if (runState === 'failed') {
-    return {
-      text: 'One browser action failed in this turn. Verify refs/inputs and retry.',
-      isStreaming: false,
-    }
-  }
-
-  if (runState === 'running') {
-    return {
-      text: 'Browser action in progress… waiting for completion.',
-      isStreaming: true,
-    }
-  }
-
-  return {
-    text: scenario === 'full-matrix'
-      ? 'Rendered all native browser_* tools and browser_tool wrapper command flows.'
-      : 'Rendered browser tool flow for this scenario.',
-    isStreaming: false,
-  }
-}
 
 function getLiveFxPayload(scenario: Scenario, runState: RunState): { active: boolean; label: string; cursor: { x: number; y: number } | null } {
   if (runState === 'failed') {
@@ -310,79 +173,6 @@ function BrowserEdgeShaderFx({ className = 'absolute inset-0 pointer-events-none
         boxShadow: BROWSER_LIVE_FX_BORDER.boxShadow,
       }}
     />
-  )
-}
-
-function BrowserTraceSidebarSample({ scenario, runState, sidebarWidth, hdrEffect, cursorPulse }: BrowserTraceSidebarSampleProps) {
-  const turns = getScenarioTurns(scenario).map((items, index) => applyRunState(items, runState))
-
-  return (
-    <div className="w-full h-[700px] rounded-xl border border-border overflow-hidden bg-background shadow-sm flex">
-      <div className="flex-1 relative overflow-hidden">
-        {/* Base placeholder browser content */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900" />
-
-        {/* Shared edge shader effect (same visual as Browser Frame overlay) */}
-        {hdrEffect && <BrowserEdgeShaderFx className="absolute inset-0 pointer-events-none z-20" />}
-
-        {/* Cursor pulse simulation */}
-        {cursorPulse && (
-          <>
-            <motion.div
-              className="absolute h-6 w-5 z-30 [will-change:transform]"
-              style={{ transform: 'translateZ(0)' }}
-              initial={false}
-              animate={{ x: [220, 300, 430, 330, 220], y: [180, 260, 240, 350, 180], rotate: [0, 2, -3, 1, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <div
-                className="h-full w-full bg-black shadow-[0_0_12px_rgba(0,0,0,0.35)]"
-                style={{
-                  clipPath: 'polygon(0% 0%, 0% 100%, 34% 73%, 51% 100%, 66% 94%, 48% 67%, 100% 67%)',
-                  borderRadius: '2px',
-                  outline: '1px solid rgba(255,255,255,0.75)',
-                }}
-              />
-            </motion.div>
-            <motion.div
-              className="absolute h-10 w-10 rounded-full border-2 border-cyan-400/65 z-30 [will-change:transform,opacity]"
-              style={{ transform: 'translateZ(0)' }}
-              initial={{ x: 213, y: 173, opacity: 0.75, scale: 0.55 }}
-              animate={{ x: [213, 293, 423, 323, 213], y: [173, 253, 233, 343, 173], opacity: [0.68, 0.16, 0.68, 0.16, 0.68], scale: [0.6, 1.5, 0.6, 1.5, 0.6] }}
-              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </>
-        )}
-
-        <BrowserMockPageSurface />
-      </div>
-
-      <div
-        className="h-full border-l border-border bg-background/95 backdrop-blur-sm overflow-y-auto p-3 space-y-3"
-        style={{ width: `${sidebarWidth}px` }}
-      >
-        {turns.map((activities, index) => {
-          const isRunning = runState === 'running' && index === turns.length - 1
-          const response = getScenarioResponse(scenario, runState)
-
-          return (
-            <TurnCard
-              key={`browser-trace-turn-${index + 1}`}
-              sessionId="playground-browser-session"
-              turnId={`browser-trace-turn-${index + 1}`}
-              activities={activities}
-              response={response}
-              intent={index === 0 ? 'Tool execution trace' : 'Wrapper command trace'}
-              isStreaming={isRunning}
-              isComplete={!isRunning}
-              onOpenFile={(path) => console.log('[Playground] Open file:', path)}
-              onOpenUrl={(url) => console.log('[Playground] Open URL:', url)}
-              compactMode={true}
-            />
-          )
-        })}
-      </div>
-    </div>
   )
 }
 

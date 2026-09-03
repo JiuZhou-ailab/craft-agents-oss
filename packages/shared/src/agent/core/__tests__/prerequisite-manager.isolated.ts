@@ -234,7 +234,6 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(guideFile);
 
       // Track with tilde path that expands to the same absolute path
-      const homeDir = process.env.HOME || process.env.USERPROFILE || '/home/user';
       const tildeRelative = `~/some-file.md`;
       manager.trackReadTool({ file_path: tildeRelative });
 

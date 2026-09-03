@@ -12,7 +12,6 @@
  * - Provide detailed rejection reasons for blocked operations
  */
 
-import { homedir } from 'os';
 import {
   getPermissionMode,
   setPermissionMode,

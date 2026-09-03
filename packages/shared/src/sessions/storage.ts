@@ -20,7 +20,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  writeFileSync,
   readdirSync,
   rmSync,
   statSync,
@@ -38,14 +37,13 @@ import {
   resolveProjectOwnedFilePath,
   resolveProjectOwnedPath,
 } from '../workspaces/paths.ts';
-import { toPortablePath, expandPath } from '../utils/paths.ts';
+import { expandPath } from '../utils/paths.ts';
 import { sanitizeSessionId } from './validation.ts';
 import { perf } from '../utils/perf.ts';
 import type {
   SessionConfig,
   StoredSession,
   SessionMetadata,
-  SessionTokenUsage,
   SessionHeader,
   SessionStatus,
 } from './types.ts';

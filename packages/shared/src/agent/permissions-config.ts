@@ -19,7 +19,7 @@ import { existsSync, lstatSync, readFileSync, mkdirSync, writeFileSync } from 'f
 import { homedir } from 'os';
 import { dirname, join } from 'path';
 import { debug } from '../utils/debug.ts';
-import { readJsonFileSync, safeJsonParse } from '../utils/files.ts';
+import { safeJsonParse } from '../utils/files.ts';
 import { canonicalizeApiPath } from '../sources/api-path.ts';
 import { CONFIG_DIR } from '../config/paths.ts';
 import { getBundledAssetsDir } from '../utils/paths.ts';

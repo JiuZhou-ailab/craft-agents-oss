@@ -4,7 +4,6 @@
  * Uses PreviewOverlay for presentation and TerminalOutput for display.
  */
 
-import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal, Search, FolderSearch } from 'lucide-react'
 import { PreviewOverlay, type BadgeVariant } from './PreviewOverlay'

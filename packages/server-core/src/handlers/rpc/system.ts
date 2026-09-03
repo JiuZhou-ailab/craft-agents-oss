@@ -101,11 +101,6 @@ function parseInternalCraftAgentsDeepLink(parsed: URL): ParsedInternalDeepLink |
 
   const host = parsed.hostname
   const pathParts = parsed.pathname.split('/').filter(Boolean)
-  const action = host === 'action'
-    ? pathParts[0]
-    : host === 'workspace' && pathParts[1] === 'action'
-      ? pathParts[2]
-      : undefined
 
   const windowMode = parsed.searchParams.get('window')
 
@@ -177,7 +172,6 @@ function assertLocalWorkspace(ctx: { workspaceId: string | null }, action: strin
 }
 
 export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps): void {
-  const windowManager = deps.windowManager
 
   // Get system theme preference (dark = true, light = false)
   server.handle(RPC_CHANNELS.theme.GET_SYSTEM_PREFERENCE, async () => {

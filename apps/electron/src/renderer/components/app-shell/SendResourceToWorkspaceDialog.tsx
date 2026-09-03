@@ -13,7 +13,6 @@
  * Adapted from SendToWorkspaceDialog (session transfer).
  */
 
-import * as React from 'react'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Cloud, CloudOff, Monitor, Send } from 'lucide-react'
 import { toast } from 'sonner'
@@ -200,7 +199,6 @@ function SendResourceToWorkspaceDialogContent({
     }
   }, [selectedWorkspaceId, activeWorkspaceId, resourceIds, resourceType, resourceLabel, workspaces, onOpenChange, onTransferComplete])
 
-  const { singular, plural } = RESOURCE_TYPE_LABELS[resourceType]
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {

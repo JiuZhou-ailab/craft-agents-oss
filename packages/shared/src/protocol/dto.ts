@@ -20,7 +20,6 @@ import type {
   StoredAttachment,
   PermissionRequest as BasePermissionRequest,
 } from '@craft-agent/core/types'
-import type { Workspace } from '@craft-agent/core/types'
 import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'

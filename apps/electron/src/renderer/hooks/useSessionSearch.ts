@@ -314,7 +314,7 @@ export function sessionMatchesCurrentFilter(
       return matched.some(v => v.id === currentFilter.viewId)
 
     default:
-      const _exhaustive: never = currentFilter
+      void (currentFilter satisfies never)
       return true
   }
 }

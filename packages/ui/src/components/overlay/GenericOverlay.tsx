@@ -6,7 +6,6 @@
  * Supports optional diff mode for side-by-side comparison.
  */
 
-import * as React from 'react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FileCode } from 'lucide-react'

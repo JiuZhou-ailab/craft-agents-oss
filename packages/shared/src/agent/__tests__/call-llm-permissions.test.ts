@@ -6,7 +6,7 @@
  * read-only operation (secondary LLM call, no side effects).
  */
 import { describe, it, expect } from 'bun:test';
-import { shouldAllowToolInMode, type PermissionMode } from '../../agent/mode-manager.ts';
+import { shouldAllowToolInMode } from '../../agent/mode-manager.ts';
 
 describe('call_llm permission mode handling', () => {
   const toolName = 'mcp__session__call_llm';

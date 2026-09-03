@@ -10,7 +10,6 @@
  * "Ignore" drops the row from the pending list without granting access.
  */
 
-import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Clock, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'

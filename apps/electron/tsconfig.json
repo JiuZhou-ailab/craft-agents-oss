@@ -17,7 +17,7 @@
     "skipLibCheck": true,
     "types": ["node", "bun"],
     "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "noUnusedParameters": false,
     "baseUrl": ".",
     "paths": {

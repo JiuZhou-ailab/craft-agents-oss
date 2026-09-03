@@ -8,7 +8,7 @@
  * Tests the Pi SDK AgentEvent / AgentSessionEvent → Craft AgentEvent conversion.
  * Each test provides mock Pi SDK event objects and verifies the AgentEvents produced.
  */
-import { describe, it, expect, beforeEach, jest } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { PiEventAdapter } from '../backend/pi/event-adapter.ts';
 
 // Helper: collect all events from a generator

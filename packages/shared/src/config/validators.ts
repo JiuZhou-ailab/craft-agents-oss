@@ -22,7 +22,7 @@ import { join } from 'path';
 import { validateSkillContent as validatePortableSkillContent } from '@craft-agent/session-tools-core/skill-validation';
 export { SkillMetadataSchema } from '@craft-agent/session-tools-core/skill-validation';
 import { CONFIG_DIR } from './paths.ts';
-import { safeJsonParse, readJsonFileSync } from '../utils/files.ts';
+import { safeJsonParse } from '../utils/files.ts';
 import { findIconFile } from '../utils/icon.ts';
 import { EntityColorSchema } from '../colors/validate.ts';
 import { THINKING_LEVEL_IDS } from '../agent/thinking-levels.ts';
@@ -1132,17 +1132,6 @@ const BaseLabelConfigSchema = z.object({
   autoRules: z.array(AutoLabelRuleSchema).optional(),
 });
 
-// Recursive schema: LabelConfig can have children which are also LabelConfigs.
-// Zod supports lazy() for recursive types.
-type LabelConfigSchemaType = z.ZodType<{
-  id: string;
-  name: string;
-  color?: unknown;
-  icon?: string;
-  valueType?: 'string' | 'number' | 'date';
-  autoRules?: Array<{ pattern: string; flags?: string; valueTemplate?: string; description?: string }>;
-  children?: LabelConfigSchemaType[];
-}>;
 
 const LabelConfigSchema: z.ZodType<any> = BaseLabelConfigSchema.extend({
   children: z.lazy(() => z.array(LabelConfigSchema)).optional(),

@@ -10,12 +10,11 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SourceConfig } from '@craft-agent/session-tools-core';
 import { createSessionToolContext } from '../session-tool-context.ts';
 import { PiAgentToolHost } from '../pi-agent-tool-host.ts';
-import { CONFIG_DIR } from '../../config/paths.ts';
 import { getPiUserSkillsDir } from '../../skills/storage.ts';
 import {
   SHARED_AGENTS_SOURCES_DIR,

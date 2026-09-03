@@ -8,7 +8,7 @@
  * - Is self-contained and testable in isolation
  */
 
-import type { EventBus, BaseEventPayload } from '../event-bus.ts';
+import type { EventBus } from '../event-bus.ts';
 import type { AutomationEvent, AutomationsConfig, AutomationMatcher, PendingPrompt } from '../types.ts';
 
 // ============================================================================

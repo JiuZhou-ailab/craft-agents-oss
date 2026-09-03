@@ -187,11 +187,9 @@ client.handleCapability(CLIENT_OPEN_FILE_DIALOG, async (spec: FileDialogSpec) =>
 // Build ElectronAPI proxy
 // ---------------------------------------------------------------------------
 
-let cachedClientAuthState: ClientAuthState | null = null
 
 async function readClientAuthState(): Promise<ClientAuthState> {
   const nextState = await ipcRenderer.invoke(CLIENT_AUTH_IPC_CHANNELS.GET_STATE) as ClientAuthState
-  cachedClientAuthState = nextState
   return nextState
 }
 
@@ -478,7 +476,6 @@ client.onConnectionStateChanged((state) => {
 }
 ;(api as ElectronAPI).onClientAuthStateChanged = (callback: (state: ClientAuthState) => void) => {
   const handler = (_event: unknown, nextState: ClientAuthState) => {
-    cachedClientAuthState = nextState
     callback(nextState)
   }
   ipcRenderer.on(CLIENT_AUTH_IPC_CHANNELS.STATE_CHANGED, handler)

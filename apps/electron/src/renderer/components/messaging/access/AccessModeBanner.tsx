@@ -4,7 +4,6 @@
  * list with the senders the gateway has already observed.
  */
 
-import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'

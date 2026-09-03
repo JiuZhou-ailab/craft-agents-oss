@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { join } from 'node:path'
 
 // We need to test checkVCRedistInstalled under different platform/arch/fs conditions.

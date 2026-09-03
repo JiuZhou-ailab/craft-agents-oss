@@ -24,7 +24,6 @@ import type {
   StdioValidationResult,
   HttpMcpConfig,
   McpValidationResult,
-  ApiTestResult,
   SourceConfig,
   DeveloperFeedback,
 } from '@craft-agent/session-tools-core';
@@ -35,7 +34,6 @@ import {
   validateStatuses,
   validatePreferences,
   validateAll,
-  validateWorkspacePermissions,
   validateSourcePermissions,
   validateAllPermissions,
   validateToolIcons,
@@ -49,7 +47,6 @@ import {
   loadSource as loadSourceImpl,
   saveSourceConfig as saveSourceConfigImpl,
   updateSourceConnectionState,
-  getSourcePath,
   getSourceDefinitionIdentity,
   isSourceUsable,
 } from '../sources/storage.ts';

@@ -5,7 +5,6 @@
  * File path badge provides "Open" / "Reveal in {file manager}" via PlatformContext.
  */
 
-import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { BookOpen, PenLine } from 'lucide-react'
 import { PreviewOverlay } from './PreviewOverlay'

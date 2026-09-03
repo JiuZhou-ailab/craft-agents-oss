@@ -26,11 +26,6 @@ export interface CodeBlockProps {
 }
 
 // Languages to pre-load (most common in chat contexts)
-const PRELOADED_LANGUAGES = [
-  'javascript', 'typescript', 'python', 'json', 'bash', 'shell',
-  'markdown', 'html', 'css', 'sql', 'yaml', 'go', 'rust', 'java',
-  'c', 'cpp', 'tsx', 'jsx', 'swift', 'kotlin', 'ruby', 'php'
-] as const
 
 // Map common aliases to Shiki language names
 const LANGUAGE_ALIASES: Record<string, BundledLanguage> = {

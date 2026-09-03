@@ -125,7 +125,6 @@ export class WhatsAppAdapter implements PlatformAdapter {
   private started = false
   private log: MessagingLogger = NOOP_LOGGER
   private messageHandler: ((msg: IncomingMessage) => Promise<void>) | null = null
-  private buttonHandler: ((press: ButtonPress) => Promise<void>) | null = null
   private eventHandlers = new Set<EventHandler>()
   private pending = new Map<string, PendingEntry>()
   private nextCmdId = 1
@@ -257,7 +256,6 @@ export class WhatsAppAdapter implements PlatformAdapter {
   }
 
   onButtonPress(handler: (press: ButtonPress) => Promise<void>): void {
-    this.buttonHandler = handler
   }
 
   /** Subscribe to adapter-level events (QR, pairing code, unavailable, errors). */

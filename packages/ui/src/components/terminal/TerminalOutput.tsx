@@ -8,7 +8,6 @@
  * - Copy functionality
  */
 
-import * as React from 'react'
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal, Copy, Check } from 'lucide-react'
@@ -55,9 +54,6 @@ export function TerminalOutput({
   const textColor = isDark ? '#e4e4e4' : '#1a1a1a'
   const mutedColor = isDark ? '#888888' : '#666666'
   const matchColor = '#22c55e' // Green for grep matches
-  const cmdColor = isDark ? '#60a5fa' : '#2563eb' // Blue for command
-  const codeBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
-  const outputBg = isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)'
 
   // Copy to clipboard (strip ANSI codes for clean text)
   const copyToClipboard = useCallback(async (text: string, type: 'command' | 'output') => {

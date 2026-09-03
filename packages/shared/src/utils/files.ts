@@ -2,9 +2,9 @@
 // output: File classification, safe loading, and provider-neutral attachment context helpers
 // pos: Shared file boundary used before persistence and model-provider adaptation
 
-import { existsSync, readFileSync, statSync, writeFileSync, unlinkSync, mkdtempSync, renameSync } from 'fs';
+import { existsSync, readFileSync, statSync, writeFileSync, unlinkSync, renameSync } from 'fs';
 import { randomUUID } from 'node:crypto';
-import { extname, basename, resolve, join, relative } from 'path';
+import { extname, basename, resolve, relative } from 'path';
 import type { AttachmentRepresentationKind } from '@craft-agent/core/types';
 import type { FileAttachment } from '../protocol/dto.ts';
 

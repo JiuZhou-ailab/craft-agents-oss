@@ -141,8 +141,6 @@ function colorLuminance(color: string): number | null {
   return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
 }
 
-/** Half of the default URL bar max-width (600px), used for CSS max() centering calc */
-const HALF_MAX_WIDTH = 300
 
 export function BrowserControls({
   url: controlledUrl,
@@ -221,7 +219,6 @@ export function BrowserControls({
   const safeThemeColor = safeCssColor(themeColor)
   const themeLum = safeThemeColor ? colorLuminance(safeThemeColor) : null
   const isDarkBg = themeLum != null && themeLum < 0.4
-  const useWindowCenter = leftClearance != null
 
   /* Shared: reload / stop button */
   const reloadButton = (

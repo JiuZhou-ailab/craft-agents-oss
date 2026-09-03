@@ -2,7 +2,6 @@
 // output: Regression coverage for the first-class blank workspace surface
 // pos: Protects the cold-start boundary between the project tree and chat
 
-import * as React from 'react'
 import { readFileSync } from 'fs'
 import { beforeAll, describe, expect, it, mock } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'

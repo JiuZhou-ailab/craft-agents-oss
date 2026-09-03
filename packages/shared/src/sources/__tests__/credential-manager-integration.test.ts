@@ -14,7 +14,6 @@ import {
   SourceCredentialManager,
   isMultiHeaderCredential,
   type MultiHeaderCredential,
-  type ApiCredential,
 } from '../credential-manager.ts';
 import type { LoadedSource, FolderSourceConfig } from '../types.ts';
 import * as credentialsModule from '../../credentials/index.ts';
@@ -45,12 +44,9 @@ function createMockSource(overrides: Partial<FolderSourceConfig> = {}): LoadedSo
 
 describe('getApiCredential with multi-header sources', () => {
   let credManager: SourceCredentialManager;
-  let mockGet: ReturnType<typeof mock>;
 
   beforeEach(() => {
     credManager = new SourceCredentialManager();
-    // Reset mocks
-    mockGet = mock(() => null);
   });
 
   test('should return MultiHeaderCredential when source has headerNames and credential is valid JSON', async () => {

@@ -214,8 +214,8 @@ export function NavigationProvider({
   // BROWSER HISTORY TRACKING
   // =========================================================================
 
-  const [canGoBack, setCanGoBack] = useState(false)
-  const [canGoForward, setCanGoForward] = useState(false)
+  const [, setCanGoBack] = useState(false)
+  const [, setCanGoForward] = useState(false)
 
   // Sequence numbers stored in history.state for tracking position
   const historySeqRef = useRef(0)                // Current history position

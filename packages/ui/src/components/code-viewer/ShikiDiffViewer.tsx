@@ -8,8 +8,7 @@
  * - Line-level diff highlighting
  */
 
-import * as React from 'react'
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { FileDiff, type FileDiffMetadata, type FileDiffProps } from '@pierre/diffs/react'
 import { parseDiffFromFile, DIFFS_TAG_NAME, type FileContents } from '@pierre/diffs'
 import { cn } from '../../lib/utils'
@@ -99,7 +98,7 @@ export function ShikiDiffViewer({
   className,
 }: ShikiDiffViewerProps) {
   const hasCalledReady = useRef(false)
-  const [isReady, setIsReady] = useState(false)
+  const [, setIsReady] = useState(false)
 
   // Resolve language
   const resolvedLang = useMemo(() => {

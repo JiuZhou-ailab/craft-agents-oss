@@ -8,8 +8,7 @@
 import * as React from 'react'
 import { useTranslation } from "react-i18next"
 import type { ColumnDef } from '@tanstack/react-table'
-import { DataTable, SortableHeader } from '@/components/ui/data-table'
-import { Input } from '@/components/ui/input'
+import { DataTable } from '@/components/ui/data-table'
 import { Spinner } from '@craft-agent/ui'
 import { cn } from '@/lib/utils'
 
@@ -79,7 +78,7 @@ export function Info_DataTable<TData, TValue>({
   className,
 }: Info_DataTableProps<TData, TValue>) {
   const { t } = useTranslation()
-  const [searchValue, setSearchValue] = React.useState('')
+  const [searchValue] = React.useState('')
 
   // Parse searchable prop
   const searchConfig = React.useMemo(() => {

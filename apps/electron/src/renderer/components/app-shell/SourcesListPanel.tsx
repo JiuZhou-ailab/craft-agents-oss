@@ -19,7 +19,7 @@ import { sourceSelection } from '@/hooks/useEntitySelection'
 import { SourceMenu } from './SourceMenu'
 import { SendResourceToWorkspaceDialog } from './SendResourceToWorkspaceDialog'
 import { EditPopover, getEditConfig, type EditContextKey } from '@/components/ui/EditPopover'
-import type { LoadedSource, SourceConnectionStatus, SourceFilter, Workspace } from '../../../shared/types'
+import type { LoadedSource, SourceFilter, Workspace } from '../../../shared/types'
 
 const SOURCE_TYPE_CONFIG: Record<string, { labelKey: string; colorClass: string }> = {
   mcp: { labelKey: 'sourcesList.typeMcp', colorClass: 'bg-accent/10 text-accent' },

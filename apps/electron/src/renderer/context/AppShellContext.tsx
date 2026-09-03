@@ -31,7 +31,6 @@ import type {
   LoadedSkill,
   NewChatActionParams,
   LlmConnectionWithStatus,
-  TestAutomationResult,
   SendMessageOptions,
   ClientAuthState,
 } from '../../shared/types'

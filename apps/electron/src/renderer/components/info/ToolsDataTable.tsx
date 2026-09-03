@@ -5,7 +5,6 @@
  * Features: searchable tools, sortable columns, max-height scroll.
  */
 
-import * as React from 'react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'

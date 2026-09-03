@@ -15,7 +15,6 @@
  * one click after the gateway records a rejected attempt.
  */
 
-import * as React from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'

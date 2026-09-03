@@ -195,7 +195,6 @@ function computeDateGranularities(values: number[]): GranularityOption[] {
   const max = Math.max(...values)
   const spanMs = max - min
 
-  const HOUR = 3600_000
   const DAY = 86400_000
   const MONTH = 30 * DAY
   const YEAR = 365 * DAY
@@ -262,12 +261,6 @@ function bucketValue(value: unknown, type: ColumnDef['type'], granularity: strin
   return String(value)
 }
 
-function defaultGranularity(type: ColumnDef['type'], options: GranularityOption[]): string {
-  if (!options.length) return 'exact'
-  if (type === 'date') return options.find((o) => o.value === 'day')?.value ?? options[0]!.value
-  // For numeric: pick the second option (first non-Exact) if available
-  return options.length > 1 ? options[1]!.value : options[0]!.value
-}
 
 // ── Error boundary ───────────────────────────────────────────────────────────
 

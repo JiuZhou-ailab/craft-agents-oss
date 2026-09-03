@@ -2,7 +2,6 @@
 // output: App-native update announcement dialog for the first launch after an update
 // pos: Lightweight renderer surface between startup policy and full release notes overlay
 
-import * as React from 'react'
 
 import { Button } from '@/components/ui/button'
 import {

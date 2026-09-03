@@ -20,7 +20,7 @@ import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts';
 import { CONFIG_DIR } from './paths.ts';
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
-import { isValidThinkingLevel, normalizeThinkingLevel } from '../agent/thinking-levels.ts';
+import { normalizeThinkingLevel } from '../agent/thinking-levels.ts';
 import { parsePermissionMode, PERMISSION_MODE_ORDER } from '../agent/mode-types.ts';
 import { type BuiltinLlmConnectionDefaults, type ConfigDefaults } from './config-defaults-schema.ts';
 import { isValidThemeFile } from './validators.ts';
@@ -2245,57 +2245,6 @@ export function migrateLegacyLlmConnectionsConfig(): void {
   const config = loadStoredConfig();
   if (!config) return;
 
-  const normalizeModelList = (models?: Array<{ id: string } | string>): string[] => {
-    if (!models) return [];
-    return models
-      .map(model => (typeof model === 'string' ? model : model.id))
-      .filter(Boolean);
-  };
-
-  const applyCompatDefaults = (target: StoredConfig): boolean => {
-    if (!target.llmConnections) return false;
-    let changed = false;
-    for (const connection of target.llmConnections) {
-      // Cast to string for legacy 'openai_compat' values that may still exist on disk
-      const providerStr = connection.providerType as string;
-      if (providerStr !== 'openai_compat') {
-        continue;
-      }
-      const compatDefaults = getDefaultModelsForConnection(connection.providerType).map(
-        m => typeof m === 'string' ? m : m.id
-      );
-      const normalizedModels = normalizeModelList(connection.models);
-      if (normalizedModels.length === 0) {
-        connection.models = [...compatDefaults];
-        changed = true;
-      } else if (normalizedModels.length !== (connection.models?.length ?? 0)) {
-        connection.models = [...normalizedModels];
-        changed = true;
-      }
-      // Backfill any new default models that are missing from existing connections
-      // (e.g., Sonnet added to compat defaults after user already created connection)
-      let currentModels = normalizeModelList(connection.models);
-      for (const defaultModel of compatDefaults) {
-        if (!currentModels.includes(defaultModel)) {
-          currentModels = [...currentModels, defaultModel];
-          changed = true;
-        }
-      }
-      if (changed) {
-        connection.models = currentModels;
-      }
-      const currentDefault = connection.defaultModel?.trim();
-      if (!currentDefault) {
-        connection.defaultModel = (normalizeModelList(connection.models)[0] ?? compatDefaults[0]);
-        changed = true;
-      } else if (!normalizeModelList(connection.models).includes(currentDefault)) {
-        connection.models = [currentDefault, ...normalizeModelList(connection.models).filter(m => m !== currentDefault)];
-        changed = true;
-      }
-    }
-    return changed;
-  };
-
   // Already migrated - llmConnections array exists
   if (config.llmConnections !== undefined) {
     // Clean up any remaining legacy fields from previous runs
@@ -2323,12 +2272,6 @@ export function migrateLegacyLlmConnectionsConfig(): void {
       delete configAny.model;
       needsSave = true;
     }
-    // Note: applyCompatDefaults() is NOT called here for already-migrated configs.
-    // Compat connections are user-owned after creation — the app should not
-    // silently extend or override the user's model list on every startup.
-    // Compat defaults are only applied during fresh connection creation or
-    // first-time legacy migration (the config.llmConnections === undefined path below).
-
     // Phase 1a-bis: Migrate Codex/Copilot connections to Pi backend
     if (migrateCodexCopilotToPi(config)) {
       needsSave = true;

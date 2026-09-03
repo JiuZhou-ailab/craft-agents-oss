@@ -182,7 +182,6 @@ describe('turn grouping stability across reload', () => {
       }),
     ]
 
-    const liveGrouping = groupMessagesByTurn(messages)
     const reloaded = simulatePersistAndReload(messages)
     const reloadGrouping = groupMessagesByTurn(reloaded)
 

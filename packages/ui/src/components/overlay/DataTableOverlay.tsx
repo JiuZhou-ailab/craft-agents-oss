@@ -6,7 +6,6 @@
  * allowing the full table to be visible in an expanded view.
  */
 
-import * as React from 'react'
 import type { ReactNode } from 'react'
 import { Table2 } from 'lucide-react'
 import { PreviewOverlay, type BadgeVariant } from './PreviewOverlay'

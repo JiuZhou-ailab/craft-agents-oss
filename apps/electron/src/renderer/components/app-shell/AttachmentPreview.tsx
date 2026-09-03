@@ -1,4 +1,3 @@
-import * as React from "react"
 import { X, Image as ImageIcon } from "lucide-react"
 import { Spinner, FileTypeIcon, getFileTypeLabel } from "@craft-agent/ui"
 import { cn } from "@/lib/utils"

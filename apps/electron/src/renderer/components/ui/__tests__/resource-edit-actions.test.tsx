@@ -2,7 +2,6 @@
 // output: Regression coverage for separate manual and AI edit affordances
 // pos: Keeps resource edit controls from collapsing manual editing into AI-only flows
 
-import * as React from 'react'
 import { beforeAll, describe, expect, it, mock } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 

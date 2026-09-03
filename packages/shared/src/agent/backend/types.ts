@@ -15,18 +15,13 @@
  * - AsyncGenerator for streaming: Consistent with existing CraftAgent API
  */
 
-import type { AgentEvent } from '@craft-agent/core/types';
-import type { FileAttachment } from '../../utils/files.ts';
 import type { ThinkingLevel } from '../thinking-levels.ts';
-import type { PermissionMode } from '../mode-manager.ts';
 import type { LoadedSource } from '../../sources/types.ts';
 import type { AuthRequest } from '@craft-agent/session-tools-core';
 import type { McpClientPoolLike } from '../../mcp/types.ts';
 import type { Workspace } from '../../config/storage.ts';
 import type { SessionConfig as Session } from '../../sessions/storage.ts';
-import type { SourceManager } from '../core/source-manager.ts';
 import type { SystemPromptPreset } from '../../prompts/system.ts';
-import type { LLMQueryRequest, LLMQueryResult } from '../llm-tool.ts';
 
 import type { RecoveryMessage } from '../core/types.ts';
 export type { RecoveryMessage };

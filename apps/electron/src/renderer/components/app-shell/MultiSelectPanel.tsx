@@ -5,7 +5,6 @@
  * Used for sessions (with status/label/archive actions), sources, and skills.
  */
 
-import * as React from 'react'
 import { Archive, Tag, CheckCircle2, Send } from 'lucide-react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Button } from '@/components/ui/button'

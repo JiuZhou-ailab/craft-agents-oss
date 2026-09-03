@@ -42,7 +42,6 @@ import {
   downloadIcon,
   ICON_EXTENSIONS,
   needsIconDownload,
-  isIconUrl,
 } from '../utils/icon.ts';
 
 // ============================================================

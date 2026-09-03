@@ -8,7 +8,6 @@
 
 import type {
   AuthRequest,
-  ToolResult,
   UserQuestionRequest,
   UserQuestionResponse,
   SourceConfig,

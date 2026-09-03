@@ -13,7 +13,6 @@ import * as React from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { settingsUI } from './SettingsUIConstants'
 

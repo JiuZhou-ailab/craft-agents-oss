@@ -2,7 +2,6 @@
 // output: Accessible tab pages, guarded submission markup, and viewport-aware prompt height
 // pos: Minimal renderer checks for ask_user_question's paged human input component
 
-import * as React from 'react'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'

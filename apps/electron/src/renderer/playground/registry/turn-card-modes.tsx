@@ -23,7 +23,7 @@ import {
 } from './samples/customer-support'
 
 // Import icons for simple samples
-import { nativeToolIcons, sourceIcons, createCircleIcon } from './sample-icons'
+import { nativeToolIcons, sourceIcons } from './sample-icons'
 
 /** Wrapper with padding for playground preview */
 function PaddedWrapper({ children }: { children: ReactNode }) {

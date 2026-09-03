@@ -7,7 +7,7 @@
  *
  * Uses centralized core mappers (single source of truth, no Electron imports needed).
  */
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, it, expect } from 'bun:test'
 import { messageToStored, storedToMessage } from '@craft-agent/core'
 import type { Message, StoredMessage, MessageRole } from '@craft-agent/core'
 

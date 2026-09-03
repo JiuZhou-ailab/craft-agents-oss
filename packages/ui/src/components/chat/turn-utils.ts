@@ -2,7 +2,7 @@
 // output: Grouped user, assistant, system, and auth turns with render metadata
 // pos: Shared transcript normalization layer before TurnCard rendering
 
-import type { Message, StoredMessage, MessageRole, TurnMetrics } from '@craft-agent/core'
+import type { Message, TurnMetrics } from '@craft-agent/core'
 import { isParentTaskTool } from '@craft-agent/shared/utils/toolNames'
 import { storedToMessage } from '@craft-agent/core'
 

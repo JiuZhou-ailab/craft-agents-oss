@@ -16,7 +16,6 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Plus,
-  X,
 } from 'lucide-react'
 import { Spinner } from '@craft-agent/ui'
 
@@ -32,7 +31,6 @@ import {
   useInlineMention,
   type MentionItem,
   type MentionFileReference,
-  type MentionItemType,
 } from '@/components/ui/mention-menu'
 import {
   InlineLabelMenu,
@@ -46,7 +44,6 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuSub,
-  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu'
 import {
   StyledDropdownMenuContent,
@@ -520,22 +517,6 @@ export function FreeFormInput({
     }
   }, [effectiveThinkingLevel, onThinkingLevelChange, thinkingLevel])
 
-  // Shuffle placeholder order once per mount so each session feels fresh.
-  // In compact mode, suppress desktop-keyboard guidance that is noisy or misleading
-  // on narrow/mobile-like layouts.
-  const placeholderOptions = React.useMemo(() => {
-    if (!Array.isArray(placeholder)) return placeholder
-    if (!compactMode) return placeholder
-    return placeholder.filter((entry) => {
-      const lower = entry.toLowerCase()
-      return !lower.includes('shift + tab')
-        && !lower.includes('shift + return')
-        && !lower.includes('toggle the sidebar')
-        && !lower.includes('⌘')
-        && !lower.includes('ctrl')
-    })
-  }, [placeholder, compactMode])
-
   // Hide placeholder entirely when panel is unfocused in multi-panel layout
   const shuffledPlaceholder = React.useMemo(
     () => Array.isArray(effectivePlaceholderProp) ? shuffleArray(effectivePlaceholderProp) : effectivePlaceholderProp,
@@ -655,7 +636,7 @@ export function FreeFormInput({
   const [isDraggingOver, setIsDraggingOver] = React.useState(false)
   const [loadingCount, setLoadingCount] = React.useState(0)
   const [sourceDropdownOpen, setSourceDropdownOpen] = React.useState(false)
-  const [isFocused, setIsFocused] = React.useState(false)
+  const [, setIsFocused] = React.useState(false)
   const [inputMaxHeight, setInputMaxHeight] = React.useState(540)
   const [modelDropdownOpen, setModelDropdownOpen] = React.useState(false)
 

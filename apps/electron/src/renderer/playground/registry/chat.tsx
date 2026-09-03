@@ -10,15 +10,13 @@ import { ChatInputZone, InputContainer } from '@/components/app-shell/input'
 import { setRecentWorkingDirs } from '@/components/app-shell/input/working-directory-history'
 import type { StructuredResponse } from '@/components/app-shell/input/structured/types'
 import { Button } from '@/components/ui/button'
-import { motion } from 'motion/react'
-import { ArrowUp, Paperclip, ChevronDown, Circle, Sparkles } from 'lucide-react'
+import { Circle, Sparkles } from 'lucide-react'
 import type { LabelConfig } from '@craft-agent/shared/labels'
 import type { ThinkingLevel } from '@craft-agent/shared/agent/thinking-levels'
 import type { SessionStatus } from '@/config/session-status-config'
 import type { FileAttachment, LlmConnectionWithStatus, PermissionRequest, PermissionMode, Workspace } from '../../../shared/types'
 import type { LlmConnection } from '@config/llm-connections'
 import configDefaults from '../../../../resources/config-defaults.json'
-import { cn } from '@/lib/utils'
 import { AppShellProvider } from '@/context/AppShellContext'
 import { ModalProvider } from '@/context/ModalContext'
 import {
@@ -48,13 +46,6 @@ const samplePermissionRequest: PermissionRequest = {
   command: 'npm install --save-dev typescript @types/react',
 }
 
-const longPermissionRequest: PermissionRequest = {
-  requestId: 'perm-2',
-  sessionId: 'session-1',
-  toolName: 'bash',
-  description: 'Run shell command',
-  command: 'find /Users/test/project -type f -name "*.ts" | xargs grep -l "deprecated" | head -20',
-}
 
 const veryLongPermissionRequest: PermissionRequest = {
   requestId: 'perm-3',

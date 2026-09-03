@@ -36,21 +36,6 @@ export interface SourceTestArgs {
 }
 
 /**
- * Test result structure for API/MCP connection tests
- */
-interface ConnectionTestResult {
-  success: boolean;
-  status?: number;
-  message: string;
-  toolCount?: number;
-  toolNames?: string[];
-  serverName?: string;
-  serverVersion?: string;
-  needsAuth?: boolean;
-  error?: string;
-}
-
-/**
  * Handle the source_test tool call.
  *
  * Performs:

@@ -68,7 +68,7 @@ export function InputContainer({
   const [viewportHeight, setViewportHeight] = React.useState<number>(() =>
     typeof window === 'undefined' ? 0 : window.innerHeight
   )
-  const [isFocused, setIsFocused] = React.useState(false)
+  const [, setIsFocused] = React.useState(false)
   const hasInitializedRef = React.useRef(false)
 
   // Create a stable key for the current content

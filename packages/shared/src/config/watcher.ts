@@ -22,8 +22,8 @@
  *   - permissions.json
  */
 
-import { watch, existsSync, readdirSync, statSync, readFileSync, mkdirSync } from 'fs';
-import { join, dirname, basename, relative } from 'path';
+import { watch, existsSync, readdirSync, statSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { homedir, platform } from 'os';
 import type { FSWatcher } from 'fs';
 import { CONFIG_DIR } from './paths.ts';
@@ -95,7 +95,6 @@ export function _getGlobalWatcherState(): {
 // Constants
 // ============================================================
 
-const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 const PREFERENCES_FILE = join(CONFIG_DIR, 'preferences.json');
 const GLOBAL_AGENT_SKILLS_DIRS = Array.from(new Set([
   getPiUserSkillsDir(),

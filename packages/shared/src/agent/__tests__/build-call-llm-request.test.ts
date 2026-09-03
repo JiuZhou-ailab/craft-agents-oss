@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'bun:test';
 import { buildCallLlmRequest } from '../llm-tool.ts';
 import { join } from 'path';
-import { writeFileSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, rmSync } from 'fs';
 
 // ============================================================
 // Test fixtures
@@ -20,26 +20,11 @@ import { writeFileSync, mkdirSync, rmSync } from 'fs';
 
 const TMP_DIR = join(import.meta.dir, '__tmp_build_call_llm__');
 
-function setupFixtures() {
-  mkdirSync(TMP_DIR, { recursive: true });
-  writeFileSync(join(TMP_DIR, 'test.ts'), 'const x = 1;\nconst y = 2;\n');
-  writeFileSync(join(TMP_DIR, 'empty.ts'), '');
-  writeFileSync(join(TMP_DIR, 'image.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47])); // PNG header
-}
-
-function cleanupFixtures() {
-  rmSync(TMP_DIR, { recursive: true, force: true });
-}
-
 // ============================================================
 // Tests
 // ============================================================
 
 describe('buildCallLlmRequest()', () => {
-  // Setup/teardown
-  setupFixtures();
-  // Note: cleanup at end of file via process.on
-
   // --- Validation ---
 
   it('throws on empty prompt', async () => {
@@ -244,9 +229,4 @@ describe('buildCallLlmRequest()', () => {
     );
     expect(result.model).toBe('corrected-model');
   });
-});
-
-// Cleanup
-process.on('exit', () => {
-  try { cleanupFixtures(); } catch {}
 });

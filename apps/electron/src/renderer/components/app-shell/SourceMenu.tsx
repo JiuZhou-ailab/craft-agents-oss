@@ -2,7 +2,6 @@
 // output: Shared dropdown/context menu that omits unavailable source mutations
 // pos: Renderer action boundary for source list and source detail menus
 
-import * as React from 'react'
 import { useTranslation } from "react-i18next"
 import {
   Trash2,

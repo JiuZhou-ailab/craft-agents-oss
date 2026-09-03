@@ -13,7 +13,7 @@
  */
 
 import { atom, useAtom, useAtomValue } from 'jotai'
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   type MultiSelectState,
   createInitialState,

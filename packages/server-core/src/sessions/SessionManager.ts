@@ -5,7 +5,7 @@
 import type { EventSink } from '@craft-agent/server-core/transport'
 import type { ISessionManager, IBrowserPaneManager, ExecutePromptAutomationInput } from '@craft-agent/server-core/handlers'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
-import { basename, join } from 'path'
+import { join } from 'path'
 import { readFile, mkdir } from 'fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
 import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, type PermissionMode, unregisterSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult } from '@craft-agent/shared/agent'
@@ -96,7 +96,6 @@ import { captureWriteOriginalContent } from './write-original-content'
 import {
   canAutoEnableSource,
   capPermissionMode,
-  consumePendingSdkFork,
   createManagedSession,
   hasPersistedAssistantBranchability,
   managedToSession,
@@ -2883,10 +2882,6 @@ export class SessionManager implements ISessionManager {
     await this.agentRuntime.disposeManagedAgentRuntime(managed, reason)
   }
 
-  /** Refresh an existing agent's runtime config in place when signatures drift. (Delegates to AgentRuntime.) */
-  private async tryRefreshAgentRuntime(managed: ManagedSession, reason: string): Promise<void> {
-    await this.agentRuntime.tryRefreshAgentRuntime(managed, reason)
-  }
 
   /** Send-path refresh; kept on the Facade so per-instance test stubs keep working. (Delegates to AgentRuntime.) */
   private async tryRefreshAgentRuntimeLocked(managed: ManagedSession, reason: string): Promise<void> {
@@ -2911,13 +2906,6 @@ export class SessionManager implements ISessionManager {
     await this.agentRuntime.disposeConnectionRuntimes(connectionSlug)
   }
 
-  // (Delegates to AgentRuntime.)
-  private async ensureManagedCredentialForSessionLocked(
-    managed: ManagedSession,
-    forceRefresh = false,
-  ): Promise<ManagedModelAccess | undefined> {
-    return this.agentRuntime.ensureManagedCredentialForSessionLocked(managed, forceRefresh)
-  }
 
   /** Resolve managed access without returning or mutating a live runtime. (Delegates to AgentRuntime.) */
   private async resolveManagedModelAccess(

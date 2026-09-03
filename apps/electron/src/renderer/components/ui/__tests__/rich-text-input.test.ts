@@ -275,16 +275,6 @@ describe('RichTextInput mention hot paths', () => {
     expect(handlerSource).toContain('const newSignature = getMentionSignature(newText, skillSlugs, sourceSlugs)')
   })
 
-  it('skips parsing mentions for render layout when value has no bracket tokens', () => {
-    const source = readFileSync(new URL('../rich-text-input.tsx', import.meta.url), 'utf-8')
-    const hasMentionsStart = source.indexOf('const hasMentions = React.useMemo')
-    const hasMentionsEnd = source.indexOf('return (', hasMentionsStart)
-    const hasMentionsSource = source.slice(hasMentionsStart, hasMentionsEnd)
-
-    expect(hasMentionsSource).toContain("if (!safeValue.includes('[')) return false")
-    expect(hasMentionsSource).toContain('const mentions = parseMentions(safeValue, skillSlugs, sourceSlugs)')
-  })
-
   it('reuses mention lookup data while converting text to html', () => {
     const source = readFileSync(new URL('../rich-text-input.tsx', import.meta.url), 'utf-8')
     const textToHTMLStart = source.indexOf('function textToHTML')

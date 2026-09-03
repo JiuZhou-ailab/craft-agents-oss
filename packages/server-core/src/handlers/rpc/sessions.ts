@@ -2,7 +2,7 @@
 // output: Registered session lifecycle, message, file tree, notes, and watcher RPC handlers
 // pos: Server-side session RPC boundary shared by Electron and server runtimes
 
-import { readFile, writeFile, stat } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { RPC_CHANNELS, type FileAttachment, type NovelSelectionRewriteRequest, type SendMessageOptions, type SessionEvent, type SessionFile, type SessionRewindResult } from '@craft-agent/shared/protocol'
 import type { StoredAttachment } from '@craft-agent/core/types'
@@ -448,7 +448,7 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
       case 'updateAnnotation':
         return sessionManager.updateMessageAnnotation(sessionId, command.messageId, command.annotationId, command.patch)
       default: {
-        const _exhaustive: never = command
+        void (command satisfies never)
         throw new Error(`Unknown session command: ${JSON.stringify(command)}`)
       }
     }

@@ -4,7 +4,7 @@
  */
 
 import type { ActivityItem, ResponseContent } from '@craft-agent/ui'
-import { nativeToolIcons, sourceIcons, internalIcons } from '../sample-icons'
+import { nativeToolIcons, sourceIcons } from '../sample-icons'
 
 const now = Date.now()
 

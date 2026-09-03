@@ -16,10 +16,8 @@ import type { WorkspaceStatusConfig, StatusConfig, StatusCategory } from './type
 import { readJsonFileSync } from '../utils/files.ts';
 import { DEFAULT_ICON_SVGS } from './default-icons.ts';
 import {
-  validateIconValue,
   downloadIcon,
   needsIconDownload,
-  isIconUrl,
   ICON_EXTENSIONS,
 } from '../utils/icon.ts';
 import { migrateStatusColors } from '../colors/migrate.ts';

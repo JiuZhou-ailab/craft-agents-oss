@@ -1,7 +1,6 @@
 // input: One completed tool activity expressed as input and output cards
 // output: Content-sized desktop modal or narrow-window fullscreen activity details
 // pos: Canonical detail surface for a single chat tool invocation
-import * as React from 'react'
 import { useMemo } from 'react'
 import JsonView from '@uiw/react-json-view'
 import { vscodeTheme } from '@uiw/react-json-view/vscode'

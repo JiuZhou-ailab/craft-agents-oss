@@ -39,13 +39,13 @@ describe('client auth IPC propagation', () => {
     expect(source).toContain('clientAuthService?.dispose()')
   })
 
-  it('updates preload auth cache and exposes a renderer subscription', () => {
+  it('exposes a renderer auth-state subscription', () => {
     const source = readElectronFile('preload/bootstrap.ts')
 
     expect(source).toContain('onClientAuthStateChanged')
     expect(source).toContain('signUpClient')
     expect(source).toContain('ipcRenderer.on(CLIENT_AUTH_IPC_CHANNELS.STATE_CHANGED')
-    expect(source).toContain('cachedClientAuthState = nextState')
+    expect(source).toContain('callback(nextState)')
   })
 
   it('keeps native email verification behind the main-process IPC boundary', () => {

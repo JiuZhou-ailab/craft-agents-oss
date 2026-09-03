@@ -6,7 +6,7 @@ import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { coerceInputText } from '@/lib/input-text'
 import { cn } from '@/lib/utils'
-import { findMentionMatches, parseMentions, type MentionMatch } from '@/lib/mentions'
+import { findMentionMatches } from '@/lib/mentions'
 import {
   loadSourceIcon,
   loadSkillIcon,
@@ -616,7 +616,6 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
       [value],
     )
     const divRef = React.useRef<HTMLDivElement>(null)
-    const [isFocused, setIsFocused] = React.useState(false)
     const isComposing = React.useRef(false)
     // The ref guards DOM writes synchronously; state keeps the composition DOM visible.
     const [isCompositionActive, setIsCompositionActive] = React.useState(false)
@@ -800,7 +799,6 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
 
     // Handle focus
     const handleFocus = React.useCallback((e: React.FocusEvent<HTMLDivElement>) => {
-      setIsFocused(true)
       // Tell browser to use <br> instead of <div> for line breaks.
       // This prevents div-wrapping when typing before non-editable spans (badges).
       document.execCommand('defaultParagraphSeparator', false, 'br')
@@ -809,7 +807,6 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
 
     // Handle blur
     const handleBlur = React.useCallback((e: React.FocusEvent<HTMLDivElement>) => {
-      setIsFocused(false)
       onBlur?.(e)
     }, [onBlur])
 
@@ -899,13 +896,6 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
       if (!placeholder) return [t("chatInput.placeholder.typeMessage")]
       return Array.isArray(placeholder) ? placeholder : [placeholder]
     }, [placeholder])
-
-    // Check if value contains any mentions (badges) to adjust line height
-    const hasMentions = React.useMemo(() => {
-      if (!safeValue.includes('[')) return false
-      const mentions = parseMentions(safeValue, skillSlugs, sourceSlugs)
-      return mentions.skills.length > 0 || mentions.sources.length > 0 || mentions.files.length > 0 || mentions.folders.length > 0
-    }, [safeValue, skillSlugs, sourceSlugs])
 
     return (
       <div className="relative">

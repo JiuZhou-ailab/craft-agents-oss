@@ -126,15 +126,7 @@ interface VariableExpressionAst extends ASTNode {
   Splatted: boolean;
 }
 
-interface SubExpressionAst extends ASTNode {
-  Type: 'SubExpressionAst';
-  SubExpression: ASTNode;
-}
 
-interface ScriptBlockExpressionAst extends ASTNode {
-  Type: 'ScriptBlockExpressionAst';
-  ScriptBlock: ASTNode;
-}
 
 interface FileRedirectionAst extends ASTNode {
   Type: 'FileRedirectionAst';
@@ -143,12 +135,6 @@ interface FileRedirectionAst extends ASTNode {
   FromStream: string;
 }
 
-interface AssignmentStatementAst extends ASTNode {
-  Type: 'AssignmentStatementAst';
-  Left: ASTNode;
-  Right: ASTNode;
-  Operator: string;
-}
 
 interface ExpandableStringExpressionAst extends ASTNode {
   Type: 'ExpandableStringExpressionAst';

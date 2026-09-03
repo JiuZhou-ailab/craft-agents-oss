@@ -2,7 +2,6 @@
 // output: Manual file edit and AI edit actions rendered as separate controls
 // pos: Shared action surface for skills, sources, and other config-backed resource pages
 
-import * as React from 'react'
 import { Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from './button'

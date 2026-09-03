@@ -40,8 +40,6 @@ import {
   shouldAllowToolInMode,
   isApiEndpointAllowed,
   isReadOnlyBashCommandWithConfig,
-  extractBashWriteTarget,
-  looksLikePotentialWrite,
   getPermissionModeDiagnostics,
   PERMISSION_MODE_CONFIG,
   type PermissionMode,
@@ -660,7 +658,6 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     hasSourceActivation,
     permissionManager,
     prerequisiteManager,
-    backendMetadata,
     onDebug,
   } = ctx;
 

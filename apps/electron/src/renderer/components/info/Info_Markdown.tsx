@@ -6,7 +6,6 @@
  * Supports optional fullscreen view using the shared DocumentFormattedMarkdownOverlay component.
  */
 
-import * as React from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Maximize2 } from 'lucide-react'

@@ -15,7 +15,6 @@
  * Data is loaded via the useLabels hook which subscribes to live config changes.
  */
 
-import * as React from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'

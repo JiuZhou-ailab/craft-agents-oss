@@ -4,7 +4,6 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   rmSync,

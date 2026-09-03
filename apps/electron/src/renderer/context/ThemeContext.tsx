@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react'
 import * as storage from '@/lib/local-storage'
 import {
   resolveTheme,
   themeToCSS,
-  DEFAULT_THEME,
   DEFAULT_SHIKI_THEME,
   getShikiTheme,
   type ThemeOverrides,

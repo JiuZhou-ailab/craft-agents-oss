@@ -15,7 +15,7 @@ import { describe, test, expect, beforeEach, spyOn } from 'bun:test';
 import { SourceServerBuilder } from '../server-builder.ts';
 import { SourceCredentialManager, isMultiHeaderCredential } from '../credential-manager.ts';
 import { buildHeaders } from '../api-tools.ts';
-import type { LoadedSource, FolderSourceConfig, ApiConfig } from '../types.ts';
+import type { LoadedSource, FolderSourceConfig } from '../types.ts';
 
 // Create a minimal mock LoadedSource for testing
 function createMockSource(overrides: Partial<FolderSourceConfig> = {}): LoadedSource {

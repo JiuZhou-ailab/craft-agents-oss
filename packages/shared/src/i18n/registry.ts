@@ -15,7 +15,7 @@
  */
 
 import type { Locale } from "date-fns";
-import { LANGUAGES, type LanguageCode } from "./languages";
+import { LANGUAGES } from "./languages";
 
 // ─── Translation resources ───────────────────────────────────────────────────
 import enMessages from "./locales/en.json";

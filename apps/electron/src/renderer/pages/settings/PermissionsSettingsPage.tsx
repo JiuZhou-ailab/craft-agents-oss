@@ -13,7 +13,6 @@
  * Custom patterns can be edited via workspace permissions.json file.
  */
 
-import * as React from 'react'
 import { useState, useEffect, useMemo } from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'

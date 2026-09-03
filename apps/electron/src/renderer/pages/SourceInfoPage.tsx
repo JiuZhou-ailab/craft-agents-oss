@@ -2,7 +2,6 @@
 // output: Source details, permissions, tools, documentation, and explicit edit actions
 // pos: Detail page for inspecting and maintaining reusable data/tool sources
 
-import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { AlertCircle } from 'lucide-react'

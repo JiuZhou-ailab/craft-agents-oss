@@ -22,7 +22,6 @@ import { invalidateSkillsCache } from '@craft-agent/shared/skills'
 import { invalidateContextFileCache } from '@craft-agent/shared/prompts/system'
 import { canSwitchSessionModelConnection } from '@craft-agent/server-core/domain'
 import { isValidWorkingDirectory } from '../utils/path-validation'
-import type { Message } from '@craft-agent/core/types'
 import { resolveSupportsBranching, type ManagedSession } from './managed-session'
 import { getLastFinalOutputMessageId, getSessionLog } from './session-runtime'
 

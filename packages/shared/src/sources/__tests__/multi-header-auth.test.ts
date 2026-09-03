@@ -10,7 +10,6 @@ import { describe, test, expect } from 'bun:test';
 
 // Import actual implementations
 import {
-  type ApiCredential,
   type BasicAuthCredential,
   type MultiHeaderCredential,
   isMultiHeaderCredential,

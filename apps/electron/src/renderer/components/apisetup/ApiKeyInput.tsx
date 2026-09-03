@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/styled-dropdown"
 import { cn } from "@/lib/utils"
 import { Check, ChevronDown, Eye, EyeOff, Loader2 } from "lucide-react"
-import { filterPiModels, pickTierDefaults, resolveTierModels, type PiModelInfo } from "./tier-models"
+import { filterPiModels, resolveTierModels, type PiModelInfo } from "./tier-models"
 import {
   resolvePiAuthProviderForSubmit,
   resolvePresetStateForBaseUrlChange,

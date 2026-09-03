@@ -8,7 +8,6 @@
  * - Scrollable with custom scrollbar styling
  */
 
-import * as React from 'react'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { codeToHtml, bundledLanguages, type BundledLanguage } from 'shiki'
 import { cn } from '../../lib/utils'

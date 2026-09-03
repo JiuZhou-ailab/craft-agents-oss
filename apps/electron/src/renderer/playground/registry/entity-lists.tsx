@@ -7,8 +7,8 @@
 
 import * as React from 'react'
 import { useState } from 'react'
-import { Circle, Flag, Globe, HardDrive, Zap, DatabaseZap, Plug, Search } from 'lucide-react'
-import { Spinner, Tooltip, TooltipTrigger, TooltipContent } from '@craft-agent/ui'
+import { Circle, Flag, Globe, HardDrive, Zap, DatabaseZap, Search } from 'lucide-react'
+import { Spinner } from '@craft-agent/ui'
 import { cn } from '@/lib/utils'
 import { EntityRow } from '@/components/ui/entity-row'
 import { EntityList } from '@/components/ui/entity-list'
@@ -647,7 +647,7 @@ function InteractiveEntityListPreview({
   const [query, setQuery] = useState('')
   const [activatedItem, setActivatedItem] = useState<string | null>(null)
 
-  const { items, listProps, getRowProps, searchInputProps, keyboard, selection } = useEntityListInteractions({
+  const { items, listProps, getRowProps, searchInputProps, selection } = useEntityListInteractions({
     items: interactiveItems,
     getId: (item) => item.id,
     keyboard: enableKeyboard ? {

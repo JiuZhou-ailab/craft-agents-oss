@@ -215,7 +215,7 @@ it('rejects rewind during credential revocation and resolves fresh access afterw
     const rewindUserMessage = jest.fn().mockResolvedValue(undefined)
     const replacementAgent = { isProcessing: () => false, rewindUserMessage }
     const getOrCreateAgentLocked = jest.fn(async (session: unknown) => {
-      const modelAccess = await (manager as any).ensureManagedCredentialForSessionLocked(session)
+      const modelAccess = await (manager as any).agentRuntime.ensureManagedCredentialForSessionLocked(session)
       expect(modelAccess).toEqual({ token: 'fresh-managed-token' })
       return replacementAgent
     })

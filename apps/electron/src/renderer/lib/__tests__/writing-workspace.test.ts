@@ -3,7 +3,6 @@
 // pos: Protects the renderer projection of writing workspaces
 
 import { describe, expect, it } from 'bun:test'
-import { readFileSync } from 'node:fs'
 import type { FileChange } from '@craft-agent/ui'
 import type { Message } from '@craft-agent/core'
 import {
@@ -70,7 +69,6 @@ const fallbackChange: FileChange = {
   modified: 'new',
 }
 
-const writingWorkspaceSource = readFileSync(new URL('../writing-workspace.ts', import.meta.url), 'utf8')
 
 describe('writing workspace helpers', () => {
   it('keeps the file-change activity key stable for assistant text deltas', () => {

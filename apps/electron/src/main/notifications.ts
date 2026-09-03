@@ -8,7 +8,6 @@
  */
 
 import { Notification, app, BrowserWindow, nativeImage } from 'electron'
-import { join } from 'path'
 import { mainLog } from './logger'
 import { RPC_CHANNELS } from '../shared/types'
 import type { WindowManager } from './window-manager'
