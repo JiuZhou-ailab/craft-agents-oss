@@ -129,6 +129,94 @@ Fidelity checks:
 
 final result: passed
 
+## Model thinking label and slash active marker QA — 2026-09-04
+
+### Evidence
+
+- Before implementation:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/model-label-slash-indicator-2026-09-04/before.jpeg`
+- Final Electron implementation:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/model-label-slash-indicator-2026-09-04/after.jpeg`
+- Focused before/after comparison:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/model-label-slash-indicator-2026-09-04/before-after-focus.png`
+
+The captures are native 1x Electron screenshots at 768 px height. The before
+window is 1097 px wide and the final window is 1047 px wide; the focused crops
+use the same 650 × 480 px region without density normalization. State: light
+theme, new free conversation, slash menu open, direct mode active.
+
+### Findings
+
+- The compact model control now reads `Gemini 3.5 Flash · 无思考`; the repeated
+  category label in `思考: 无思考` is gone from both the visible control and its
+  tooltip.
+- The active direct-mode marker is now a 12 px blue circle with an 8 px white
+  check. It remains recognizable without competing with the 14 px row icon or
+  the command label.
+- The slash menu geometry, row density, keyboard selection, and composer layout
+  are unchanged.
+
+### Required fidelity surfaces
+
+- Fonts and typography: existing sizes and weights remain unchanged; only the
+  redundant label was removed.
+- Spacing and layout rhythm: the smaller marker preserves row alignment and
+  increases trailing whitespace.
+- Colors and visual tokens: the active state uses the existing `blue-500`
+  product indicator color.
+- Image quality and asset fidelity: Lucide check rendering remains sharp at the
+  native capture density; no bitmap assets changed.
+- Copy and content: model and thinking values remain visible and accessible.
+
+No actionable P0, P1, or P2 visual or interaction difference remains within
+the requested scope.
+
+final result: passed
+
+## Opening tips and slash selection QA — 2026-09-04
+
+### Evidence
+
+- Source screenshot:
+  `/var/folders/jk/7_pcx4cd3y94_lwnf7hbxcv80000gn/T/codex-clipboard-525d3ba1-f61b-416b-afa6-d9624de23ce2.png`
+- Full implementation before the timed change:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/opening-tips-2026-09-04/tips-before.jpeg`
+- Full implementation after the timed change:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/opening-tips-2026-09-04/tips-after.jpeg`
+- Slash-menu implementation:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/opening-tips-2026-09-04/slash-menu.jpeg`
+- Focused source/implementation alignment comparison:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/opening-tips-2026-09-04/alignment-comparison.png`
+- Focused before/after rotation comparison:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/opening-tips-2026-09-04/tip-rotation-comparison.png`
+
+The source is a 2270 × 2402 px user capture. The implementation is a 1097 ×
+768 px live Electron capture in light theme, free-conversation empty state.
+The source and implementation have different viewport sizes and capture
+density, so the focused comparison normalizes the central content region
+rather than asserting pixel-for-pixel scale parity.
+
+### Comparison history and findings
+
+- Before: a centered 520 px list container left-aligned short lines, moving the
+  visible text mass left of the centered heading.
+- After: the list keeps its 520 px ceiling but shrink-wraps its content; the
+  heading, context, hint, and longest tip line now share the same visual center.
+- A live accessibility-tree comparison captured one three-tip group, waited
+  10.5 seconds, and captured a different three-tip group without user input.
+- The active slash-mode marker is now 12 px instead of 16 px, with an 8 px
+  check glyph. The existing filled-circle language and accessible item state
+  remain unchanged.
+- Hovering or focusing the tip list pauses rotation, and reduced-motion users
+  keep a stable set. No new dependency, asset, or animation framework was added.
+
+Focused tests: 26 passed, 0 failed. Electron TypeScript, targeted ESLint (no
+errors), renderer production build, and `git diff --check` passed. The four
+reported ESLint hook warnings predate this change and occur outside the edited
+opening-state effect.
+
+final result: passed
+
 ## Settings sidebar density alignment — 2026-09-03
 
 ### Sources
@@ -186,23 +274,22 @@ daily history is empty while persisted all-time usage and tool calls exist.
 - The macOS native window shadow is disabled at BrowserWindow construction and
   again before first paint; a 1 px low-contrast inside edge retains separation
   without recreating the dark outside band.
-- The 365-day activity map uses the existing open-source `@uiw/react-heat-map`.
-  Its strict threshold lookup previously mapped count 0 to the first blue level;
-  a second neutral threshold now keeps every zero day gray.
-- The five-column summary, compact rounded cells, bottom month labels, activity
-  insights, and top-tool counts follow the supplied Codex reference. Tool counts
+- Token activity remains a one-year grid heatmap. The day/week/month segmented
+  control deterministically changes the aggregate represented by each grid cell.
+- The five-column summary, activity heatmap, activity insights, and top-tool counts
+  follow the supplied Codex reference. Tool counts
   are derived from persisted tool messages in the active workspace. The final
   UI total of 893 matches the 893 durable tool records on disk; reads are
   serialized and deduplicated so transcript release cannot race the aggregate.
-- Pointer hover dims the active cell and shows its localized date and exact
-  Token total immediately above the cell; the captured empty day reads 0 Token.
+- Pointer hover highlights a cell and its tooltip shows the period start
+  and exact Token total.
 - A width correction removed the transient horizontal scrollbar and invalid
   non-image icon data is no longer rendered as a broken asset.
 - Historical totals collected before daily tracking remain explicitly
   separated instead of being assigned to fabricated dates.
-- Weekly, monthly, and cumulative views were not represented as inert controls;
-  they remain deferred until they have real aggregation semantics and enough
-  tracked daily history.
+- Daily, weekly, and monthly views are all interactive. Weekly cells share the
+  Sunday-start heatmap-column aggregate and monthly cells share the calendar-month aggregate;
+  no synthetic activity is assigned to untracked history.
 
 ### Required fidelity surfaces
 
@@ -217,12 +304,116 @@ daily history is empty while persisted all-time usage and tool calls exist.
 - Copy: visible labels and hover content are localized.
 
 No actionable P0, P1, or P2 visual or interaction difference remains within
-the implemented daily-activity scope.
+the implemented Token-activity scope.
 
 Focused tests, Electron TypeScript, Electron lint, renderer production build,
 and `git diff --check` passed. Existing repository lint warnings are unchanged.
 
 final result: passed
+
+## Settings usage, slash palette, and opening tips QA — 2026-09-04
+
+### Sources and implementation evidence
+
+- Annotated settings source:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/settings-reference.png`
+- Codex slash-palette reference:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/slash-reference.png`
+- Final slash implementation:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/slash-implementation.jpeg`
+- Weekly hover implementation:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/usage-week-hover.jpeg`
+- Monthly hover implementation:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/usage-month-hover.jpeg`
+- Focused settings comparison:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/settings-comparison.png`
+- Focused slash comparison:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/slash-comparison.png`
+- Focused weekly/monthly hover comparison:
+  `/Users/dingzhijian/.codex/visualizations/2026/09/03/01a0684e-3907-7bf1-b494-b7737148226a/storyflow-ui-qa/period-hover-comparison.png`
+
+The live Electron checks used a 1097 × 768 light-theme viewport in the free
+conversation workspace. Full-window captures were inspected first, then the
+settings header, slash palette, and heatmap states were cropped and normalized
+for focused comparison.
+
+### Iteration history
+
+- P2: the account identity and usage content were stacked under one App page,
+  creating redundant separators and hierarchy. They now live on dedicated
+  Profile and Usage pages; each standalone card keeps its complete boundary.
+- P2: weekly and monthly values were aggregated but hover still behaved like a
+  single-day cell. Hover now keys every cell by its selected period, dims the
+  rest, and outlines the full Sunday-start week column or calendar-month group.
+- P1: the slash interaction used a narrow caret-following menu with section
+  headings, separators, and a footer. The final panel anchors to the composer,
+  matches its width, uses one scrollable flat list, keeps label and description
+  on one line, and preserves pointer plus arrow/Enter/Tab/Escape behavior.
+- P2: general-chat onboarding selected one tip. The final state samples three
+  unique items on mount from eight relevant localized guidance strings, rotates
+  them every ten seconds, and resets the sample for each conversation.
+- The first live weekly check made empty grouped cells too subtle. A second pass
+  increased surrounding dimming and added a restrained outline to every cell in
+  the hovered period; the weekly and monthly focused capture confirms the group.
+
+### Required fidelity surfaces
+
+- Typography and icons reuse Storyflow's existing type scale, semantic colors,
+  Lucide icons, and installed UI primitives.
+- The slash panel is visually distinct from the composer through its own border,
+  background, radius, and shadow, while retaining the reference's shared width.
+- Selected slash rows have a clear neutral highlight; descriptions remain muted
+  without section chrome competing for attention.
+- Heatmap layout remains the requested one-year grid and does not collapse into
+  a line or bar chart.
+- Account and usage are separate settings destinations, so the annotated stacked
+  separators no longer exist.
+- Three opening tips were visible in the live accessibility tree; after ten
+  seconds the group changed without turning the tips into action buttons.
+
+No actionable P0, P1, or P2 visual or interaction differences remain within
+the four requested corrections.
+
+final result: passed
+
+## Sources Hub refactor standard — 2026-09-04
+
+This is the implementation contract for aligning Sources with the Skills Hub
+information architecture. It is not implementation evidence.
+
+### Information architecture
+
+- The Sources navigation entry opens one full-width `SourcesHubPage` with
+  `Discover` and `Added` tabs, matching the Skills Hub page shell and density.
+- `Discover` reuses the existing MCP Registry search, review, endpoint display,
+  admission decision, and add flow. API and local-directory sources remain
+  explicit create actions because they are not remotely discoverable packages.
+- `Added` renders every API, MCP, and local source from `sourcesAtom`. Selecting
+  an item opens the existing `SourceInfoPage`; back navigation restores the tab,
+  query, filter, and scroll position.
+
+### Domain and state boundaries
+
+- Shared page structure does not imply a shared package protocol. Sources must
+  not inherit Skill bundle, checksum receipt, version-upgrade, or install-scope
+  behavior.
+- MCP Registry entries are read-only discovery metadata that create a local
+  Source. Enabled state, connection state, permission state, and credential
+  references remain local and workspace-scoped.
+- `sourcesAtom` and `sources:changed` remain the single live state path. Add,
+  edit, and delete must not maintain a second copied catalog or require refresh.
+
+### Safety and acceptance
+
+- Discovery never probes an endpoint, requests credentials, or starts runtime
+  traffic before the user confirms adding the Source. Endpoint and transport
+  remain visible before confirmation.
+- `Discover` and `Added` have explicit loading, empty, error, retry, keyboard,
+  focus, and light/dark states using the existing Storyflow design tokens.
+- Adding or deleting updates counts and lists immediately. Workspace changes do
+  not leak Sources, credentials, permissions, or connection state across scope.
+- API, MCP, and local Sources are searchable and filterable in `Added`; detail,
+  delete, deep-link, and back-navigation behavior remain intact.
 
 ## Activity rail help menu QA — 2026-08-06
 
