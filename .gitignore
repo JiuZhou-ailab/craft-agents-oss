@@ -39,9 +39,6 @@ apps/*/.dev.vars.*
 .antigravitycli/
 tmp/
 
-# OSS sync temp directory
-.oss-sync-temp/
-
 # IntelliJ based IDEs
 .idea
 
