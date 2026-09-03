@@ -1,6 +1,6 @@
 // input: Centralized action registry and component-specific keyboard behaviors
-// output: Reusable shortcut reference content plus the legacy standalone route
-// pos: Renderer settings content shared by Input and the preserved shortcuts deep link
+// output: Keyboard shortcut reference settings
+// pos: Renderer settings page for discoverable keyboard commands
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'

@@ -2169,10 +2169,10 @@ function AppContent() {
     setAppState('ready')
   }, [activateRuntimeWorkspace, runtimeNavigationWorkspaceId, windowWorkspaceId])
 
-  const handleOpenGlobalSettings = useCallback(() => {
-    const route = routes.view.settings('app')
+  const handleOpenGlobalSettings = useCallback((subpage: SettingsSubpage = 'app') => {
+    const route = routes.view.settings(subpage)
     if (appState === 'project-hub' || !runtimeNavigationWorkspaceId) {
-      setGlobalSettingsSubpage('app')
+      setGlobalSettingsSubpage(subpage)
       return
     }
     handleOpenRuntimeRoute(route)
@@ -2279,6 +2279,9 @@ function AppContent() {
       : undefined,
     onOpenSkills: canOpenRuntimeNavigation
       ? () => handleOpenRuntimeRoute(routes.view.skills())
+      : undefined,
+    onOpenAutomations: canOpenRuntimeNavigation
+      ? () => handleOpenRuntimeRoute(routes.view.automationsScheduled())
       : undefined,
     onOpenSearch: canOpenRuntimeNavigation ? handleOpenRuntimeSearch : undefined,
     onOpenSettings: handleOpenGlobalSettings,

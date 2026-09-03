@@ -15,6 +15,8 @@ import type { ComponentType } from 'react'
 import type { SettingsSubpage } from '../../../shared/settings-registry'
 
 import AppSettingsPage from './AppSettingsPage'
+import ProfileSettingsPage from './ProfileSettingsPage'
+import UsageSettingsPage from './UsageSettingsPage'
 import AiSettingsPage from './AiSettingsPage'
 import AppearanceSettingsPage from './AppearanceSettingsPage'
 import InputSettingsPage from './InputSettingsPage'
@@ -32,6 +34,8 @@ import ShortcutsPage from './ShortcutsPage'
  */
 export const SETTINGS_PAGE_COMPONENTS: Record<SettingsSubpage, ComponentType> = {
   app: AppSettingsPage,
+  profile: ProfileSettingsPage,
+  usage: UsageSettingsPage,
   ai: AiSettingsPage,
   appearance: AppearanceSettingsPage,
   input: InputSettingsPage,

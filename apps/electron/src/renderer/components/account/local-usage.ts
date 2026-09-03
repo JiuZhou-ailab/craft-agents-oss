@@ -1,5 +1,5 @@
 // input: Persisted per-session and daily token totals for one runtime workspace
-// output: Deterministic project aggregation and activity-calendar levels
+// output: Deterministic project aggregation, activity levels, and day/week/month buckets
 // pos: Pure data model for the App settings usage visualization
 
 import type { Message, Session } from '../../../shared/types'
@@ -26,6 +26,13 @@ export interface UsageCalendarDay {
   date: string
   count: number
   level: number
+}
+
+export type UsagePeriod = 'day' | 'week' | 'month'
+
+export interface UsagePeriodBucket {
+  startDate: string
+  totalTokens: number
 }
 
 export interface LocalUsageTool {
@@ -121,14 +128,19 @@ export function summarizeUsageActivity(
 export function buildUsageCalendar(
   dailyUsage: LocalUsageDay[],
   endDate = new Date(),
+  period: UsagePeriod = 'day',
 ): UsageCalendarDay[] {
-  const usageByDate = new Map(dailyUsage.map(usage => [usage.date, usage.totalTokens]))
+  const usageByPeriod = new Map(
+    buildUsagePeriodBuckets(dailyUsage, period, endDate)
+      .map(bucket => [bucket.startDate, bucket.totalTokens]),
+  )
   const days = Array.from({ length: 365 }, (_, index) => {
     const date = new Date(endDate)
     date.setHours(12, 0, 0, 0)
     date.setDate(date.getDate() - (364 - index))
     const dateKey = localDateKey(date)
-    return { date: dateKey, count: usageByDate.get(dateKey) ?? 0, level: 0 }
+    const periodKey = getUsagePeriodKey(date, period)
+    return { date: dateKey, count: usageByPeriod.get(periodKey) ?? 0, level: 0 }
   })
   const max = Math.max(...days.map(day => day.count))
   if (max === 0) return days
@@ -141,19 +153,51 @@ export function buildUsageCalendar(
   }))
 }
 
+export function buildUsagePeriodBuckets(
+  dailyUsage: LocalUsageDay[],
+  period: UsagePeriod,
+  endDate = new Date(),
+): UsagePeriodBucket[] {
+  const bucketCount = period === 'day' ? 365 : period === 'week' ? 53 : 12
+  const latestStart = startOfUsagePeriod(endDate, period)
+  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+    const start = new Date(latestStart)
+    const offset = index - bucketCount + 1
+    if (period === 'month') start.setMonth(start.getMonth() + offset)
+    else start.setDate(start.getDate() + offset * (period === 'week' ? 7 : 1))
+    return { startDate: localDateKey(start), totalTokens: 0 }
+  })
+  const byStartDate = new Map(buckets.map(bucket => [bucket.startDate, bucket]))
+
+  for (const usage of dailyUsage) {
+    const date = parseUsageDate(usage.date)
+    if (!date) continue
+    const bucket = byStartDate.get(getUsagePeriodKey(date, period))
+    if (bucket) bucket.totalTokens += usage.totalTokens
+  }
+
+  return buckets
+}
+
+function startOfUsagePeriod(date: Date, period: UsagePeriod): Date {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12)
+  if (period === 'week') start.setDate(start.getDate() - start.getDay())
+  if (period === 'month') start.setDate(1)
+  return start
+}
+
+export function getUsagePeriodKey(date: Date, period: UsagePeriod): string {
+  return localDateKey(startOfUsagePeriod(date, period))
+}
+
 function localDateKey(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-/**
- * Parse the date string @uiw/react-heat-map hands back from rectRender.
- * The library re-serializes every cell as unpadded `YYYY/M/D`, not the ISO
- * `YYYY-MM-DD` we feed it, so it must be parsed by components rather than
- * through the Date constructor. Returns null for anything unparseable.
- */
-export function parseHeatMapDate(value: string): Date | null {
+/** Parse local usage date keys without relying on implementation-defined Date parsing. */
+export function parseUsageDate(value: string): Date | null {
   const match = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(value)
   if (!match) return null
   const [, year, month, day] = match.map(Number)
@@ -165,7 +209,7 @@ export function parseHeatMapDate(value: string): Date | null {
 
 export function isLocalDateKey(value: string): boolean {
   // Local usage keys are always canonical padded ISO. Reuse the same strict
-  // parser as parseHeatMapDate so a non-existent date (e.g. Feb 31) stays out.
-  const date = parseHeatMapDate(value)
+  // parser as parseUsageDate so a non-existent date (e.g. Feb 31) stays out.
+  const date = parseUsageDate(value)
   return date !== null && localDateKey(date) === value
 }

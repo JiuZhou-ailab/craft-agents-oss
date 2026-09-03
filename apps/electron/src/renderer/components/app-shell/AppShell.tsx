@@ -34,8 +34,13 @@ import {
   Pencil,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
-import { ActivityRail } from "./ActivityRail"
-import { ACTIVITY_RAIL_WIDTH, type ActivityRailItemId } from "./ActivityRail"
+import {
+  ActivityRail,
+  ACTIVITY_RAIL_MAX_WIDTH,
+  ACTIVITY_RAIL_MIN_WIDTH,
+  ACTIVITY_RAIL_WIDTH,
+  type ActivityRailItemId,
+} from "./ActivityRail"
 import { PanelLeftRounded } from "@/components/icons/PanelLeftRounded"
 import { FirstRunTour } from "./FirstRunTour"
 import { GlobalSearchDialog } from "./GlobalSearchDialog"
@@ -102,7 +107,7 @@ import { useAction } from "@/actions"
 import { useFocusZone } from "@/hooks/keyboard"
 import { useFocusActions } from "@/context/FocusContext"
 import { hasSessionHistoryContent } from "@/utils/session"
-import type { Workspace, LoadedSource, LoadedSkill, SourceFilter, AutomationFilter, WorkspaceVersionEntry, WorkspaceVersionFileChange, WhatsNewManifest } from "../../../shared/types"
+import type { LoadedSource, LoadedSkill, SourceFilter, AutomationFilter, WorkspaceVersionEntry, WorkspaceVersionFileChange, WhatsNewManifest } from "../../../shared/types"
 import {
   ensureSessionMessagesLoadedAtom,
   reconcileSessionTranscriptWorkingSetAtom,
@@ -912,6 +917,10 @@ function AppShellContent({
   const [isActivityRailVisible, setIsActivityRailVisible] = React.useState(() => {
     return storage.get(storage.KEYS.activityRailVisible, true)
   })
+  const [activityRailWidth, setActivityRailWidth] = React.useState(() => {
+    const storedWidth = storage.get(storage.KEYS.activityRailWidth, ACTIVITY_RAIL_WIDTH)
+    return Math.min(ACTIVITY_RAIL_MAX_WIDTH, Math.max(ACTIVITY_RAIL_MIN_WIDTH, storedWidth))
+  })
   const shouldReduceMotion = useReducedMotion()
   // Session list width in pixels (min 240, max 480)
   const [sessionListWidth, setSessionListWidth] = React.useState(() => {
@@ -949,7 +958,7 @@ function AppShellContent({
   const effectiveSidebarAndNavigatorHidden = isAutoCompact
   // Foundation layer: activity rail is always available (not tied to sidebar/navigator chrome).
   const showActivityRail = true
-  const activityRailOffset = isActivityRailVisible ? ACTIVITY_RAIL_WIDTH : 0
+  const activityRailOffset = isActivityRailVisible ? activityRailWidth : 0
 
 
   // What's New overlay
@@ -4359,7 +4368,8 @@ function AppShellContent({
   const showPrimarySidebar = hasPrimarySidebar && showWritingWorkspaceShell
   const activeActivityRailItem = React.useMemo<ActivityRailItemId>(() => {
     if (globalSearchOpen) return 'search'
-    if (settingsSubpage || isAutomationsNavigation(navState)) return 'settings'
+    if (settingsSubpage) return 'settings'
+    if (isAutomationsNavigation(navState)) return 'automations'
     if (isSourcesNavigation(navState)) return 'sources'
     if (isSkillsNavigation(navState)) return 'skills'
     if (isSessionsNavigation(navState)) return 'recent'
@@ -4369,7 +4379,7 @@ function AppShellContent({
     <div
       data-testid="activity-rail-titlebar-actions"
       className="pointer-events-none fixed left-0 top-0 z-overlay flex shrink-0 translate-y-0.5 items-center justify-end gap-0.5 px-2"
-      style={{ width: ACTIVITY_RAIL_WIDTH, height: WINDOW_TITLE_BAR_HEIGHT }}
+      style={{ width: activityRailWidth, height: WINDOW_TITLE_BAR_HEIGHT }}
     >
       <button
         type="button"
@@ -4643,13 +4653,15 @@ function AppShellContent({
               key="activity-rail"
               data-testid="activity-rail-motion"
               initial={{ width: 0 }}
-              animate={{ width: ACTIVITY_RAIL_WIDTH }}
+              animate={{ width: activityRailWidth }}
               exit={{ width: 0 }}
               transition={shouldReduceMotion ? { duration: 0 } : PANEL_SPRING}
               className="h-full min-w-0 shrink-0 overflow-hidden border-r border-border"
             >
               <ActivityRail
                 activeItem={activeActivityRailItem}
+                width={activityRailWidth}
+                onWidthChange={setActivityRailWidth}
                 workspaces={workspaces}
                 runtimeWorkspaceId={activeWorkspaceId}
                 activeWorkspaceId={projectWorkspaceId}
@@ -4669,7 +4681,8 @@ function AppShellContent({
                 onOpenFreeConversations={onOpenFreeConversations}
                 onOpenSources={handleSourcesClick}
                 onOpenSkills={handleSkillsClick}
-                onOpenSettings={() => handleSettingsClick('app')}
+                onOpenAutomations={() => navigate(routes.view.automationsScheduled())}
+                onOpenSettings={handleSettingsClick}
                 onSignOut={contextValue.clientAuthState?.user ? contextValue.onClientSignOut : undefined}
                 profile={profile}
                 onOpenWhatsNew={handleWhatsNewClick}

@@ -16,8 +16,6 @@ import type { ClientAuthUser } from '../../../shared/types'
 export function AccountSettingsSection() {
   const {
     clientAuthState,
-    workspaces,
-    runtimeWorkspace,
     onClientSignedIn,
   } = useAccountSettings()
   const { t } = useTranslation()
@@ -64,19 +62,6 @@ export function AccountSettingsSection() {
                   {user.email}
                 </p>
               ) : null}
-              <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[12px] leading-5 text-muted-foreground">
-                <span>{getProviderLabel(user.provider, t)}</span>
-                <span aria-hidden="true">·</span>
-                <span>{user.email
-                  ? t(user.emailVerified ? 'settings.app.account.emailVerified' : 'settings.app.account.emailUnverified')
-                  : t('settings.app.account.emailUnbound')}</span>
-                <span aria-hidden="true">·</span>
-                <span className="min-w-0 truncate">
-                  {runtimeWorkspace?.name ?? (workspaces.length > 0
-                    ? t('settings.app.account.projectCount', { projects: workspaces.length })
-                    : t('settings.app.account.noProjects'))}
-                </span>
-              </div>
             </div>
           </SettingsCardContent>
         </SettingsCard>
@@ -87,18 +72,4 @@ export function AccountSettingsSection() {
 
 function getDisplayName(user: ClientAuthUser): string {
   return user.name?.trim() || user.email?.trim() || user.userId || '本地用户'
-}
-
-function getProviderLabel(
-  provider: ClientAuthUser['provider'],
-  t: (key: string) => string,
-): string {
-  switch (provider) {
-    case 'feishu':
-      return t('settings.app.account.feishuLogin')
-    case 'neon':
-      return t('settings.app.account.emailLogin')
-    default:
-      return t('settings.app.account.localAccess')
-  }
 }

@@ -1,5 +1,5 @@
 // input: Electron input preferences and the centralized shortcut registry
-// output: Combined input behavior and keyboard shortcut settings
+// output: Input behavior settings
 // pos: Renderer settings page for keyboard-facing interaction preferences
 
 import { useState, useEffect, useCallback } from 'react'
@@ -9,7 +9,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
 import { routes } from '@/lib/navigate'
 import { isMac } from '@/lib/platform'
-import { ShortcutsSettingsContent } from './ShortcutsPage'
 
 import {
   SettingsSection,
@@ -111,7 +110,6 @@ export default function InputSettingsPage() {
                 </SettingsCard>
               </SettingsSection>
 
-              <ShortcutsSettingsContent showTitle />
             </div>
           </div>
         </ScrollArea>

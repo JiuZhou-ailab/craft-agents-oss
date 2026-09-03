@@ -37,17 +37,18 @@ interface SettingsItemRowProps {
 
 const PRIMARY_SETTINGS_SUBPAGES: readonly SettingsSubpage[] = [
   'app',
+  'profile',
+  'usage',
   'ai',
   'appearance',
   'input',
+  'shortcuts',
   // Experimental app-level remote access; hidden unless its feature flag is enabled.
   'server',
 ]
 
 export const GLOBAL_SETTINGS_SUBPAGES: readonly SettingsSubpage[] = [
   ...PRIMARY_SETTINGS_SUBPAGES,
-  // Preserved for existing deep links; its content is surfaced under Input.
-  'shortcuts',
 ]
 
 const PROJECT_SETTINGS_SUBPAGES: readonly SettingsSubpage[] = [
@@ -137,7 +138,6 @@ export default function SettingsNavigator({
               item={item}
               isSelected={
                 selectedSubpage === item.id
-                || (item.id === 'input' && selectedSubpage === 'shortcuts')
                 || (item.id === 'ai' && selectedSubpage === 'preferences')
               }
               onSelect={() => onSelectSubpage(item.id)}

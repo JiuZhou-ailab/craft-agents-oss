@@ -7,9 +7,11 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
+  Clock3,
   DatabaseZap,
   Download,
   Gift,
+  Gauge,
   HelpCircle,
   LoaderCircle,
   LogOut,
@@ -17,6 +19,7 @@ import {
   Settings,
   ShieldAlert,
   SquarePen,
+  UserRound,
   Zap,
 } from 'lucide-react'
 import appPackage from '../../../../package.json'
@@ -52,7 +55,7 @@ import { getSessionTitle, hasSessionHistoryContent } from '@/utils/session'
 import { FREE_CONVERSATION_WORKSPACE_ID } from '@craft-agent/shared/protocol'
 import { deriveSessionRuntimeStatus, requiresHumanAttention } from '@craft-agent/shared/statuses/runtime'
 import { sessionIdsWithPendingPromptAtom } from '@/atoms/pending-requests'
-import type { Workspace } from '../../../shared/types'
+import type { SettingsSubpage, Workspace } from '../../../shared/types'
 import { WINDOW_TITLE_BAR_HEIGHT } from './layout-constants'
 import type { UpdateIndicatorState } from '@/lib/update-indicator'
 import { useFocusActions } from '@/context/FocusContext'
@@ -63,6 +66,7 @@ export type ActivityRailItemId =
   | 'writing'
   | 'sources'
   | 'skills'
+  | 'automations'
   | 'settings'
   | 'search'
 
@@ -92,7 +96,10 @@ export interface ActivityRailProps {
   onOpenFreeConversations?: (options?: { createNew?: boolean }) => void | Promise<void>
   onOpenSources?: () => void
   onOpenSkills?: () => void
-  onOpenSettings?: () => void
+  onOpenAutomations?: () => void
+  onOpenSettings?: (subpage?: SettingsSubpage) => void
+  width?: number
+  onWidthChange?: (width: number) => void
   onSignOut?: () => void | Promise<void>
   profile?: {
     name: string
@@ -112,6 +119,8 @@ export interface ActivityRailProps {
 export type { ActivityRailSessionActions } from './ActivityRailRows'
 
 export const ACTIVITY_RAIL_WIDTH = 240
+export const ACTIVITY_RAIL_MIN_WIDTH = 200
+export const ACTIVITY_RAIL_MAX_WIDTH = 360
 const RECENT_SESSION_LIMIT = 5
 const PROJECT_WORKSPACE_LIMIT = 8
 const activityFreeSessionMetasAtom = atom<SessionMeta[] | null>(null)
@@ -160,7 +169,10 @@ export function ActivityRail({
   onOpenFreeConversations,
   onOpenSources,
   onOpenSkills,
+  onOpenAutomations,
   onOpenSettings,
+  width,
+  onWidthChange,
   onSignOut,
   profile,
   onOpenWhatsNew,
@@ -197,6 +209,14 @@ export function ActivityRail({
     { kind: 'project' | 'session'; id: string; name: string } | null
   >(null)
   const [renameValue, setRenameValue] = React.useState('')
+  const [uncontrolledWidth, setUncontrolledWidth] = React.useState(() => (
+    storage.get(storage.KEYS.activityRailWidth, ACTIVITY_RAIL_WIDTH)
+  ))
+  const resolvedWidth = Math.min(
+    ACTIVITY_RAIL_MAX_WIDTH,
+    Math.max(ACTIVITY_RAIL_MIN_WIDTH, width ?? uncontrolledWidth),
+  )
+  const latestWidthRef = React.useRef(resolvedWidth)
   const refreshGenerationRef = React.useRef(0)
   const activeRefreshGenerationRef = React.useRef(0)
   const canCreateProjects = typeof onAddLocalProject === 'function'
@@ -214,6 +234,44 @@ export function ActivityRail({
     // rerenders. The rail is the navigator zone when one of its controls is used.
     focusZone('navigator', { intent: 'click', moveFocus: false })
   }, [focusZone])
+  const updateWidth = React.useCallback((nextWidth: number) => {
+    const clampedWidth = Math.min(ACTIVITY_RAIL_MAX_WIDTH, Math.max(ACTIVITY_RAIL_MIN_WIDTH, nextWidth))
+    latestWidthRef.current = clampedWidth
+    if (onWidthChange) onWidthChange(clampedWidth)
+    else setUncontrolledWidth(clampedWidth)
+    return clampedWidth
+  }, [onWidthChange])
+  const handleResizeStart = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const startX = event.clientX
+    const startWidth = resolvedWidth
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      updateWidth(startWidth + moveEvent.clientX - startX)
+    }
+    const handleMouseUp = () => {
+      storage.set(storage.KEYS.activityRailWidth, latestWidthRef.current)
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+      document.removeEventListener('mousemove', handleMouseMove, true)
+      document.removeEventListener('mouseup', handleMouseUp, true)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove, true)
+    document.addEventListener('mouseup', handleMouseUp, true)
+  }, [resolvedWidth, updateWidth])
+  const handleResizeKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    const direction = event.key === 'ArrowLeft' ? -1 : 1
+    const nextWidth = updateWidth(latestWidthRef.current + (direction * 10))
+    storage.set(storage.KEYS.activityRailWidth, nextWidth)
+  }, [updateWidth])
   let updateIndicatorLabel: string | null = null
   if (updateIndicator?.kind === 'downloading' && updateIndicator.version) {
     updateIndicatorLabel = t('settings.about.downloading', {
@@ -440,8 +498,8 @@ export function ActivityRail({
       onFocus={handleNavigatorFocus}
       data-testid="activity-rail"
       aria-label="工作区导航"
-      className="titlebar-no-drag flex h-full shrink-0 flex-col bg-foreground-1.5 font-medium"
-      style={{ width: ACTIVITY_RAIL_WIDTH }}
+      className="titlebar-no-drag relative flex h-full shrink-0 flex-col bg-foreground-1.5 font-medium"
+      style={{ width: resolvedWidth }}
     >
       {/* Window-pinned collapse/search controls sit above this draggable title-bar area. */}
       <div
@@ -489,6 +547,14 @@ export function ActivityRail({
             disabled={!onOpenSources}
             onClick={onOpenSources}
             dataTutorial="activity-sources"
+          />
+          <SidebarNavItem
+            label={t('sidebar.scheduled')}
+            icon={<Clock3 className="h-4 w-4" />}
+            active={activeItem === 'automations'}
+            disabled={!onOpenAutomations}
+            onClick={onOpenAutomations}
+            dataTutorial="activity-automations"
           />
         </nav>
 
@@ -738,20 +804,38 @@ export function ActivityRail({
               <StyledDropdownMenuContent side="top" align="start" sideOffset={6} className="w-[196px]">
                 <StyledDropdownMenuItem
                   disabled={!onOpenSettings}
-                  onClick={onOpenSettings}
+                  onClick={() => onOpenSettings?.('usage')}
+                  className="text-xs"
+                >
+                  <Gauge className="size-4" />
+                  {t('settings.app.localUsage.title')}
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  disabled={!onOpenSettings}
+                  onClick={() => onOpenSettings?.('app')}
+                  className="text-xs"
                   data-tutorial="activity-settings"
                 >
                   <Settings className="size-4" />
-                  设置
+                  {t('sidebar.settings')}
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  disabled={!onOpenSettings}
+                  onClick={() => onOpenSettings?.('profile')}
+                  className="text-xs"
+                >
+                  <UserRound className="size-4" />
+                  {t('settings.profile.title')}
                 </StyledDropdownMenuItem>
                 {onSignOut ? <StyledDropdownMenuSeparator /> : null}
                 {onSignOut ? (
                   <StyledDropdownMenuItem
                     onClick={() => { void onSignOut() }}
+                    className="text-xs"
                     data-tutorial="activity-sign-out"
                   >
                     <LogOut className="size-4" />
-                    退出登录
+                    {t('webui.logOut')}
                   </StyledDropdownMenuItem>
                 ) : null}
               </StyledDropdownMenuContent>
@@ -814,6 +898,20 @@ export function ActivityRail({
           </nav>
         </div>
         <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      </div>
+      <div
+        role="separator"
+        tabIndex={0}
+        aria-label="调整侧边栏宽度"
+        aria-orientation="vertical"
+        aria-valuemin={ACTIVITY_RAIL_MIN_WIDTH}
+        aria-valuemax={ACTIVITY_RAIL_MAX_WIDTH}
+        aria-valuenow={resolvedWidth}
+        onMouseDown={handleResizeStart}
+        onKeyDown={handleResizeKeyDown}
+        className="group absolute inset-y-0 right-0 z-dropdown w-2 cursor-col-resize outline-none"
+      >
+        <span className="absolute inset-y-0 right-0 w-px bg-transparent transition-colors group-hover:bg-foreground/15 group-focus-visible:bg-ring" />
       </div>
       {renameTarget ? (
         <RenameDialog

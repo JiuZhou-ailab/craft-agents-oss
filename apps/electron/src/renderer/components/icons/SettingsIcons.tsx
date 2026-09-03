@@ -211,12 +211,21 @@ export const PreferencesIcon = ({ className }: IconProps) => (
   </svg>
 )
 
+/** Gauge icon for local usage statistics. */
+export const UsageSettingsIcon = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M4 19a8 8 0 1 1 16 0M12 15l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+)
+
 /**
  * Map of settings subpage IDs to their icon components.
  * Used by SettingsNavigator for consistent icons.
  */
 export const SETTINGS_ICONS: Record<SettingsSubpage, React.ComponentType<IconProps>> = {
   app: AppSettingsIcon,
+  profile: PreferencesIcon,
+  usage: UsageSettingsIcon,
   ai: AiSettingsIcon,
   appearance: AppearanceIcon,
   input: InputIcon,

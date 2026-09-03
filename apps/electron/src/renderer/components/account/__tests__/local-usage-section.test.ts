@@ -4,9 +4,10 @@
 
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { buildUsageCalendar, summarizeLocalUsage, summarizeUsageActivity } from '../local-usage'
+import { buildUsageCalendar, buildUsagePeriodBuckets, summarizeLocalUsage, summarizeUsageActivity } from '../local-usage'
 
 const source = readFileSync(new URL('../LocalUsageSection.tsx', import.meta.url), 'utf8')
+const accountSource = readFileSync(new URL('../AccountSettingsSection.tsx', import.meta.url), 'utf8')
 
 describe('summarizeLocalUsage', () => {
   it('aggregates persisted usage for one runtime workspace', () => {
@@ -101,12 +102,16 @@ describe('summarizeLocalUsage', () => {
   it('queries only the current runtime workspace', () => {
     expect(source).toContain('const { runtimeWorkspace } = useAccountSettings()')
     expect(source).toContain('listSessionsByWorkspace(workspaceId)')
-    expect(source).toContain('monthPlacement="bottom"')
-    expect(source).toContain('onPointerEnter={() => {')
-    expect(source).toContain('parseHeatMapDate(activity.date)')
-    expect(source).not.toContain('new Date(`${hoveredDay.date}T12:00:00`)')
-    expect(source).toContain('dateFormatter.format(hoveredDay.date)')
-    expect(source).toContain("1: 'var(--foreground-5)'")
+    expect(source).toContain("import HeatMap from '@uiw/react-heat-map'")
+    expect(source).toContain("const [period, setPeriod] = useState<UsagePeriod>('day')")
+    expect(source).toContain('buildUsageCalendar(summary.dailyUsage, endDate, period)')
+    expect(source).toContain('<SettingsSegmentedControl')
+    expect(source).toContain('data-period-highlighted={isHighlightedPeriod || undefined}')
+    expect(source).toContain('strokeWidth: 1.5')
+    expect(source).toContain('hoveredPeriodKey')
+    expect(source).toContain('<SettingsCard divided={false}>')
+    expect(accountSource).toContain('className="border-b-0"')
+    expect(buildUsagePeriodBuckets([], 'month', new Date(2026, 0, 1))).toHaveLength(12)
     expect(source).toContain('getSessionMessages(session.id)')
     expect(source).toContain('usageSummaryLoads.get(workspaceId)')
     expect(source).not.toContain('Promise.all(sessions.map')

@@ -1,5 +1,5 @@
 // input: Current runtime workspace and its persisted per-session and daily token totals
-// output: Read-only token totals, composition, and activity calendar for the active project
+// output: Read-only token totals, composition, and switchable usage heat maps for the active project
 // pos: Current-project usage section inside global App settings
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
@@ -10,20 +10,22 @@ import HeatMap from '@uiw/react-heat-map'
 import {
   SettingsCard,
   SettingsCardContent,
-  SettingsSection,
+  SettingsSegmentedControl,
 } from '@/components/settings'
 import { useAccountSettings } from '@/context/AppShellContext'
 import type { Message, Session } from '../../../shared/types'
 import {
   buildUsageCalendar,
-  parseHeatMapDate,
+  buildUsagePeriodBuckets,
+  getUsagePeriodKey,
+  parseUsageDate,
   summarizeLocalUsage,
   summarizeUsageActivity,
   type LocalUsageSummary,
+  type UsagePeriod,
 } from './local-usage'
+import { cn } from '@/lib/utils'
 
-// @uiw selects the first threshold greater than the count, so 0 and 1 must
-// both be neutral for empty days to stay visibly gray.
 const ACTIVITY_COLORS = {
   0: 'var(--foreground-5)',
   1: 'var(--foreground-5)',
@@ -103,38 +105,33 @@ export function LocalUsageSection() {
   const currentResult = result?.workspaceId === runtimeWorkspace?.id ? result : null
 
   return (
-    <SettingsSection
-      title={t('settings.app.localUsage.title')}
-      description={t('settings.app.localUsage.description')}
-    >
-      <SettingsCard divided={false}>
-        <SettingsCardContent className="p-5">
-          {currentResult?.summary ? (
-            <UsageContent summary={currentResult.summary} />
-          ) : !runtimeWorkspace || currentResult?.error ? (
-            <p className="text-sm text-muted-foreground">{t('settings.app.localUsage.unavailable')}</p>
-          ) : (
-            <div className="flex min-h-32 items-center justify-center" aria-label={t('settings.app.localUsage.loading')}>
-              <Spinner />
-            </div>
-          )}
-        </SettingsCardContent>
-      </SettingsCard>
-    </SettingsSection>
+    <SettingsCard divided={false}>
+      <SettingsCardContent className="p-5">
+        {currentResult?.summary ? (
+          <UsageContent summary={currentResult.summary} />
+        ) : !runtimeWorkspace || currentResult?.error ? (
+          <p className="text-sm text-muted-foreground">{t('settings.app.localUsage.unavailable')}</p>
+        ) : (
+          <div className="flex min-h-32 items-center justify-center" aria-label={t('settings.app.localUsage.loading')}>
+            <Spinner />
+          </div>
+        )}
+      </SettingsCardContent>
+    </SettingsCard>
   )
 }
 
 function UsageContent({ summary }: { summary: LocalUsageSummary }) {
   const { t, i18n } = useTranslation()
-  // `date` is kept as a real Date: @uiw hands rectRender its own `YYYY/M/D`
-  // string, which is not ISO and would make `new Date(\`${date}T12:00:00\`)`
-  // an Invalid Date that throws RangeError inside Intl.DateTimeFormat.format.
-  const [hoveredDay, setHoveredDay] = useState<{
+  const [period, setPeriod] = useState<UsagePeriod>('day')
+  const [hoveredPeriod, setHoveredPeriod] = useState<{
+    periodKey: string
     date: Date
     tokens: number
     column: number
     row: number
   } | null>(null)
+  const hoveredPeriodKey = hoveredPeriod?.periodKey
   const compositionTotal = summary.inputTokens + summary.outputTokens
   const inputPercent = compositionTotal > 0
     ? (summary.inputTokens / compositionTotal) * 100
@@ -147,33 +144,39 @@ function UsageContent({ summary }: { summary: LocalUsageSummary }) {
     date.setDate(date.getDate() - 364)
     return date
   }, [endDate])
+  const buckets = useMemo(
+    () => buildUsagePeriodBuckets(summary.dailyUsage, period, endDate),
+    [endDate, period, summary.dailyUsage],
+  )
   const calendar = useMemo(
-    () => buildUsageCalendar(summary.dailyUsage, endDate).map(day => ({
+    () => buildUsageCalendar(summary.dailyUsage, endDate, period).map(day => ({
       date: day.date,
       count: day.level,
       content: String(day.count),
     })),
-    [endDate, summary.dailyUsage],
+    [endDate, period, summary.dailyUsage],
   )
   const trackedTokens = summary.dailyUsage.reduce((total, day) => total + day.totalTokens, 0)
   const historicalTokens = Math.max(0, summary.totalTokens - trackedTokens)
-  const calendarTrackedTokens = calendar.reduce((total, day) => total + Number(day.content), 0)
+  const visibleTokens = buckets.reduce((total, bucket) => total + bucket.totalTokens, 0)
   const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }),
-    [locale],
+    () => new Intl.DateTimeFormat(locale, period === 'month'
+      ? { year: 'numeric', month: 'short' }
+      : { year: 'numeric', month: 'short', day: 'numeric' }),
+    [locale, period],
   )
   const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale])
   const compactNumberFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }),
     [locale],
   )
-  const months = useMemo(
-    () => Array.from({ length: 12 }, (_, month) => new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, month, 1))),
-    [locale],
-  )
   const activity = useMemo(
     () => summarizeUsageActivity(summary.dailyUsage, endDate),
     [endDate, summary.dailyUsage],
+  )
+  const months = useMemo(
+    () => Array.from({ length: 12 }, (_, month) => new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2024, month, 1))),
+    [locale],
   )
   return (
     <div className="space-y-8">
@@ -205,13 +208,22 @@ function UsageContent({ summary }: { summary: LocalUsageSummary }) {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-4 text-xs">
           <span className="font-medium text-foreground">{t('settings.app.localUsage.dailyTitle')}</span>
-          <span className="font-medium text-foreground">{t('settings.app.localUsage.daily')}</span>
+          <SettingsSegmentedControl
+            value={period}
+            onValueChange={setPeriod}
+            size="sm"
+            options={[
+              { value: 'day', label: t('settings.app.localUsage.daily') },
+              { value: 'week', label: t('settings.app.localUsage.weekly') },
+              { value: 'month', label: t('settings.app.localUsage.monthly') },
+            ]}
+          />
         </div>
         <div className="text-muted-foreground">
           <div className="relative w-[650px] pt-7">
             <HeatMap
-              aria-label={t('settings.app.localUsage.dailyAria', {
-                tokens: numberFormatter.format(calendarTrackedTokens),
+              aria-label={t('settings.app.localUsage.periodAria', {
+                tokens: numberFormatter.format(visibleTokens),
               })}
               endDate={endDate}
               height={110}
@@ -220,23 +232,38 @@ function UsageContent({ summary }: { summary: LocalUsageSummary }) {
               monthPlacement="bottom"
               panelColors={ACTIVITY_COLORS}
               rectProps={{ rx: 3, ry: 3 }}
-              rectRender={(props, activity) => (
-                <rect
-                  {...props}
-                  className="outline-none transition-opacity hover:opacity-80"
-                  onPointerEnter={() => {
-                    const date = parseHeatMapDate(activity.date)
-                    if (!date) return
-                    setHoveredDay({
-                      date,
-                      tokens: Number(activity.content ?? 0),
-                      column: activity.column,
-                      row: activity.row,
-                    })
-                  }}
-                  onPointerLeave={() => setHoveredDay(null)}
-                />
-              )}
+              rectRender={(props, cell) => {
+                const date = parseUsageDate(cell.date)
+                const periodKey = date ? getUsagePeriodKey(date, period) : null
+                const isHighlightedPeriod = Boolean(hoveredPeriodKey && periodKey === hoveredPeriodKey)
+                return (
+                  <rect
+                    {...props}
+                    data-period-highlighted={isHighlightedPeriod || undefined}
+                    className={cn(
+                      'outline-none transition-opacity duration-150',
+                      hoveredPeriodKey && !isHighlightedPeriod ? 'opacity-20' : 'opacity-100',
+                    )}
+                    style={isHighlightedPeriod ? {
+                      ...props.style,
+                      stroke: 'var(--foreground)',
+                      strokeOpacity: 0.4,
+                      strokeWidth: 1.5,
+                    } : props.style}
+                    onPointerEnter={() => {
+                      if (!date || !periodKey) return
+                      setHoveredPeriod({
+                        periodKey,
+                        date: parseUsageDate(periodKey) ?? date,
+                        tokens: Number(cell.content ?? 0),
+                        column: cell.column,
+                        row: cell.row,
+                      })
+                    }}
+                    onPointerLeave={() => setHoveredPeriod(null)}
+                  />
+                )
+              }}
               rectSize={ACTIVITY_CELL_SIZE}
               role="img"
               space={ACTIVITY_CELL_GAP}
@@ -246,19 +273,19 @@ function UsageContent({ summary }: { summary: LocalUsageSummary }) {
               weekLabels={false}
               width={650}
             />
-            {hoveredDay ? (
+            {hoveredPeriod ? (
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute z-tooltip whitespace-nowrap rounded-[8px] border border-border/50 bg-background/90 px-2.5 py-1.5 text-xs text-foreground shadow-modal-small backdrop-blur-xl"
                 style={{
-                  left: Math.min(568, Math.max(82, 10 + hoveredDay.column * ACTIVITY_CELL_STEP)),
-                  top: 33 + hoveredDay.row * ACTIVITY_CELL_STEP,
+                  left: Math.min(568, Math.max(82, 10 + hoveredPeriod.column * ACTIVITY_CELL_STEP)),
+                  top: 33 + hoveredPeriod.row * ACTIVITY_CELL_STEP,
                   transform: 'translate(-50%, calc(-100% - 6px))',
                 }}
               >
                 {t('settings.app.localUsage.dayTooltip', {
-                  date: dateFormatter.format(hoveredDay.date),
-                  tokens: numberFormatter.format(hoveredDay.tokens),
+                  date: dateFormatter.format(hoveredPeriod.date),
+                  tokens: numberFormatter.format(hoveredPeriod.tokens),
                 })}
               </div>
             ) : null}

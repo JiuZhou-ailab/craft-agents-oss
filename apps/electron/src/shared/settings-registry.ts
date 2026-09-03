@@ -38,6 +38,8 @@ export interface SettingsPageDefinition {
  */
 export const SETTINGS_PAGES = [
   { id: 'app' as const, labelKey: 'settings.app.title' },
+  { id: 'profile' as const, labelKey: 'settings.profile.title' },
+  { id: 'usage' as const, labelKey: 'settings.app.localUsage.title' },
   { id: 'ai' as const, labelKey: 'settings.ai.title' },
   { id: 'appearance' as const, labelKey: 'settings.appearance.title' },
   { id: 'input' as const, labelKey: 'settings.input.title' },

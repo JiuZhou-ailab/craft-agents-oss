@@ -17,6 +17,7 @@ export const KEYS = {
   // Chat sidebar
   sidebarVisible: 'sidebar-visible',
   activityRailVisible: 'activity-rail-visible',
+  activityRailWidth: 'activity-rail-width',
   sidebarWidth: 'sidebar-width',
   sessionListWidth: 'session-list-width',
   novelWorkspaceNavigatorWidth: 'novel-workspace-navigator-width',
