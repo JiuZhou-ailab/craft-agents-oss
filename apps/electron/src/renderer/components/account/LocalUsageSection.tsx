@@ -1,6 +1,6 @@
 // input: Current runtime workspace and its persisted per-session and daily token totals
 // output: Read-only token totals, composition, and switchable usage heat maps for the active project
-// pos: Current-project usage section inside global App settings
+// pos: Current-project usage section rendered by the dedicated Usage settings page
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Spinner } from '@craft-agent/ui'

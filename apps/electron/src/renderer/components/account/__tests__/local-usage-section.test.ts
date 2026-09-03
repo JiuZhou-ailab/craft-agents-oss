@@ -1,13 +1,12 @@
 // input: Current-workspace persisted per-session token totals
 // output: Regression coverage for scoped usage aggregation and routing
-// pos: Minimal runnable check for the App settings local usage section
+// pos: Minimal runnable check for the dedicated settings usage page
 
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { buildUsageCalendar, buildUsagePeriodBuckets, summarizeLocalUsage, summarizeUsageActivity } from '../local-usage'
 
 const source = readFileSync(new URL('../LocalUsageSection.tsx', import.meta.url), 'utf8')
-const accountSource = readFileSync(new URL('../AccountSettingsSection.tsx', import.meta.url), 'utf8')
 
 describe('summarizeLocalUsage', () => {
   it('aggregates persisted usage for one runtime workspace', () => {
@@ -110,7 +109,6 @@ describe('summarizeLocalUsage', () => {
     expect(source).toContain('strokeWidth: 1.5')
     expect(source).toContain('hoveredPeriodKey')
     expect(source).toContain('<SettingsCard divided={false}>')
-    expect(accountSource).toContain('className="border-b-0"')
     expect(buildUsagePeriodBuckets([], 'month', new Date(2026, 0, 1))).toHaveLength(12)
     expect(source).toContain('getSessionMessages(session.id)')
     expect(source).toContain('usageSummaryLoads.get(workspaceId)')
