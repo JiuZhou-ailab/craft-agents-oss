@@ -168,6 +168,8 @@ describe('builtin LLM connection defaults', () => {
       ['storyflow-managed-deepseek', ['deepseek-v4-pro', 'deepseek-v4-flash']],
       ['storyflow-managed', ['gpt-5.5', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']],
       ['storyflow-managed-gemini', [
+        'gemini-3.8-flash',
+        'gemini-3.7-flash',
         'gemini-3.6-flash',
         'gemini-3.5-flash',
         'gemini-3.1-pro-preview',

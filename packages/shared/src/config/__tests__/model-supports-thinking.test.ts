@@ -9,6 +9,7 @@ import {
   resolveModelThinkingLevel,
   type LlmConnection,
 } from '../llm-connections.ts'
+import { cloneManagedModelCatalog } from '../managed-model-catalog.ts'
 
 function connection(
   providerType: LlmConnection['providerType'],
@@ -64,5 +65,16 @@ describe('model thinking levels', () => {
   it('resolves an unsupported persisted level to the nearest supported level', () => {
     expect(resolveModelThinkingLevel(managedConnection, 'gpt-5.6-sol', 'max')).toBe('max')
     expect(resolveModelThinkingLevel(managedConnection, 'gpt-5.6-luna', 'max')).toBe('xhigh')
+  })
+
+  it('exposes supported Gemini thinking levels without offering invalid 3.7/3.8 minimal mode', () => {
+    const geminiConnection = connection('pi_compat', cloneManagedModelCatalog('google-generative-ai'))
+
+    for (const modelId of ['gemini-3.8-flash', 'gemini-3.7-flash']) {
+      expect(modelSupportsThinking(geminiConnection, modelId)).toBe(true)
+      expect(modelSupportsThinkingLevel(geminiConnection, modelId, 'off')).toBe(false)
+      expect(modelSupportsThinkingLevel(geminiConnection, modelId, 'medium')).toBe(true)
+      expect(modelSupportsThinkingLevel(geminiConnection, modelId, 'xhigh')).toBe(false)
+    }
   })
 })

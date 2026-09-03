@@ -163,6 +163,8 @@ describe('model gateway worker', () => {
       'gpt-5.6-luna',
       'claude-sonnet-5',
       'claude-opus-5',
+      'gemini-3.8-flash',
+      'gemini-3.7-flash',
       'gemini-3.6-flash',
       'gemini-3.5-flash',
       'gemini-3.1-pro-preview',
@@ -187,6 +189,11 @@ describe('model gateway worker', () => {
       name: 'Gemini 3.6 Flash',
       short_name: 'Gemini',
       api: 'google-generative-ai',
+    })
+    expect(catalogBody.data.find(model => model.id === 'gemini-3.8-flash')).toMatchObject({
+      name: 'Gemini 3.8 Flash',
+      supports_thinking: true,
+      thinking_level_map: { off: null, medium: 'medium', xhigh: null },
     })
     expect(catalogBody.data.find(model => model.id === 'gemini-3.1-pro-preview')).toMatchObject({
       name: 'Gemini 3.1 Pro Preview',
