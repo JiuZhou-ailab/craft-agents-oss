@@ -8,6 +8,7 @@
  */
 
 import { resolve } from 'path'
+import { parseArgs as parseNodeArgs } from 'node:util'
 import { CliRpcClient } from './client.ts'
 
 // ---------------------------------------------------------------------------
@@ -42,119 +43,94 @@ export interface CliArgs {
 
 export function parseArgs(argv: string[]): CliArgs {
   const args = argv.slice(2) // skip bun + script path
-  let url = ''
-  let token = ''
-  let workspace: string | undefined
-  let timeout = 10_000
-  let json = false
-  let tlsCa: string | undefined
-  let sendTimeout = 300_000 // 5 min
+  const { values, tokens } = parseNodeArgs({
+    args,
+    allowPositionals: true,
+    strict: false,
+    tokens: true,
+    options: {
+      url: { type: 'string' },
+      token: { type: 'string' },
+      workspace: { type: 'string' },
+      timeout: { type: 'string' },
+      json: { type: 'boolean' },
+      'tls-ca': { type: 'string' },
+      'send-timeout': { type: 'string' },
+      source: { type: 'string', multiple: true },
+      mode: { type: 'string' },
+      'output-format': { type: 'string' },
+      'no-cleanup': { type: 'boolean' },
+      'disable-spinner': { type: 'boolean' },
+      'no-spinner': { type: 'boolean' },
+      verbose: { type: 'boolean', short: 'v' },
+      'server-entry': { type: 'string' },
+      'workspace-dir': { type: 'string' },
+      provider: { type: 'string' },
+      model: { type: 'string' },
+      'api-key': { type: 'string' },
+      'base-url': { type: 'string' },
+      help: { type: 'boolean', short: 'h' },
+      version: { type: 'boolean' },
+      'validate-server': { type: 'boolean' },
+    } as const,
+  })
+
   const rest: string[] = []
   let command = ''
-  const sources: string[] = []
-  let mode = ''
-  let outputFormat = 'text'
-  let noCleanup = false
-  let noSpinner = false
-  let verbose = false
-  let serverEntry: string | undefined
-  let workspaceDir: string | undefined
-  let provider = ''
-  let model = ''
-  let apiKey = ''
-  let baseUrl = ''
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
-    switch (arg) {
-      case '--url':
-        url = args[++i] ?? ''
-        break
-      case '--token':
-        token = args[++i] ?? ''
-        break
-      case '--workspace':
-        workspace = args[++i]
-        break
-      case '--timeout':
-        timeout = parseInt(args[++i] ?? '10000', 10)
-        break
-      case '--json':
-        json = true
-        break
-      case '--tls-ca':
-        tlsCa = args[++i]
-        break
-      case '--send-timeout':
-        sendTimeout = parseInt(args[++i] ?? '300000', 10)
-        break
-      case '--source':
-        sources.push(args[++i] ?? '')
-        break
-      case '--mode':
-        mode = args[++i] ?? ''
-        break
-      case '--output-format':
-        outputFormat = args[++i] ?? 'text'
-        break
-      case '--no-cleanup':
-        noCleanup = true
-        break
-      case '--disable-spinner':
-      case '--no-spinner':
-        noSpinner = true
-        break
-      case '--verbose':
-      case '-v':
-        verbose = true
-        break
-      case '--server-entry':
-        serverEntry = args[++i]
-        break
-      case '--workspace-dir':
-        workspaceDir = args[++i]
-        break
-      case '--provider':
-        provider = args[++i] ?? ''
-        break
-      case '--model':
-        model = args[++i] ?? ''
-        break
-      case '--api-key':
-        apiKey = args[++i] ?? ''
-        break
-      case '--base-url':
-        baseUrl = args[++i] ?? ''
-        break
-      case '--help':
-      case '-h':
-        command = 'help'
-        break
-      case '--version':
-        command = 'version'
-        break
-      case '--validate-server':
-        command = 'validate'
-        break
-      default:
-        if (!command && !arg.startsWith('-')) {
-          command = arg
-        } else {
-          rest.push(arg)
-        }
+  const knownOptions = new Set([
+    'url', 'token', 'workspace', 'timeout', 'json', 'tls-ca', 'send-timeout', 'source',
+    'mode', 'output-format', 'no-cleanup', 'disable-spinner', 'no-spinner', 'verbose',
+    'server-entry', 'workspace-dir', 'provider', 'model', 'api-key', 'base-url',
+  ])
+  for (const parsedToken of tokens) {
+    if (parsedToken.kind === 'positional') {
+      if (!command) command = parsedToken.value
+      else rest.push(parsedToken.value)
+      continue
     }
+    if (parsedToken.kind !== 'option') continue
+    if (parsedToken.name === 'help') command = 'help'
+    else if (parsedToken.name === 'version') command = 'version'
+    else if (parsedToken.name === 'validate-server') command = 'validate'
+    else if (!knownOptions.has(parsedToken.name)) rest.push(args[parsedToken.index] ?? parsedToken.rawName)
   }
 
-  // Env var fallbacks
-  if (!url) url = process.env.CRAFT_SERVER_URL ?? ''
-  if (!token) token = process.env.CRAFT_SERVER_TOKEN ?? ''
-  if (!tlsCa) tlsCa = process.env.CRAFT_TLS_CA
-  if (!provider) provider = process.env.LLM_PROVIDER ?? 'anthropic'
-  if (!model) model = process.env.LLM_MODEL ?? ''
-  if (!apiKey) apiKey = process.env.LLM_API_KEY ?? ''
-  if (!baseUrl) baseUrl = process.env.LLM_BASE_URL ?? ''
+  const stringValue = (value: string | boolean | undefined): string | undefined =>
+    typeof value === 'string' ? value : undefined
 
-  return { url, token, workspace, timeout, json, tlsCa, sendTimeout, command, rest, sources, mode, outputFormat, noCleanup, noSpinner, verbose, serverEntry, workspaceDir, provider, model, apiKey, baseUrl }
+  // Env var fallbacks
+  const url = stringValue(values.url) || process.env.CRAFT_SERVER_URL || ''
+  const token = stringValue(values.token) || process.env.CRAFT_SERVER_TOKEN || ''
+  const tlsCa = stringValue(values['tls-ca']) || process.env.CRAFT_TLS_CA
+  const provider = stringValue(values.provider) || process.env.LLM_PROVIDER || 'anthropic'
+  const model = stringValue(values.model) || process.env.LLM_MODEL || ''
+  const apiKey = stringValue(values['api-key']) || process.env.LLM_API_KEY || ''
+  const baseUrl = stringValue(values['base-url']) || process.env.LLM_BASE_URL || ''
+
+  return {
+    url,
+    token,
+    workspace: stringValue(values.workspace),
+    timeout: Number.parseInt(stringValue(values.timeout) ?? '10000', 10),
+    json: values.json === true,
+    tlsCa,
+    sendTimeout: Number.parseInt(stringValue(values['send-timeout']) ?? '300000', 10),
+    command,
+    rest,
+    sources: values.source?.filter((value): value is string => typeof value === 'string') ?? [],
+    mode: stringValue(values.mode) ?? '',
+    outputFormat: stringValue(values['output-format']) ?? 'text',
+    noCleanup: values['no-cleanup'] === true,
+    noSpinner: values['disable-spinner'] === true || values['no-spinner'] === true,
+    verbose: values.verbose === true,
+    serverEntry: stringValue(values['server-entry']),
+    workspaceDir: stringValue(values['workspace-dir']),
+    provider,
+    model,
+    apiKey,
+    baseUrl,
+  }
 }
 
 // ---------------------------------------------------------------------------
