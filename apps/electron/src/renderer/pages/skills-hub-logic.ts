@@ -79,7 +79,7 @@ export function filterMarketSkills(
   view: CatalogView,
 ): MarketSkillSummary[] {
   const normalizedQuery = query.trim().toLocaleLowerCase()
-  return skills.filter((skill) => {
+  const filtered = skills.filter((skill) => {
     if (view === 'company' && skill.visibility !== 'company') return false
     if (!normalizedQuery && view === 'featured' && !skill.featured) return false
     if (!normalizedQuery) return true
@@ -97,6 +97,9 @@ export function filterMarketSkills(
       .toLocaleLowerCase()
       .includes(normalizedQuery)
   })
+  return view === 'all'
+    ? filtered.sort((a, b) => (Date.parse(b.publishedAt ?? '') || 0) - (Date.parse(a.publishedAt ?? '') || 0))
+    : filtered
 }
 
 export function isInstallableMarketSkill(skill: MarketSkillSummary): boolean {

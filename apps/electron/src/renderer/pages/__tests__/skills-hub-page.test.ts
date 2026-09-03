@@ -231,10 +231,17 @@ describe('SkillsHubPage contracts', () => {
   })
 
   it('keeps recommendation evidence searchable but displays Market download counts', () => {
+    expect(source).toContain("React.useState<CatalogView>('all')")
     expect(source).toContain('skill.downloadCount')
     expect(source).not.toContain('skill.recommendation.label')
     expect(source).toContain("t('skillsHub.downloadCount'")
     expect(filterMarketSkills([marketSkill], '', 'featured')).toEqual([marketSkill])
+  })
+
+  it('shows the newest Registry entries first in the default all view', () => {
+    const older = { ...marketSkill, slug: 'older', publishedAt: '2026-08-01T00:00:00Z' }
+    const newer = { ...marketSkill, slug: 'newer', publishedAt: '2026-09-01T00:00:00Z' }
+    expect(filterMarketSkills([older, newer], '', 'all').map(skill => skill.slug)).toEqual(['newer', 'older'])
   })
 
   it('uses button semantics and blocks remote Markdown image requests', () => {

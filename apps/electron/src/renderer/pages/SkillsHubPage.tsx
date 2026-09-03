@@ -86,7 +86,7 @@ export default function SkillsHubPage() {
   const [reloadToken, setReloadToken] = React.useState(0)
   const [activeTab, setActiveTab] = React.useState<SkillsTab>('discover')
   const [query, setQuery] = React.useState('')
-  const [catalogView, setCatalogView] = React.useState<CatalogView>('featured')
+  const [catalogView, setCatalogView] = React.useState<CatalogView>('all')
   const [installingSlug, setInstallingSlug] = React.useState<string | null>(null)
   const [upgradingSlug, setUpgradingSlug] = React.useState<string | null>(null)
   const [installReceipts, setInstallReceipts] = React.useState<SkillInstallReceipt[]>([])
