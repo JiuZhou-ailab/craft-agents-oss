@@ -17,6 +17,7 @@ interface FilePreviewRendererProps {
   loadDataUrl: (path: string) => Promise<string>
   loadPdfData: (path: string) => Promise<Uint8Array>
   isDark: boolean
+  embedded?: boolean
 }
 
 export function FilePreviewRenderer({
@@ -25,6 +26,7 @@ export function FilePreviewRenderer({
   loadDataUrl,
   loadPdfData,
   isDark,
+  embedded,
 }: FilePreviewRendererProps) {
   const theme = isDark ? 'dark' : 'light' as const
 
@@ -48,6 +50,7 @@ export function FilePreviewRenderer({
           filePath={state.filePath}
           loadPdfData={loadPdfData}
           theme={theme}
+          embedded={embedded}
         />
       )
 
@@ -63,6 +66,7 @@ export function FilePreviewRenderer({
           mode="read"
           theme={theme}
           error={state.error}
+          embedded={embedded}
         />
       )
 
@@ -96,6 +100,7 @@ export function FilePreviewRenderer({
             mode="read"
             theme={theme}
             error={state.error}
+            embedded={embedded}
           />
         )
       }
@@ -111,6 +116,7 @@ export function FilePreviewRenderer({
             mode="read"
             theme={theme}
             error={state.error}
+            embedded={embedded}
           />
         )
       }
@@ -124,6 +130,7 @@ export function FilePreviewRenderer({
           data={parsedData}
           theme={theme}
           error={state.error}
+          embedded={embedded}
         />
       )
     }

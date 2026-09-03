@@ -4542,7 +4542,10 @@ function AppShellContent({
                   )}
                 />
               ) : (
-                <FileViewer path={selectedNovelFile.path} />
+                <FileViewer
+                  path={selectedNovelFile.path}
+                  onClose={() => { void handleCloseNovelFileTab(selectedNovelFile.path) }}
+                />
               ) : (
                 <WorkspaceEmptyState
                   workspaceName={activeWorkspace?.name ?? t('writing.workspace')}

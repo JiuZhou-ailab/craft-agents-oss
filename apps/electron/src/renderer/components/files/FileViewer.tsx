@@ -2,24 +2,33 @@
 // output: Bounded inline preview for the shared project document tab
 // pos: Read-only counterpart to the writing editor for non-editable project files
 
-import React, { useState, useEffect, useMemo } from 'react'
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ExternalLink, FileText, FileVideo } from 'lucide-react'
 import { Spinner } from '@craft-agent/ui'
 import { classifyFile, isVideoFile } from '@craft-agent/ui/file-classification'
+import { useTheme } from '@/hooks/useTheme'
+import type { FilePreviewState } from '@/hooks/useLinkInterceptor'
+
+const FilePreviewRenderer = lazy(async () => {
+  const module = await import('@/components/file-preview/FilePreviewRenderer')
+  return { default: module.FilePreviewRenderer }
+})
 
 interface FileViewerProps {
   path: string | null
   onOpenExternal?: (path: string) => void
+  onClose?: () => void
 }
 
 function getFileName(path: string): string {
   return path.replace(/\\/g, '/').split('/').pop() ?? path
 }
 
-export function FileViewer({ path, onOpenExternal }: FileViewerProps) {
+export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
   const { t } = useTranslation()
+  const { isDark } = useTheme()
   const [content, setContent] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,6 +38,8 @@ export function FileViewer({ path, onOpenExternal }: FileViewerProps) {
     () => path ? `workspace-file://media/${encodeURIComponent(path)}` : '',
     [path],
   )
+  const loadDataUrl = useCallback((filePath: string) => window.electronAPI.readFileDataUrl(filePath), [])
+  const loadPdfData = useCallback((filePath: string) => window.electronAPI.readFileBinary(filePath), [])
 
   useEffect(() => {
     let cancelled = false
@@ -84,9 +95,34 @@ export function FileViewer({ path, onOpenExternal }: FileViewerProps) {
   const fileName = getFileName(path)
   const previewKind = isVideo
     ? 'video'
-    : classification?.canPreview && classification.type !== 'pdf'
+    : classification?.canPreview
     ? classification.type
     : 'external'
+
+  const embeddedPreviewState: FilePreviewState | null = previewKind === 'pdf'
+    ? { type: 'pdf', filePath: path }
+    : previewKind === 'json' && !isLoading
+      ? { type: 'json', filePath: path, content, error: error ?? undefined }
+      : null
+
+  if (embeddedPreviewState) {
+    return (
+      <Suspense fallback={(
+        <div className="flex h-full items-center justify-center text-muted-foreground">
+          <Spinner className="text-lg" />
+        </div>
+      )}>
+        <FilePreviewRenderer
+          state={embeddedPreviewState}
+          onClose={onClose ?? (() => {})}
+          loadDataUrl={loadDataUrl}
+          loadPdfData={loadPdfData}
+          isDark={isDark}
+          embedded
+        />
+      </Suspense>
+    )
+  }
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-background" data-file-viewer-kind={previewKind}>
