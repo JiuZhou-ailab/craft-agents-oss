@@ -4,6 +4,7 @@
 
 import { existsSync } from "fs";
 import { join } from "path";
+import { parseArgs as parseNodeArgs } from "node:util";
 import {
   buildElectronApp,
   cleanBuildArtifacts,
@@ -58,40 +59,30 @@ function parseArch(value: string): BuildArch {
 }
 
 function parseOptions(args: string[]): BuildOptions {
-  const options: BuildOptions = {
-    platform: parsePlatform(process.platform),
-    upload: false,
-    latest: false,
-    script: false,
-  };
-
-  for (const arg of args) {
-    if (arg === "-h" || arg === "--help") {
-      console.log(usage());
-      process.exit(0);
-    }
-    if (arg.startsWith("--platform=")) {
-      options.platform = parsePlatform(arg.slice("--platform=".length));
-      continue;
-    }
-    if (arg.startsWith("--arch=")) {
-      options.arch = parseArch(arg.slice("--arch=".length));
-      continue;
-    }
-    if (arg === "--upload") {
-      options.upload = true;
-      continue;
-    }
-    if (arg === "--latest") {
-      options.latest = true;
-      continue;
-    }
-    if (arg === "--script") {
-      options.script = true;
-      continue;
-    }
-    throw new Error(`Unknown option: ${arg}`);
+  const { values } = parseNodeArgs({
+    args,
+    allowPositionals: false,
+    options: {
+      platform: { type: "string" },
+      arch: { type: "string" },
+      upload: { type: "boolean" },
+      latest: { type: "boolean" },
+      script: { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
+  if (values.help) {
+    console.log(usage());
+    process.exit(0);
   }
+
+  const options: BuildOptions = {
+    platform: parsePlatform(values.platform ?? process.platform),
+    arch: values.arch === undefined ? undefined : parseArch(values.arch),
+    upload: values.upload ?? false,
+    latest: values.latest ?? false,
+    script: values.script ?? false,
+  };
 
   if (!options.arch) {
     options.arch = options.platform === "darwin" ? "arm64" : "x64";

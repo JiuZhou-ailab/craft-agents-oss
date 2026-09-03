@@ -4,6 +4,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { parseArgs as parseNodeArgs } from 'node:util'
 import {
   buildWhatsNewDraft,
   createWhatsNewDigest,
@@ -50,54 +51,45 @@ function usage(): string {
 }
 
 function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    version: '',
-    outDir: join(ROOT_DIR, 'apps/electron/resources/release-notes'),
-    to: 'HEAD',
-    limit: 30,
-    curatedNotes: join(ROOT_DIR, 'apps/electron/resources/release-notes/next.md'),
-    curatedNotesExplicit: false,
+  const { values } = parseNodeArgs({
+    args: argv,
+    allowPositionals: false,
+    options: {
+      version: { type: 'string' },
+      'commits-json': { type: 'string' },
+      'out-dir': { type: 'string' },
+      'out-json': { type: 'string' },
+      from: { type: 'string' },
+      to: { type: 'string' },
+      limit: { type: 'string' },
+      'curated-notes': { type: 'string' },
+      'no-curated-notes': { type: 'boolean' },
+      help: { type: 'boolean', short: 'h' },
+    },
+  })
+  if (values.help) {
+    console.log(usage())
+    process.exit(0)
   }
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index]
-    if (arg === '-h' || arg === '--help') {
-      console.log(usage())
-      process.exit(0)
-    }
+  const limit = Number.parseInt(values.limit ?? '30', 10)
+  if (!Number.isFinite(limit) || limit <= 0) {
+    throw new Error(`Invalid --limit value: ${values.limit}`)
+  }
 
-    const [name, inlineValue] = arg.split('=', 2)
-    const value = inlineValue ?? argv[index + 1]
-    if (!value) throw new Error(`Missing value for ${name}`)
-
-    if (name === '--version') {
-      options.version = normalizeVersion(value)
-    } else if (name === '--commits-json') {
-      options.commitsJson = value
-    } else if (name === '--out-dir') {
-      options.outDir = value
-    } else if (name === '--out-json') {
-      options.outJson = value
-    } else if (name === '--from') {
-      options.from = value
-    } else if (name === '--to') {
-      options.to = value
-    } else if (name === '--limit') {
-      options.limit = Number.parseInt(value, 10)
-      if (!Number.isFinite(options.limit) || options.limit <= 0) {
-        throw new Error(`Invalid --limit value: ${value}`)
-      }
-    } else if (name === '--curated-notes') {
-      options.curatedNotes = value
-      options.curatedNotesExplicit = true
-    } else if (name === '--no-curated-notes') {
-      options.curatedNotes = undefined
-      options.curatedNotesExplicit = true
-    } else {
-      throw new Error(`Unknown argument: ${arg}`)
-    }
-
-    if (!inlineValue) index += 1
+  const curatedNotesExplicit = values['curated-notes'] !== undefined || values['no-curated-notes'] === true
+  const options: CliOptions = {
+    version: normalizeVersion(values.version ?? ''),
+    commitsJson: values['commits-json'],
+    outDir: values['out-dir'] ?? join(ROOT_DIR, 'apps/electron/resources/release-notes'),
+    outJson: values['out-json'],
+    from: values.from,
+    to: values.to ?? 'HEAD',
+    limit,
+    curatedNotes: values['no-curated-notes']
+      ? undefined
+      : values['curated-notes'] ?? join(ROOT_DIR, 'apps/electron/resources/release-notes/next.md'),
+    curatedNotesExplicit,
   }
 
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(options.version)) {

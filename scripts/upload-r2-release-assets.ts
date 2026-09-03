@@ -4,6 +4,7 @@
 
 import { readdirSync } from "node:fs";
 import { basename, join, relative } from "node:path";
+import { parseArgs as parseNodeArgs } from "node:util";
 import {
   publicInstallerAssets,
   releaseAssetFiles,
@@ -63,59 +64,37 @@ function usage(): string {
 }
 
 function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    assetsDir: "",
-    tag: "",
-    dryRun: false,
-    profile: "full",
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--dry-run") {
-      options.dryRun = true;
-      continue;
-    }
-
-    const [name, inlineValue] = arg.split("=", 2);
-    const value = inlineValue ?? argv[index + 1];
-
-    if (name === "--assets-dir") {
-      options.assetsDir = value;
-      if (!inlineValue) index += 1;
-      continue;
-    }
-
-    if (name === "--tag") {
-      options.tag = value;
-      if (!inlineValue) index += 1;
-      continue;
-    }
-
-    if (name === "--profile") {
-      options.profile = parseReleaseAssetProfile(value);
-      if (!inlineValue) index += 1;
-      continue;
-    }
-
-    if (name === "--retain-releases") {
-      const parsed = Number.parseInt(value, 10);
-      if (!Number.isInteger(parsed) || parsed < 1) {
-        throw new Error(`Invalid --retain-releases value: ${value}`);
-      }
-      options.retainReleases = parsed;
-      if (!inlineValue) index += 1;
-      continue;
-    }
-
-    if (arg === "-h" || arg === "--help") {
-      console.log(usage());
-      process.exit(0);
-    }
-
-    throw new Error(`Unknown argument: ${arg}`);
+  const { values } = parseNodeArgs({
+    args: argv,
+    allowPositionals: false,
+    options: {
+      "assets-dir": { type: "string" },
+      tag: { type: "string" },
+      "dry-run": { type: "boolean" },
+      profile: { type: "string" },
+      "retain-releases": { type: "string" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
+  if (values.help) {
+    console.log(usage());
+    process.exit(0);
   }
 
+  const retainReleases = values["retain-releases"] === undefined
+    ? undefined
+    : Number.parseInt(values["retain-releases"], 10);
+  if (retainReleases !== undefined && (!Number.isInteger(retainReleases) || retainReleases < 1)) {
+    throw new Error(`Invalid --retain-releases value: ${values["retain-releases"]}`);
+  }
+
+  const options: CliOptions = {
+    assetsDir: values["assets-dir"] ?? "",
+    tag: values.tag ?? "",
+    dryRun: values["dry-run"] ?? false,
+    profile: parseReleaseAssetProfile(values.profile ?? "full"),
+    retainReleases,
+  };
   if (!options.assetsDir) {
     throw new Error("Missing --assets-dir");
   }
