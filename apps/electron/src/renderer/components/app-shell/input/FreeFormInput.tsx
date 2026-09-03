@@ -1050,6 +1050,8 @@ export function FreeFormInput({
     recentFolders,
     homeDir,
   })
+  const slashListboxId = React.useId()
+  const [activeSlashOptionId, setActiveSlashOptionId] = React.useState<string>()
 
   // Handle mention selection (sources, skills, files)
   const handleMentionSelect = React.useCallback((item: MentionItem) => {
@@ -1855,6 +1857,9 @@ export function FreeFormInput({
           onSelectFolder={handleInlineSlashFolderSelect}
           filter={inlineSlash.filter}
           position={inlineSlash.position}
+          anchorRef={containerRef}
+          listboxId={slashListboxId}
+          onActiveDescendantChange={setActiveSlashOptionId}
         />
 
         {/* Inline Mention Autocomplete (sources, files, folders) */}
@@ -2036,6 +2041,10 @@ export function FreeFormInput({
           className="pl-5 pr-4 pt-4 pb-3 overflow-y-auto min-h-[88px]"
           style={{ maxHeight: inputMaxHeight }}
           data-tutorial="chat-input"
+          aria-haspopup="listbox"
+          aria-expanded={inlineSlash.isOpen}
+          aria-controls={inlineSlash.isOpen ? slashListboxId : undefined}
+          aria-activedescendant={activeSlashOptionId}
           spellCheck={spellCheck}
           autoCapitalize="off"
         />
@@ -2236,7 +2245,7 @@ export function FreeFormInput({
                         {effectiveConnectionDetails && llmConnections.length > 1 && storage.get(storage.KEYS.showConnectionIcons, true) && <ConnectionIcon connection={effectiveConnectionDetails} size={14} showTooltip />}
                         <span className="min-w-0 truncate">{currentModelDisplayName}</span>
                         <span className="shrink-0 text-[11px] text-muted-foreground">
-                          · {t('settings.ai.thinking')}: {currentThinkingLabel}
+                          · {currentThinkingLabel}
                         </span>
                         {!connectionDefaultModel && <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />}
                       </>
@@ -2245,7 +2254,7 @@ export function FreeFormInput({
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent side="top">
-                {`${currentModelDisplayName} · ${t('settings.ai.thinking')}: ${currentThinkingLabel}`}
+                {`${currentModelDisplayName} · ${currentThinkingLabel}`}
               </TooltipContent>
             </Tooltip>
             <StyledDropdownMenuContent side="top" align="end" sideOffset={6} className="min-w-60">

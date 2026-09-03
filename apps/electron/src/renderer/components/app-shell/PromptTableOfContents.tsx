@@ -128,10 +128,10 @@ export function PromptTableOfContents({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'h-px w-[18px] rounded-full transition-colors',
+                    'rounded-full transition-[width,height,background-color] duration-150',
                     active
-                      ? 'bg-foreground'
-                      : 'bg-muted-foreground/40 group-hover/toc-tick:bg-muted-foreground/75',
+                      ? 'h-0.5 w-6 bg-foreground'
+                      : 'h-px w-[18px] bg-muted-foreground/40 group-hover/toc-tick:w-[22px] group-hover/toc-tick:bg-muted-foreground/75',
                   )}
                 />
               </button>
@@ -142,9 +142,9 @@ export function PromptTableOfContents({
 
       <div
         className={cn(
-          'pointer-events-none invisible absolute left-9 top-1/2 w-[285px] -translate-y-1/2 pl-[5px] opacity-0',
-          'group-hover/prompt-toc:pointer-events-auto group-hover/prompt-toc:visible group-hover/prompt-toc:opacity-100',
-          'group-focus-within/prompt-toc:pointer-events-auto group-focus-within/prompt-toc:visible group-focus-within/prompt-toc:opacity-100',
+          'pointer-events-none invisible absolute left-9 top-1/2 w-[285px] -translate-x-1 -translate-y-1/2 pl-[5px] opacity-0 transition-[opacity,transform] duration-150',
+          'group-hover/prompt-toc:pointer-events-auto group-hover/prompt-toc:visible group-hover/prompt-toc:translate-x-0 group-hover/prompt-toc:opacity-100',
+          'group-focus-within/prompt-toc:pointer-events-auto group-focus-within/prompt-toc:visible group-focus-within/prompt-toc:translate-x-0 group-focus-within/prompt-toc:opacity-100',
         )}
       >
         <div className="max-h-[30lvh] w-[280px] overflow-y-auto overscroll-contain rounded-[10px] border border-border/60 bg-popover p-1 text-popover-foreground shadow-modal-small">

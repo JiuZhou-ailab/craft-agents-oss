@@ -374,7 +374,9 @@ describe('FreeFormInput model menu', () => {
     expect(source).toContain('const currentThinkingLabel =')
     expect(source).toContain(": t('thinking.off')")
     expect(source).toContain('max-w-[240px]')
-    expect(source).toContain("{t('settings.ai.thinking')}: {currentThinkingLabel}")
+    expect(source).toContain('· {currentThinkingLabel}')
+    expect(source).toContain('`${currentModelDisplayName} · ${currentThinkingLabel}`')
+    expect(source).not.toContain("{t('settings.ai.thinking')}: {currentThinkingLabel}")
   })
 
   it('projects a successful model switch into the current window', () => {

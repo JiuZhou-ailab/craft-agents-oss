@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'bun:test'
 
-import { resolveChatOpeningPrompt } from '../chat-opening'
+import { getTipWindow, pickRandomTipKeys, resolveChatOpeningPrompt } from '../chat-opening'
 
 const zhHansLocale = JSON.parse(readFileSync(new URL('../../../../../../../packages/shared/src/i18n/locales/zh-Hans.json', import.meta.url), 'utf8'))
 
@@ -23,7 +23,7 @@ describe('resolveChatOpeningPrompt', () => {
     expect(opening.sections.map(section => section.id)).toEqual(['project'])
     expect(opening.actions.map(action => ({
       id: action.id,
-      command: action.command,
+      command: action.kind === 'command' ? action.command : null,
     }))).toEqual([
       { id: 'project.import', command: 'import-files' },
       { id: 'project.createFile', command: 'create-file' },
@@ -47,7 +47,7 @@ describe('resolveChatOpeningPrompt', () => {
     ])
   })
 
-  it('keeps free conversations independent from project file actions', () => {
+  it('offers rotating tips without turning guidance into an action', () => {
     const opening = resolveChatOpeningPrompt({
       workspaceName: '自由对话',
       isProject: false,
@@ -55,8 +55,31 @@ describe('resolveChatOpeningPrompt', () => {
     })
 
     expect(opening.titleKey).toBe('chatOpening.general.title')
+    expect(opening.workspaceName).toBeUndefined()
     expect(opening.sections).toEqual([])
     expect(opening.actions).toEqual([])
+    expect(opening.tipKeys).toEqual([
+      'chatInput.placeholder.mention',
+      'chatInput.placeholder.shiftTab',
+      'chatInput.placeholder.labels',
+      'chatInput.placeholder.newLine',
+      'mode.askFullDesc',
+      'mode.exploreFullDesc',
+      'skillsList.emptyDescription',
+      'sourcesList.emptyDescription',
+    ])
+    const tips = pickRandomTipKeys(opening.tipKeys, 3, () => 0)
+    expect(tips).toHaveLength(3)
+    expect(new Set(tips).size).toBe(3)
+  })
+
+  it('cycles through a shuffled tip queue in three-item windows', () => {
+    const queue = ['a', 'b', 'c', 'd', 'e']
+
+    expect(getTipWindow(queue, 0, 3)).toEqual(['a', 'b', 'c'])
+    expect(getTipWindow(queue, 3, 3)).toEqual(['d', 'e', 'a'])
+    expect(getTipWindow(queue, 8, 3)).toEqual(['d', 'e', 'a'])
+    expect(getTipWindow([], 3, 3)).toEqual([])
   })
 
   it('keeps project starter labels and descriptions concise', () => {

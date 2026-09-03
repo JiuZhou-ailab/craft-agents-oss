@@ -71,8 +71,9 @@ describe('ChatDisplay scroll layout', () => {
     expect(chatDisplaySource).toContain('scrollToTurnIndex')
     expect(promptTocSource).toContain('max-h-[50lvh] w-9 overflow-clip')
     expect(promptTocSource).toContain('data-toc-item-index={index}')
-    expect(promptTocSource).toContain("'h-px w-[18px] rounded-full transition-colors'")
-    expect(promptTocSource).not.toContain("'h-0.5 w-[18px]")
+    expect(promptTocSource).toContain("'h-0.5 w-6 bg-foreground'")
+    expect(promptTocSource).toContain('group-hover/toc-tick:w-[22px]')
+    expect(promptTocSource).toContain('transition-[opacity,transform] duration-150')
     expect(promptTocSource).toContain('group-hover/prompt-toc:visible')
   })
 
@@ -97,5 +98,14 @@ describe('ChatDisplay scroll layout', () => {
     expect(freeFormInputSource).toContain('flex min-w-0 max-w-[52%] items-center justify-end shrink-0')
     expect(freeFormInputSource).toContain('input-toolbar-btn inline-flex !h-7 min-w-0 max-w-[240px]')
     expect(freeFormInputSource).toContain('<span className="min-w-0 truncate">{currentModelDisplayName}</span>')
+  })
+
+  it('centers and advances the three opening tips every ten seconds', () => {
+    expect(chatDisplaySource).toContain('window.setInterval')
+    expect(chatDisplaySource).toContain('10_000')
+    expect(chatDisplaySource).toContain('window.clearInterval')
+    expect(chatDisplaySource).toContain('tipsPaused || shouldReduceMotion')
+    expect(chatDisplaySource).toContain("key={session?.id ?? 'new-session'}")
+    expect(chatDisplaySource).toContain('mx-auto mt-6 w-fit max-w-[520px]')
   })
 })

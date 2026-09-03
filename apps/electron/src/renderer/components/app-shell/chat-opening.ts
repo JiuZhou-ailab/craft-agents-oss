@@ -27,6 +27,7 @@ export interface ChatOpeningPrompt {
   titleKey: string
   workspaceName?: string
   hintKey: string
+  tipKeys: string[]
   sections: ChatOpeningSection[]
   actions: ChatOpeningAction[]
 }
@@ -52,6 +53,38 @@ function commandAction(
 }
 
 const GENERAL_ACTIONS: ChatOpeningAction[] = []
+const GENERAL_TIP_KEYS = [
+  'chatInput.placeholder.mention',
+  'chatInput.placeholder.shiftTab',
+  'chatInput.placeholder.labels',
+  'chatInput.placeholder.newLine',
+  'mode.askFullDesc',
+  'mode.exploreFullDesc',
+  'skillsList.emptyDescription',
+  'sourcesList.emptyDescription',
+]
+
+export function pickRandomTipKeys(
+  keys: string[],
+  count: number,
+  random: () => number = Math.random,
+): string[] {
+  const pool = [...keys]
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1))
+    ;[pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]]
+  }
+  return pool.slice(0, Math.max(0, count))
+}
+
+export function getTipWindow(keys: string[], offset: number, count: number): string[] {
+  if (keys.length === 0 || count <= 0) return []
+  const start = ((offset % keys.length) + keys.length) % keys.length
+  return Array.from(
+    { length: Math.min(count, keys.length) },
+    (_, index) => keys[(start + index) % keys.length],
+  )
+}
 
 const PROJECT_ACTIONS: ChatOpeningAction[] = [
   commandAction('project.import', 'import-files'),
@@ -72,12 +105,13 @@ export function resolveChatOpeningPrompt({
         ? 'chatOpening.project.readyTitle'
         : 'chatOpening.project.emptyTitle'
       : 'chatOpening.general.title',
-    workspaceName: workspaceName?.trim() || undefined,
+    workspaceName: isProject ? workspaceName?.trim() || undefined : undefined,
     hintKey: isProject
       ? hasUserContent
         ? 'chatOpening.project.readyHint'
         : 'chatOpening.project.emptyHint'
       : 'chatOpening.hint',
+    tipKeys: isProject ? [] : GENERAL_TIP_KEYS,
     sections: actions.length > 0
       ? [{
           id: 'project',

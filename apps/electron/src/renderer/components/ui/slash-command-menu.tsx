@@ -161,11 +161,13 @@ export function replaceSlashSkillSelection(
 // Shared Styles
 // ============================================================================
 
-const MENU_CONTAINER_STYLE = 'min-w-[200px] overflow-hidden rounded-[8px] bg-background text-foreground shadow-modal-small'
+const MENU_CONTAINER_STYLE = 'min-w-[200px] overflow-hidden rounded-[8px] bg-foreground-5 text-foreground shadow-modal-small ring-1 ring-foreground/10'
 const MENU_LIST_STYLE = 'max-h-[260px] overflow-y-auto py-1'
 const MENU_ITEM_STYLE = 'flex cursor-pointer select-none items-center gap-2 rounded-[6px] mx-1 px-2 py-1.5 text-[13px]'
-const MENU_ITEM_SELECTED = 'bg-foreground/5'
-const MENU_SECTION_HEADER = 'px-3 py-1.5 mb-0.5 text-[12px] font-medium text-muted-foreground border-b border-foreground/5'
+const INLINE_MENU_CONTAINER_STYLE = 'overflow-hidden rounded-[16px] border border-border/70 bg-foreground-5 text-foreground shadow-modal-small'
+const INLINE_MENU_LIST_STYLE = 'min-h-0 overflow-y-auto p-2'
+const INLINE_MENU_ITEM_STYLE = 'flex min-h-9 cursor-pointer select-none items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] leading-5 outline-none'
+const INLINE_MENU_ITEM_SELECTED = 'bg-foreground/[0.06]'
 
 // ============================================================================
 // Shared: Filter utilities
@@ -227,17 +229,37 @@ function flattenSections(sections: SlashSection[]): SlashItem[] {
 // ============================================================================
 
 const MODE_COMMAND_IDS = new Set<string>(['safe', 'ask', 'allow-all'])
+const MODE_COMMAND_DESCRIPTION_KEYS: Partial<Record<SlashCommandId, string>> = {
+  safe: 'mode.exploreFullDesc',
+  ask: 'mode.askFullDesc',
+  'allow-all': 'mode.executeFullDesc',
+}
 
-function CommandItemContent({ command, isActive }: { command: SlashCommand; isActive: boolean }) {
+function CommandItemContent({
+  command,
+  isActive,
+  showDescription = false,
+}: {
+  command: SlashCommand
+  isActive: boolean
+  showDescription?: boolean
+}) {
   const { t } = useTranslation()
   const label = MODE_COMMAND_IDS.has(command.id) ? t(`mode.${command.id}`, command.label) : command.label
+  const descriptionKey = MODE_COMMAND_DESCRIPTION_KEYS[command.id]
+  const description = descriptionKey ? t(descriptionKey, command.description) : command.description
   return (
     <>
       <div className="shrink-0 text-muted-foreground">{command.icon}</div>
-      <div className="flex-1 min-w-0">{label}</div>
+      <div className="min-w-0 flex-1 truncate">
+        <span className={cn(showDescription && 'font-medium')}>{label}</span>
+        {showDescription && (
+          <span className="ml-1.5 text-muted-foreground">{description}</span>
+        )}
+      </div>
       {isActive && (
-        <div className="shrink-0 h-4 w-4 rounded-full bg-current flex items-center justify-center">
-          <Check className="h-2.5 w-2.5 text-white dark:text-black" strokeWidth={3} />
+        <div className="shrink-0 size-3 rounded-full bg-blue-500 flex items-center justify-center">
+          <Check className="size-2 text-white" strokeWidth={3} />
         </div>
       )}
     </>
@@ -251,7 +273,7 @@ function SkillItemContent({ item }: { item: SlashSkillItem }) {
         <Zap className={MENU_ICON_SIZE} strokeWidth={1.75} />
       </div>
       <div className="flex-1 min-w-0 truncate">
-        <span>{item.label}</span>
+        <span className="font-medium">{item.label}</span>
         {item.description && <span className="text-muted-foreground ml-1.5">{item.description}</span>}
       </div>
     </>
@@ -336,7 +358,7 @@ export function SlashCommandMenu({
         className={cn(
           MENU_ITEM_STYLE,
           'outline-none',
-          'data-[selected=true]:bg-foreground/5'
+          'data-[selected=true]:bg-foreground/10'
         )}
       >
         <CommandItemContent command={cmd} isActive={isActive} />
@@ -400,6 +422,9 @@ export interface InlineSlashCommandProps {
   onSelectFolder: (path: string) => void
   filter?: string
   position: { x: number; y: number }
+  anchorRef?: React.RefObject<HTMLElement | null>
+  listboxId: string
+  onActiveDescendantChange?: (id: string | undefined) => void
   className?: string
 }
 
@@ -413,6 +438,9 @@ export function InlineSlashCommand({
   onSelectFolder,
   filter = '',
   position,
+  anchorRef,
+  listboxId,
+  onActiveDescendantChange,
   className,
 }: InlineSlashCommandProps) {
   const menuRef = React.useRef<HTMLDivElement>(null)
@@ -440,6 +468,12 @@ export function InlineSlashCommand({
       selectedEl.scrollIntoView({ block: 'nearest' })
     }
   }, [selectedIndex])
+
+  React.useEffect(() => {
+    onActiveDescendantChange?.(
+      open && flatItems[selectedIndex] ? `${listboxId}-option-${selectedIndex}` : undefined,
+    )
+  }, [flatItems, listboxId, onActiveDescendantChange, open, selectedIndex])
 
   // Handle item selection
   const handleSelect = React.useCallback((item: SlashItem) => {
@@ -503,98 +537,67 @@ export function InlineSlashCommand({
   // Hide if no results or not open
   if (!open || flatItems.length === 0) return null
 
-  // Calculate bottom position from window height (menu appears above cursor)
+  const anchorRect = anchorRef?.current?.getBoundingClientRect()
   const bottomPosition = typeof window !== 'undefined'
-    ? window.innerHeight - Math.round(position.y) + 8
+    ? window.innerHeight - Math.round(anchorRect?.top ?? position.y) + 8
     : 0
-
-  // Track current item index across all sections
-  let currentItemIndex = 0
 
   return (
     <div
       ref={menuRef}
       data-inline-menu
-      className={cn('fixed z-dropdown', MENU_CONTAINER_STYLE, className)}
-      style={{ left: Math.round(position.x) - 10, bottom: bottomPosition, minWidth: 220, maxWidth: 260 }}
+      className={cn('fixed z-dropdown flex flex-col', INLINE_MENU_CONTAINER_STYLE, className)}
+      style={anchorRect ? {
+        left: Math.round(anchorRect.left),
+        bottom: bottomPosition,
+        width: Math.round(anchorRect.width),
+        maxHeight: Math.min(560, Math.max(160, Math.round(anchorRect.top) - 16)),
+      } : {
+        left: Math.round(position.x) - 10,
+        bottom: bottomPosition,
+        minWidth: 220,
+        maxWidth: 260,
+      }}
     >
-      <div ref={listRef} className={MENU_LIST_STYLE}>
-        {filteredSections.map((section, sectionIndex) => (
-          <React.Fragment key={section.id}>
-            {/* Section header */}
-            <div className={MENU_SECTION_HEADER}>
-              {section.label}
+      <div id={listboxId} ref={listRef} className={INLINE_MENU_LIST_STYLE} role="listbox">
+        {flatItems.map((item, itemIndex) => {
+          const isSelected = itemIndex === selectedIndex
+          return (
+            <div
+              key={`${isFolder(item) ? 'folder' : isSkill(item) ? 'skill' : 'command'}:${item.id}`}
+              id={`${listboxId}-option-${itemIndex}`}
+              role="option"
+              aria-selected={isSelected}
+              data-selected={isSelected}
+              onClick={() => handleSelect(item)}
+              onMouseEnter={() => setSelectedIndex(itemIndex)}
+              className={cn(
+                INLINE_MENU_ITEM_STYLE,
+                isSelected && INLINE_MENU_ITEM_SELECTED,
+              )}
+            >
+              {isFolder(item) ? (
+                <>
+                  <div className="shrink-0 text-muted-foreground">
+                    <Icon_Folder className={MENU_ICON_SIZE} strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="ml-1.5 text-muted-foreground">{item.description}</span>
+                  </div>
+                </>
+              ) : isSkill(item) ? (
+                <SkillItemContent item={item} />
+              ) : (
+                <CommandItemContent
+                  command={item}
+                  isActive={activeCommands.includes(item.id)}
+                  showDescription
+                />
+              )}
             </div>
-
-            {/* Section items */}
-            {section.items.map((item) => {
-              const itemIndex = currentItemIndex++
-              const isSelected = itemIndex === selectedIndex
-
-              if (isFolder(item)) {
-                // Folder item - single line with path
-                return (
-                  <div
-                    key={`${section.id}-${item.id}`}
-                    data-selected={isSelected}
-                    onClick={() => handleSelect(item)}
-                    onMouseEnter={() => setSelectedIndex(itemIndex)}
-                    className={cn(
-                      MENU_ITEM_STYLE,
-                      isSelected && MENU_ITEM_SELECTED
-                    )}
-                  >
-                    <div className="shrink-0 text-muted-foreground">
-                      <Icon_Folder className={MENU_ICON_SIZE} strokeWidth={1.75} />
-                    </div>
-                    <div className="flex-1 min-w-0 truncate">
-                      <span>{item.label}</span>
-                      <span className="text-muted-foreground ml-1.5">{item.description}</span>
-                    </div>
-                  </div>
-                )
-              } else if (isSkill(item)) {
-                return (
-                  <div
-                    key={`${section.id}-${item.id}`}
-                    data-selected={isSelected}
-                    onClick={() => handleSelect(item)}
-                    onMouseEnter={() => setSelectedIndex(itemIndex)}
-                    className={cn(
-                      MENU_ITEM_STYLE,
-                      isSelected && MENU_ITEM_SELECTED
-                    )}
-                  >
-                    <SkillItemContent item={item} />
-                  </div>
-                )
-              } else {
-                // Command item
-                const isActive = activeCommands.includes(item.id)
-                return (
-                  <div
-                    key={item.id}
-                    data-selected={isSelected}
-                    onClick={() => handleSelect(item)}
-                    onMouseEnter={() => setSelectedIndex(itemIndex)}
-                    className={cn(
-                      MENU_ITEM_STYLE,
-                      isSelected && MENU_ITEM_SELECTED
-                    )}
-                  >
-                    <CommandItemContent command={item} isActive={isActive} />
-                  </div>
-                )
-              }
-            })}
-
-          </React.Fragment>
-        ))}
-      </div>
-      {/* Always-visible footer hint for @ mentions */}
-      <div className="h-px bg-border/50 mx-2" />
-      <div className="px-3 py-2.5 select-none text-xs text-muted-foreground">
-        Use @ to attach files, folders, and sources
+          )
+        })}
       </div>
     </div>
   )

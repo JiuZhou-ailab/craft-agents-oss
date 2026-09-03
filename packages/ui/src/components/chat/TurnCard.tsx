@@ -1481,7 +1481,7 @@ function TurnUsageTooltip({ metrics }: { metrics: TurnMetrics }) {
           data-search-exclude="true"
           className={cn(
             "p-1 rounded-[4px] transition-colors select-none",
-            "text-muted-foreground/60 hover:text-foreground hover:bg-foreground/5",
+            "text-muted-foreground hover:text-foreground hover:bg-foreground/5",
             "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           )}
         >

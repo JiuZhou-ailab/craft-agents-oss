@@ -168,4 +168,27 @@ describe('slash skill commands', () => {
     expect(matcherSource).toContain('if (item.searchText) return item.searchText.includes(lowerFilter)')
     expect(matcherSource).not.toContain('item.label.toLowerCase().includes(lowerFilter)')
   })
+
+  it('keeps the floating menu distinct from the composer surface', () => {
+    const source = readFileSync(new URL('../slash-command-menu.tsx', import.meta.url), 'utf-8')
+    const inputSource = readFileSync(new URL('../../app-shell/input/FreeFormInput.tsx', import.meta.url), 'utf-8')
+    const inlineSource = source.slice(
+      source.indexOf('export function InlineSlashCommand'),
+      source.indexOf('// Hook for managing inline slash command state'),
+    )
+
+    expect(source).toContain("const INLINE_MENU_CONTAINER_STYLE = 'overflow-hidden rounded-[16px] border border-border/70 bg-foreground-5")
+    expect(inlineSource).toContain('INLINE_MENU_CONTAINER_STYLE')
+    expect(inlineSource).toContain('flatItems.map')
+    expect(inlineSource).not.toContain('section.label')
+    expect(inlineSource).not.toContain('Use @ to attach')
+    expect(inlineSource).toContain('width: Math.round(anchorRect.width)')
+    expect(inputSource).toContain('anchorRef={containerRef}')
+    expect(inputSource).toContain('aria-controls={inlineSlash.isOpen ? slashListboxId : undefined}')
+    expect(inputSource).toContain('aria-activedescendant={activeSlashOptionId}')
+    expect(source).toContain('id={`${listboxId}-option-${itemIndex}`}')
+    expect(source).toContain('shrink-0 size-3 rounded-full bg-blue-500')
+    expect(source).toContain('Check className="size-2 text-white"')
+    expect(source).not.toContain('rounded-full bg-current')
+  })
 })

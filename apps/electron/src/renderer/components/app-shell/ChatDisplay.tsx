@@ -14,7 +14,7 @@ import {
   ExternalLink,
   Info,
 } from "lucide-react"
-import { motion, AnimatePresence } from "motion/react"
+import { motion, AnimatePresence, useReducedMotion } from "motion/react"
 import { toast } from "sonner"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -64,6 +64,8 @@ import { CHAT_LAYOUT } from "@craft-agent/ui"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
 import { resolveBranchNewPanelOption } from "./branching"
 import {
+  getTipWindow,
+  pickRandomTipKeys,
   resolveChatOpeningPrompt,
   type ChatOpeningAction,
   type ChatOpeningCommand,
@@ -471,6 +473,19 @@ function ChatOpeningEmptyState({
   onAction: (action: ChatOpeningAction) => void
 }) {
   const { t } = useTranslation()
+  const shouldReduceMotion = useReducedMotion()
+  const [tipQueue] = React.useState(() => pickRandomTipKeys(opening.tipKeys, opening.tipKeys.length))
+  const [tipOffset, setTipOffset] = React.useState(0)
+  const [tipsPaused, setTipsPaused] = React.useState(false)
+  const tipKeys = getTipWindow(tipQueue, tipOffset, 3)
+
+  React.useEffect(() => {
+    if (tipQueue.length <= 3 || tipsPaused || shouldReduceMotion) return
+    const interval = window.setInterval(() => {
+      setTipOffset(current => (current + 3) % tipQueue.length)
+    }, 10_000)
+    return () => window.clearInterval(interval)
+  }, [shouldReduceMotion, tipQueue.length, tipsPaused])
   const contextParts = [
     opening.workspaceName ? t('chatOpening.contextProject', { workspaceName: opening.workspaceName }) : undefined,
   ].filter((part): part is string => Boolean(part))
@@ -489,32 +504,46 @@ function ChatOpeningEmptyState({
         <div className="mt-1 text-xs text-muted-foreground/70">
           {t(opening.hintKey)}
         </div>
-        <div className="mt-6 space-y-4 text-left">
-          {opening.sections.map((section) => (
-            <section key={section.id}>
-              <div className="mb-2 px-1 text-[11px] font-medium text-muted-foreground">
-                {t(section.labelKey)}
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {section.actions.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    onClick={() => onAction(action)}
-                    className="min-h-[52px] rounded-[7px] border border-border/60 bg-background px-3 py-2 text-left shadow-minimal transition-colors hover:border-foreground/20 hover:bg-foreground/[0.03]"
-                  >
-                    <span className="block text-sm font-medium text-foreground/85">
-                      {t(action.labelKey)}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {t(action.descriptionKey)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        {tipKeys.length > 0 ? (
+          <ul
+            className="mx-auto mt-6 w-fit max-w-[520px] list-disc space-y-1.5 pl-5 text-left text-sm leading-6 text-foreground/65 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            tabIndex={tipQueue.length > 3 ? 0 : undefined}
+            onPointerEnter={() => setTipsPaused(true)}
+            onPointerLeave={() => setTipsPaused(false)}
+            onFocus={() => setTipsPaused(true)}
+            onBlur={() => setTipsPaused(false)}
+          >
+            {tipKeys.map(tipKey => <li key={tipKey}>{t(tipKey)}</li>)}
+          </ul>
+        ) : null}
+        {opening.sections.length > 0 ? (
+          <div className="mt-6 space-y-4 text-left">
+            {opening.sections.map((section) => (
+              <section key={section.id}>
+                <div className="mb-2 px-1 text-[11px] font-medium text-muted-foreground">
+                  {t(section.labelKey)}
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {section.actions.map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      onClick={() => onAction(action)}
+                      className="min-h-[52px] rounded-[7px] border border-border/60 bg-background px-3 py-2 text-left shadow-minimal transition-colors hover:border-foreground/20 hover:bg-foreground/[0.03]"
+                    >
+                      <span className="block text-sm font-medium text-foreground/85">
+                        {t(action.labelKey)}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {t(action.descriptionKey)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -1854,6 +1883,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                   )}
                   {!compactMode && turns.length === 0 && !hasUnrenderedLoadedMessages && (
                     <ChatOpeningEmptyState
+                      key={session?.id ?? 'new-session'}
                       opening={chatOpening}
                       onAction={handleOpeningAction}
                     />
