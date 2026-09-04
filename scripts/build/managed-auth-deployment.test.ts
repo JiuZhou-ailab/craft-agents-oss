@@ -79,7 +79,8 @@ describe('managed auth deployment', () => {
     expect(workflow).toContain('TOOL_TOKEN_RESPONSE_PATH')
     expect(workflow).toContain('TOOL_SEARCH_RESPONSE_PATH')
     expect(workflow).toContain('payload.exp - now <= 12 * 60 * 60 + 5 * 60')
-    expect(workflow).not.toContain('gemini-3.5-flash')
+    expect(workflow).toContain('gemini-3.8-flash')
+    expect(workflow).toContain('gemini-3.7-flash')
     expect(gatewayDeploy).toBeGreaterThan(0)
     expect(toolGatewayDeploy).toBeGreaterThan(gatewayDeploy)
     expect(brokerDeploy).toBeGreaterThan(toolGatewayDeploy)
@@ -235,9 +236,13 @@ describe('managed auth deployment', () => {
     }
   })
 
-  it('verifies live managed auth without redeploying it during desktop release', () => {
+  it('verifies the release Gemini models without redeploying managed auth during desktop release', () => {
     const releaseWorkflow = readRepoFile('.github/workflows/release.yml')
     const deployWorkflow = readRepoFile('.github/workflows/deploy-managed-auth.yml')
+    const verifyIntegration = findStep(
+      readDeployJob('.github/workflows/deploy-managed-auth.yml'),
+      'Verify managed auth integration',
+    ).run ?? ''
 
     expect(releaseWorkflow).toContain('verify-managed-auth:')
     expect(releaseWorkflow).toContain('deploy: false')
@@ -248,6 +253,11 @@ describe('managed auth deployment', () => {
     expect(deployWorkflow).toContain('DEPLOY_MANAGED_AUTH: ${{ inputs.deploy }}')
     expect(deployWorkflow).toContain('if: ${{ inputs.deploy }}')
     expect(deployWorkflow).not.toContain('github.event_name != \'workflow_call\' || inputs.deploy')
+    expect(verifyIntegration).toContain('gemini-3.8-flash')
+    expect(verifyIntegration).toContain('gemini-3.7-flash')
+    expect(verifyIntegration).toContain('"thinkingLevel":"low"')
+    expect(verifyIntegration).toContain('GEMINI_CANARY_RESPONSE_PATH')
+    expect(verifyIntegration).toContain('No generated text')
     expect(readRepoFile('apps/auth-broker-worker/wrangler.toml')).toContain('workers_dev = false')
     expect(readRepoFile('apps/model-gateway-worker/wrangler.toml')).toContain('workers_dev = false')
     expect(readRepoFile('apps/tool-gateway-worker/wrangler.toml')).toContain('workers_dev = false')

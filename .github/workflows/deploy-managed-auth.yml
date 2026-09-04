@@ -221,7 +221,37 @@ jobs:
           MODEL_CATALOG_RESPONSE_PATH="$RUNNER_TEMP/model-catalog-response.json" bun --eval '
             const body = await Bun.file(process.env.MODEL_CATALOG_RESPONSE_PATH).json();
             if (!Array.isArray(body.data) || body.data.length === 0) process.exit(1);
+            const available = new Set(body.data.flatMap((model) =>
+              model && typeof model === "object" && typeof model.id === "string" ? [model.id] : []
+            ));
+            for (const model of ["gemini-3.8-flash", "gemini-3.7-flash"]) {
+              if (!available.has(model)) {
+                console.error(`Missing managed release model: ${model}`);
+                process.exit(1);
+              }
+            }
           '
+
+          for model in gemini-3.8-flash gemini-3.7-flash; do
+            response_path="$RUNNER_TEMP/gemini-canary-$model.json"
+            status="$(curl --silent --show-error --max-time 60 --output "$response_path" \
+              --write-out '%{http_code}' \
+              -H "x-goog-api-key: $MODEL_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -d '{"contents":[{"role":"user","parts":[{"text":"Reply with OK."}]}],"generationConfig":{"maxOutputTokens":64,"thinkingConfig":{"thinkingLevel":"low"}}}' \
+              "https://storyflow-model.zjding.com/v1beta/models/$model:generateContent")"
+            test "$status" = 200
+            GEMINI_CANARY_RESPONSE_PATH="$response_path" GEMINI_CANARY_MODEL="$model" bun --eval '
+              const body = await Bun.file(process.env.GEMINI_CANARY_RESPONSE_PATH).json();
+              const generated = body.candidates?.some((candidate) =>
+                candidate?.content?.parts?.some((part) => typeof part?.text === "string" && part.text.trim())
+              );
+              if (!generated) {
+                console.error(`No generated text for ${process.env.GEMINI_CANARY_MODEL}`);
+                process.exit(1);
+              }
+            '
+          done
 
           status="$(curl --silent --show-error --output "$RUNNER_TEMP/tool-token-response.json" \
             --write-out '%{http_code}' \
