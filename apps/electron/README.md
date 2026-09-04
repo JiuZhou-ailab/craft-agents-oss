@@ -122,7 +122,7 @@ bun run sync-secrets
 bun run electron:build:main      # Bundle main process (esbuild)
 bun run electron:build:preload   # Bundle preload script (esbuild)
 bun run electron:build:renderer  # Bundle React app (Vite)
-bun run electron:build:resources # Copy icons
+bun run electron:build:assets    # Copy runtime resources
 bun run electron:build           # All of the above
 ```
 

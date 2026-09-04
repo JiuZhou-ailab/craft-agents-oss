@@ -17,7 +17,6 @@ Build, validation, packaging, install, and local development entry scripts for t
 - `electron-build-main.ts` - Electron main-process and subprocess bundle builder.
 - `electron-build-preload.ts` - Electron preload bundle builder.
 - `electron-build-renderer.ts` - Electron renderer build runner.
-- `electron-build-resources.ts` - Electron resources copy step.
 - `electron-clean.ts` - Electron build artifact cleaner.
 - `electron-dev.ts` - local Electron development runner.
 - `electron-perf-summary.ts` - summarize Electron debug performance logs into operation latency evidence.

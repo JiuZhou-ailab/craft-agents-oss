@@ -50,7 +50,6 @@
     "electron:build:main": "bun run scripts/electron-build-main.ts",
     "electron:build:preload": "bun run scripts/electron-build-preload.ts",
     "electron:build:renderer": "bun run scripts/electron-build-renderer.ts",
-    "electron:build:resources": "bun run scripts/electron-build-resources.ts",
     "build:wa-worker": "bun run scripts/build-wa-worker.ts",
     "electron:build:assets": "cd apps/electron && bun scripts/copy-assets.ts",
     "electron:build:validate": "cd apps/electron && bun run build:validate",
