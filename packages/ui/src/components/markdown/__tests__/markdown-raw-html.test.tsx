@@ -19,7 +19,7 @@ describe('Markdown raw HTML handling', () => {
   it('does not render raw HTML payloads as active DOM elements', () => {
     const html = renderToStaticMarkup(
       <Markdown>
-        {'Before\n\n<iframe srcdoc="<script>alert(1)</script>"></iframe><object data="x"></object><svg onload="alert(1)"></svg><form action="https://example.com"><button>send</button></form><img src="x" onerror="alert(1)">\n\nAfter'}
+        {'Before\n\n<sq+qr><iframe srcdoc="<script>alert(1)</script>"></iframe><object data="x"></object><svg onload="alert(1)"></svg><form action="https://example.com"><button>send</button></form><img src="x" onerror="alert(1)">\n\nAfter'}
       </Markdown>
     )
 
@@ -30,6 +30,7 @@ describe('Markdown raw HTML handling', () => {
     expect(html).not.toContain('<svg')
     expect(html).not.toContain('<form')
     expect(html).not.toContain('<img')
+    expect(html).toContain('&lt;sq+qr&gt;')
     expect(html).toContain('&lt;iframe')
   })
 })

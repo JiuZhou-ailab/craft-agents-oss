@@ -20,7 +20,6 @@ import { resolveMarkdownLinkTarget } from './link-target'
 import remarkCollapsibleSections from './remarkCollapsibleSections'
 import { CollapsibleSection } from './CollapsibleSection'
 import { useCollapsibleMarkdown } from './CollapsibleMarkdownContext'
-import { wrapWithSafeProxy } from './safe-components'
 import { MARKDOWN_MATH_OPTIONS } from './math-options'
 
 /**
@@ -488,9 +487,6 @@ function createComponents(
     strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
     em: ({ children }) => <em className="italic">{children}</em>,
     del: ({ children }) => <del className="line-through text-muted-foreground">{children}</del>,
-    // Handle unknown <markdown> tags that may come through rehype-raw
-    // Type assertion needed because 'markdown' is not a standard HTML element
-    markdown: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   } as Partial<Components>
 }
 
@@ -532,7 +528,7 @@ export function Markdown({
   }
 
   const components = React.useMemo(
-    () => wrapWithSafeProxy(createComponents(mode, onUrlClick, onFileClick, collapsible ? collapsibleContext : null, firstMermaidCodeRef, hideFirstMermaidExpand, allowImages)),
+    () => createComponents(mode, onUrlClick, onFileClick, collapsible ? collapsibleContext : null, firstMermaidCodeRef, hideFirstMermaidExpand, allowImages),
     [mode, onUrlClick, onFileClick, collapsible, collapsibleContext, hideFirstMermaidExpand, allowImages]
   )
 
