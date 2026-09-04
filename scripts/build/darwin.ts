@@ -94,7 +94,7 @@ function normalizeCscLinkForMacosSecurity(tempDir: string): void {
     return;
   }
 
-  const exportOk = runOpenSsl(['pkcs12', '-export', '-in', pemFile, '-out', normalizedP12, '-passout', `file:${passFile}`]);
+  const exportOk = runOpenSsl(['pkcs12', '-export', '-legacy', '-in', pemFile, '-out', normalizedP12, '-passout', `file:${passFile}`]);
   if (!exportOk) {
     console.log('OpenSSL could not normalize CSC_LINK; using CSC_LINK as provided.');
     return;

@@ -194,6 +194,12 @@ describe('macOS release configuration', () => {
     expect(darwinBuild).toContain('-c.dmg.sign=false');
   });
 
+  test('normalizes PKCS#12 certificates into a macOS security-compatible format', () => {
+    const darwinBuild = readRepoFile('scripts/build/darwin.ts');
+
+    expect(darwinBuild).toContain("['pkcs12', '-export', '-legacy'");
+  });
+
   test('publishes updater manifests from the public R2 endpoint', () => {
     const builderConfig = readRepoFile('apps/electron/electron-builder.yml');
     const autoUpdate = readRepoFile('apps/electron/src/main/auto-update.ts');
