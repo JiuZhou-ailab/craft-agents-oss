@@ -37,14 +37,12 @@ import { motion } from 'motion/react'
 import { MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCompensateForStoplight } from '@/context/StoplightContext'
+import { PANEL_SPRING } from './panel-constants'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { StyledDropdownMenuContent } from '@/components/ui/styled-dropdown'
-
-// Spring transition for smooth animations (matches sidebar)
-const springTransition = { type: 'spring' as const, stiffness: 300, damping: 30 }
 
 // Padding to compensate for macOS traffic lights (stoplight buttons)
 // Traffic lights positioned at x:18, ~52px wide = 70px + 14px gap
@@ -188,8 +186,12 @@ export function PanelHeader({
   return (
     <motion.div
       initial={false}
-      animate={{ paddingLeft: shouldCompensate ? STOPLIGHT_PADDING : basePadding }}
-      transition={springTransition}
+      animate={{
+        paddingLeft: shouldCompensate
+          ? `var(--panel-header-leading-inset, ${STOPLIGHT_PADDING}px)`
+          : basePadding,
+      }}
+      transition={PANEL_SPRING}
       className={baseClassName}
     >
       {content}

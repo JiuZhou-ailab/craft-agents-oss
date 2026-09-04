@@ -295,6 +295,11 @@ describe('app shell layout defaults', () => {
     expect(rendererCssSource).not.toContain("html[data-activity-rail-collapsed='true']")
     expect(appShellSource).toContain('const contentNeedsStoplightCompensation = isAutoCompact')
     expect(appShellSource).toContain('|| (!isActivityRailVisible && hideSessionListNavigator)')
+    expect(appShellSource).toContain(
+      'const contentHeaderLeadingInset = !isAutoCompact && !isActivityRailVisible && hideSessionListNavigator',
+    )
+    expect(appShellSource).toContain('? activityRailWidth + 16')
+    expect(appShellSource).toContain("'--panel-header-leading-inset': `${contentHeaderLeadingInset}px`")
     expect(appShellSource).toContain('isSidebarAndNavigatorHidden={contentNeedsStoplightCompensation}')
     expect(appShellSource).toContain('compensateForStoplight={!isActivityRailVisible}')
     expect(appShellSource).not.toContain('const isSidebarAndNavigatorHidden = false')
@@ -322,6 +327,8 @@ describe('app shell layout defaults', () => {
     expect(activityRailSource).toContain('className="titlebar-drag-region shrink-0"')
     expect(activityRailSource).toContain('aria-label="调整侧边栏宽度"')
     expect(activityRailSource).toContain('storage.KEYS.activityRailWidth')
+    expect(panelHeaderSource).toContain("var(--panel-header-leading-inset, ${STOPLIGHT_PADDING}px)")
+    expect(panelHeaderSource).toContain('transition={PANEL_SPRING}')
     expect(windowManagerSource).toContain('const MACOS_TRAFFIC_LIGHT_POSITION = { x: 17, y: 13 }')
     expect(windowManagerSource).toContain('hasShadow: false')
     expect(windowManagerSource).toContain('window.setHasShadow(false)')

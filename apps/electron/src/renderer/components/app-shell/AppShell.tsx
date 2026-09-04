@@ -1028,6 +1028,9 @@ function AppShellContent({
     )
   const contentNeedsStoplightCompensation = isAutoCompact
     || (!isActivityRailVisible && hideSessionListNavigator)
+  const contentHeaderLeadingInset = !isAutoCompact && !isActivityRailVisible && hideSessionListNavigator
+    ? activityRailWidth + 16
+    : null
   const visibleSessionListWidth = hideSessionListNavigator ? 0 : sessionListWidth
 
   const store = useStore()
@@ -4645,7 +4648,15 @@ function AppShellContent({
       <div
         ref={shellRef}
         className="flex items-stretch relative"
-        style={{ height: '100%', paddingRight: PANEL_EDGE_INSET, paddingLeft: 0, gap: showActivityRail ? 0 : PANEL_GAP }}
+        style={{
+          height: '100%',
+          paddingRight: PANEL_EDGE_INSET,
+          paddingLeft: 0,
+          gap: showActivityRail ? 0 : PANEL_GAP,
+          ...(contentHeaderLeadingInset !== null
+            ? { '--panel-header-leading-inset': `${contentHeaderLeadingInset}px` }
+            : {}),
+        } as React.CSSProperties}
       >
         <AnimatePresence initial={false}>
           {showActivityRail && isActivityRailVisible ? (
