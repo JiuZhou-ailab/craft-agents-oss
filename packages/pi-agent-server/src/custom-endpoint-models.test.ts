@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'bun:test'
 import { ModelRuntime } from '@earendil-works/pi-coding-agent'
 import { clampThinkingLevel, InMemoryCredentialStore } from '@earendil-works/pi-ai'
+import { cloneManagedModelCatalog } from '../../shared/src/config/managed-model-catalog.ts'
 import {
   buildCustomEndpointModelDef,
   normalizeCustomEndpointModelEntry,
@@ -105,6 +106,23 @@ describe('buildCustomEndpointModelDef', () => {
     expect(clampThinkingLevel(model as never, 'minimal')).toBe('low')
     expect(clampThinkingLevel(model as never, 'max')).toBe('xhigh')
     expect(model.contextWindow).toBe(262_144)
+  })
+
+  it('carries managed Gemini 3.7/3.8 thinking levels into the Pi runtime model', () => {
+    const managedModels = cloneManagedModelCatalog('google-generative-ai')
+
+    for (const modelId of ['gemini-3.8-flash', 'gemini-3.7-flash']) {
+      const managed = managedModels.find(model => model.id === modelId)
+      expect(managed).toBeDefined()
+
+      const model = buildCustomEndpointModelDef(modelId, undefined, {
+        supportsThinking: managed!.supportsThinking,
+        thinkingLevelMap: managed!.thinkingLevelMap,
+      })
+      expect(model.reasoning).toBe(true)
+      expect(clampThinkingLevel(model as never, 'medium')).toBe('medium')
+      expect(clampThinkingLevel(model as never, 'off')).toBe('minimal')
+    }
   })
 })
 
