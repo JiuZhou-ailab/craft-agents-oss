@@ -823,6 +823,7 @@ export function ActivityRail({
                   disabled={!onOpenSettings}
                   onClick={() => onOpenSettings?.('profile')}
                   className="text-xs"
+                  data-tutorial="activity-profile-settings"
                 >
                   <UserRound className="size-4" />
                   {t('settings.profile.title')}

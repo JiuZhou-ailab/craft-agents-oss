@@ -329,7 +329,7 @@ async function smokeAccountCenter(app: LaunchedApp): Promise<void> {
       10_000,
       'settings menu item',
     )
-    await clickSelector(app, '[data-tutorial="activity-settings"]')
+    await clickSelector(app, '[data-tutorial="activity-profile-settings"]')
     await waitFor(
       app,
       `!!document.querySelector('#client-auth-identifier')
