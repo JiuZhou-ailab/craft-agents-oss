@@ -1,19 +1,19 @@
 {
-  "version": "0.21.0",
-  "digest": "148a1dd5d150aa8f6d58b2678bcf1e14424a4b31dbff165ca0ae541a7ba1d0f3",
-  "generatedAt": "2026-09-07T14:18:41.000Z",
-  "title": "Storyflow v0.21.0 更新说明",
-  "summary": "Storyflow 0.21.0 支持在独立对话中执行定时任务，并更新了模型、数据源、项目文件预览和桌面导航。",
+  "version": "0.21.1",
+  "digest": "9b9bceecc4c4afd94ed301d0a2c4fef61eda94fbaa5b3a7d78fde1c2913e582c",
+  "generatedAt": "2026-09-07T18:00:59.490Z",
+  "title": "Storyflow v0.21.1 更新说明",
+  "summary": "Storyflow 0.21.1 修复了侧边栏会话排序和项目归属显示，并统一了菜单与对话的视觉样式。",
   "highlights": [
-    "新增 Gemini 3.7 和 3.8 Flash：登录后的托管模型列表现在提供这两个模型，并支持低、中、高三档思考强度。",
-    "优先展示最新 Skills：Skills 页面默认打开全部目录并按发布时间倒序排列，新增内容不再被固定精选遮住。",
-    "直接预览 JSON 和 PDF：在项目文件工作区打开这两类文件时，右侧面板会直接显示结构化内容或 PDF 页面。",
-    "侧边栏更容易调整：侧边栏新增定时任务入口，宽度可以拖动或用方向键调整，收起侧边栏时会话标题也会保持原位。"
+    "拖动调整会话顺序：固定、项目和自由对话都可以上下拖动排序，重新打开后保留调整结果。",
+    "对话显示所属项目：从项目中启动的对话会在顶部显示项目名称，方便确认当前归属。",
+    "一次浏览历史提问：侧边消息导航更窄，悬停后展示全部历史提问列表，点击即可跳转到对应位置。",
+    "操作菜单样式统一：菜单使用一致的字号、间距和高亮，弹层边框更清楚，边缘阴影更轻，侧边栏统一使用默认光标。"
   ],
-  "accentColor": "#af1d72",
+  "accentColor": "#1d61af",
   "accentTextColor": "#ffffff",
   "source": {
-    "commitCount": 23,
-    "userVisibleCommitCount": 9
+    "commitCount": 3,
+    "userVisibleCommitCount": 2
   }
 }

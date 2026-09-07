@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/shared",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "license": "Apache-2.0",
   "description": "Shared business logic for Storyflow - agent, auth, config, credentials, MCP integration",
   "type": "module",
