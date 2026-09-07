@@ -386,8 +386,15 @@ async function smokeAccountCenter(app: LaunchedApp): Promise<void> {
 async function smokeManagedLoginRedirect(app: LaunchedApp): Promise<void> {
   await clickSelector(app, '[role="dialog"] button[aria-label]')
   await waitFor(app, `!document.querySelector('#client-auth-identifier')`, 5_000, 'profile dismissal')
+  const previousRoute = await evalOn<string | null>(app, `new URL(location.href).searchParams.get('route')`)
   await clickSelector(app, '[data-testid="activity-projects"] button[title="新建任务"]')
-  await waitFor(app, `new URL(location.href).searchParams.get('route')?.includes('/session/')`,
+  // Startup may already have restored a session. Wait for the newly created
+  // session before configuring its connection, rather than accepting the old route.
+  await waitFor(app, `(() => {
+    const route = new URL(location.href).searchParams.get('route')
+    return route !== ${JSON.stringify(previousRoute)} && route?.includes('/session/')
+      && !!document.querySelector('[data-tutorial="chat-input"][contenteditable="true"]')
+  })()`,
     15_000, 'project task creation activates its owning runtime')
   const sessionId = await evalOn<string>(app, `new URL(location.href).searchParams.get('route').split('/session/')[1]`)
   try {

@@ -409,6 +409,9 @@
     "protobufjs",
     "electron",
   ],
+  "patchedDependencies": {
+    "app-builder-lib@26.4.0": "patches/app-builder-lib@26.4.0.patch",
+  },
   "overrides": {
     "sharp": "0.35.3",
   },

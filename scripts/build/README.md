@@ -16,6 +16,7 @@ TypeScript build/dev entrypoints.
 - `electron-main-build-config.test.ts` - regression tests for Electron main process bundling constraints.
 - `linux.ts` - Linux packaging helpers.
 - `macos-release-config.test.ts` - regression tests for signed/notarized macOS release configuration.
+- `macos-keychain-password.test.ts` - verifies the installed signing dependency separates certificate and temporary keychain passwords without accessing a real keychain; see `../../patches/README.md`.
 - `pi-agent-server.ts` - builds the self-contained Pi subprocess required by Pi's native Extension loader.
 - `resource-staging.test.ts` - regression tests for Electron subprocess resource staging.
 - `resource-staging.ts` - stages built subprocess bundles into Electron resources.
