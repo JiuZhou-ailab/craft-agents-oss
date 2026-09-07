@@ -55,6 +55,7 @@ describe('transform_data path containment', () => {
         stat: () => ({ size: 0, isDirectory: () => false }),
       },
       loadSourceConfig: () => null,
+      resolveSourcePath: () => null,
       isSourceExecutionAllowed: () => false,
       sessionPath: sessionDir,
       dataPath: dataDir,

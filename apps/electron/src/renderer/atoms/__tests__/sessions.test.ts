@@ -157,6 +157,10 @@ describe('session status transitions', () => {
     expect(shouldRefreshGlobalSessionMetasForEvent('session_deleted')).toBe(true)
     expect(shouldRefreshGlobalSessionMetasForEvent('session_archived')).toBe(true)
     expect(shouldRefreshGlobalSessionMetasForEvent('session_unarchived')).toBe(true)
+    expect(shouldRefreshGlobalSessionMetasForEvent('session_flagged')).toBe(true)
+    expect(shouldRefreshGlobalSessionMetasForEvent('session_unflagged')).toBe(true)
+    expect(shouldRefreshGlobalSessionMetasForEvent('session_pinned')).toBe(true)
+    expect(shouldRefreshGlobalSessionMetasForEvent('session_unpinned')).toBe(true)
   })
 })
 

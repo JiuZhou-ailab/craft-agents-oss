@@ -10,19 +10,17 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SourceConfig } from '@craft-agent/session-tools-core';
 import { createSessionToolContext } from '../session-tool-context.ts';
 import { PiAgentToolHost } from '../pi-agent-tool-host.ts';
 import { getPiUserSkillsDir } from '../../skills/storage.ts';
-import {
-  SHARED_AGENTS_SOURCES_DIR,
-  loadSource,
-} from '../../sources/storage.ts';
+import { loadSource } from '../../sources/storage.ts';
 import { getSourceGrantRef } from '../../sources/grants.ts';
 
 const TEST_PREFIX = `pi-context-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const SHARED_AGENTS_SOURCES_DIR = join(homedir(), '.agents', 'sources');
 const touchedPaths = new Set<string>();
 
 afterEach(() => {
@@ -115,7 +113,7 @@ describe('Pi SessionToolContext Source ownership', () => {
       onAuthRequest: () => {},
     });
     expect(context.loadSourceConfig(slug)).toBeUndefined();
-    expect(context.isSourceDefinitionReadOnly?.(slug)).toBe(false);
+    expect(context.resolveSourcePath(slug)).toBeNull();
     expect(readFileSync(sharedConfigPath)).toEqual(originalDefinition);
   });
 

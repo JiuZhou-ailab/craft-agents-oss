@@ -40,6 +40,7 @@ function createContext(): SessionToolContext {
       stat: () => ({ size: 0, isDirectory: () => false }),
     },
     loadSourceConfig: () => null,
+    resolveSourcePath: () => null,
     isSourceExecutionAllowed: () => false,
     createSkillDocument: (slug, content) => {
       if (skills.has(slug)) throw new Error(`Skill already exists: ${slug}`);

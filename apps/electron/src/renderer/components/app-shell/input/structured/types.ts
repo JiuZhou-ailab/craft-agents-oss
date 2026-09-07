@@ -1,4 +1,4 @@
-import type { PermissionRequest, CredentialRequest, CredentialResponse, UserQuestionRequest, UserQuestionResponse as UserQuestionAnswer } from '../../../../../shared/types'
+import type { PermissionRequest, PermissionResponseOptions, CredentialRequest, CredentialResponse, UserQuestionRequest, UserQuestionResponse as UserQuestionAnswer } from '../../../../../shared/types'
 import type { AdminApprovalRequestData } from './AdminApprovalRequest'
 
 /**
@@ -35,6 +35,7 @@ export interface PermissionResponse {
   type: 'permission'
   allowed: boolean
   alwaysAllow: boolean
+  options?: PermissionResponseOptions
 }
 
 /**

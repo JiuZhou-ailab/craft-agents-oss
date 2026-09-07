@@ -320,6 +320,7 @@ export class ExportImport {
       lastUsedAt: Date.now(),
       lastMessageAt: header.lastMessageAt,
       isFlagged: header.isFlagged,
+      isPinned: header.isPinned,
       permissionMode: header.permissionMode,
       previousPermissionMode: header.previousPermissionMode,
       sessionStatus: header.sessionStatus,

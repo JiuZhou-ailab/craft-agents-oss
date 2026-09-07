@@ -20,7 +20,7 @@ interface PermissionRequestProps {
  * - Tool name badge
  * - Description of what the tool wants to do
  * - Command preview (scrollable)
- * - Action buttons: Allow, Always Allow, Deny
+ * - Action buttons: Allow once, switch this Session to Allow All, or Deny
  */
 export function PermissionRequest({ request, onResponse, unstyled = false }: PermissionRequestProps) {
   const { t } = useTranslation()
@@ -29,8 +29,8 @@ export function PermissionRequest({ request, onResponse, unstyled = false }: Per
     onResponse({ type: 'permission', allowed: true, alwaysAllow: false })
   }
 
-  const handleAlwaysAllow = () => {
-    onResponse({ type: 'permission', allowed: true, alwaysAllow: true })
+  const handleAllowAll = () => {
+    onResponse({ type: 'permission', allowed: true, alwaysAllow: false, options: { permissionMode: 'allow-all' } })
   }
 
   const handleDeny = () => {
@@ -85,10 +85,11 @@ export function PermissionRequest({ request, onResponse, unstyled = false }: Per
           size="sm"
           variant="ghost"
           className="h-7 gap-1.5 border border-foreground/10 hover:bg-foreground/5 active:bg-foreground/10"
-          onClick={handleAlwaysAllow}
+          onClick={handleAllowAll}
+          data-tutorial="permission-allow-all-button"
         >
           <RefreshCw className="h-3.5 w-3.5" />
-          Always Allow
+          Allow All
         </Button>
         <Button
           size="sm"
@@ -102,7 +103,7 @@ export function PermissionRequest({ request, onResponse, unstyled = false }: Per
 
         {/* Tip text */}
         <span className="min-w-0 flex-1 basis-full text-[10px] text-muted-foreground sm:basis-auto sm:text-right">
-          "Always Allow" remembers this command for the session
+          "Allow All" switches this session to execution mode
         </span>
       </div>
     </div>

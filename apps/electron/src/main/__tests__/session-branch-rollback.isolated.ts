@@ -249,6 +249,7 @@ mock.module('@craft-agent/shared/sources', () => ({
   getSourceServerBuilder: () => ({ buildServers: async () => ({ mcpServers: {}, apiServers: {} }) }),
   isApiOAuthProvider: () => false,
   // mcp-pool（server-core）顶层值导入；本测试不触发 API 调用，仅需存在以通过 ESM 链接
+  canonicalizeApiPath: (path: string) => path,
   materializeApiOperationRequest: () => ({ url: '', method: 'GET', headers: {} }),
   hasRenewEndpoint: () => false,
   SERVER_BUILD_ERRORS: {},

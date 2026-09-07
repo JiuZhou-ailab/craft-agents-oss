@@ -1,13 +1,13 @@
 /**
  * MainContentPanel - Right panel component for displaying content
  *
- * input: Navigation state, workspace-scoped session metadata, primary writing-content readiness, narrow action contexts, and entity selection atoms
- * output: Independently loaded writing chat plus content panels for sources, skills, and automations
+ * input: Navigation state, workspace-scoped session metadata, title inset, narrow action contexts, and entity selection atoms
+ * output: Route-selected chat independent of file loading, actionable empty states, content panels, and scheduled-task overview
  * pos: Renderer content router inside the app-shell panel stack
  *
  * Renders content based on the unified NavigationState:
  * - Chats navigator: ChatPage for the selected or base session
- * - Sources navigator: SourceInfoPage for selected source, or empty state
+ * - Sources navigator: Source list with modal details, or MCP discovery
  *
  * The NavigationState is the single source of truth for what to display.
  *
@@ -23,12 +23,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAtomValue } from 'jotai'
 import { useTranslation, Trans } from 'react-i18next'
 import { Panel } from './Panel'
-import { PanelHeader } from './PanelHeader'
+import { ChatPanelPlaceholder } from './ChatPanelPlaceholder'
 import { MultiSelectPanel } from './MultiSelectPanel'
-import { useSessionBatchActions, useSessionPanelChrome } from '@/context/AppShellContext'
+import { useSessionBatchActions } from '@/context/AppShellContext'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { workspacePanelFieldsAtomFamily, hasOtherWorkspacesAtom, sessionIdsAtom, sessionMetaAtomFamily, sessionMetaMapAtom, windowWorkspaceIdAtom, windowWorkspacesAtom, type SessionMeta } from '@/atoms/sessions'
+import { workspacePanelFieldsAtomFamily, hasOtherWorkspacesAtom, sessionMetaAtomFamily, windowWorkspaceIdAtom, windowWorkspacesAtom, type SessionMeta } from '@/atoms/sessions'
 import { StoplightProvider } from '@/context/StoplightContext'
 import {
   useNavigationState,
@@ -44,28 +44,24 @@ import { routes } from '@/lib/navigate'
 import { sourceSelection, automationSelection } from '@/hooks/useEntitySelection'
 import { extractLabelId } from '@craft-agent/shared/labels'
 import type { SessionStatusId } from '@/config/session-status-config'
-import SourceInfoPage from '@/pages/SourceInfoPage'
+import SourcesHubPage from '@/pages/SourcesHubPage'
 import McpHubPage from '@/pages/McpHubPage'
 import SkillInfoPage from '@/pages/SkillInfoPage'
 import SkillsHubPage from '@/pages/SkillsHubPage'
 import { AutomationInfoPage } from '../automations/AutomationInfoPage'
+import { ScheduledTasksOverview } from '../automations/ScheduledTasksOverview'
 import type { ExecutionEntry } from '../automations/types'
-import { automationsAtom } from '@/atoms/automations'
-import { useAutomationActions } from '@/hooks/useAutomations'
+import { useAutomations } from '@/hooks/useAutomations'
+import { FREE_CONVERSATION_WORKSPACE_ID } from '@craft-agent/shared/protocol'
 import { SendResourceToWorkspaceDialog, type SendResourceType } from './SendResourceToWorkspaceDialog'
-import { resolveWritingSessionId } from './writing-session-selection'
 
 const LazyChatPage = React.lazy(() => import('@/pages/ChatPage'))
-
-/**
- * Writing keeps its chat visible by default, but transcript work must not compete
- * with the directory and first document that make the project usable.
- */
-export const WritingPrimaryContentReadyContext = React.createContext(true)
 
 export interface MainContentPanelProps {
   /** Whether both sidebar and navigator are hidden by responsive compaction. */
   isSidebarAndNavigatorHidden?: boolean
+  /** Stable screen-space title inset used while the activity rail collapses. */
+  stoplightLeadingInset?: number
   /** Optional className for the container */
   className?: string
   /**
@@ -78,18 +74,23 @@ export interface MainContentPanelProps {
 
 export function MainContentPanel({
   isSidebarAndNavigatorHidden = false,
+  stoplightLeadingInset,
   className,
   navStateOverride,
 }: MainContentPanelProps) {
   const { t } = useTranslation()
   const globalNavState = useNavigationState()
+  const { navigate } = useNavigationActions()
   const navState = navStateOverride ?? globalNavState
   const isMultiSelectActive = useIsMultiSelectActive()
   const activeWorkspaceId = useAtomValue(windowWorkspaceIdAtom)
   const hasOtherWorkspaces = useAtomValue(hasOtherWorkspacesAtom)
   const activeWorkspace = useAtomValue(workspacePanelFieldsAtomFamily(activeWorkspaceId ?? null))
-  const automations = useAtomValue(automationsAtom)
+  const automationRuntimeId = isAutomationsNavigation(navState)
+    ? navState.filter?.automationType === 'scheduled' ? FREE_CONVERSATION_WORKSPACE_ID : activeWorkspaceId
+    : null
   const {
+    automations, automationWorkspace,
     automationTestResults,
     getAutomationHistory,
     handleDeleteAutomation,
@@ -101,37 +102,38 @@ export function MainContentPanel({
     confirmDeleteAutomation,
     pendingDeleteAutomation,
     setAutomationPendingDelete,
-  } = useAutomationActions(activeWorkspaceId, automations)
+  } = useAutomations(automationRuntimeId)
 
   // Execution history for the selected automation
   const selectedAutomationId = isAutomationsNavigation(navState) ? navState.details?.automationId : undefined
   const [executionHistory, setExecutionHistory] = useState<{
+    workspaceId: string
     automationId: string
     entries: ExecutionEntry[]
   } | null>(null)
 
   useEffect(() => {
-    if (!selectedAutomationId) return
+    if (!selectedAutomationId || !automationRuntimeId) return
     let stale = false
 
     // Initial fetch
     getAutomationHistory(selectedAutomationId).then(entries => {
-      if (!stale) setExecutionHistory({ automationId: selectedAutomationId, entries })
+      if (!stale) setExecutionHistory({ workspaceId: automationRuntimeId, automationId: selectedAutomationId, entries })
     })
 
     // Re-fetch on automation changes (live updates when automations fire)
     const cleanup = window.electronAPI.onAutomationsChanged(() => {
       if (!stale) {
         getAutomationHistory(selectedAutomationId).then(entries => {
-          if (!stale) setExecutionHistory({ automationId: selectedAutomationId, entries })
+          if (!stale) setExecutionHistory({ workspaceId: automationRuntimeId, automationId: selectedAutomationId, entries })
         })
       }
     })
 
     return () => { stale = true; cleanup() }
-  }, [selectedAutomationId, getAutomationHistory])
+  }, [selectedAutomationId, automationRuntimeId, getAutomationHistory])
 
-  const executions = executionHistory && executionHistory.automationId === selectedAutomationId
+  const executions = executionHistory && executionHistory.workspaceId === automationRuntimeId && executionHistory.automationId === selectedAutomationId
     ? executionHistory.entries
     : []
 
@@ -165,7 +167,7 @@ export function MainContentPanel({
   // Wrap content with StoplightProvider so PanelHeaders auto-compensate in focused mode.
   // Also renders the Send to Workspace dialog (portal-based, so it overlays regardless of position).
   const wrapWithStoplight = (content: React.ReactNode) => (
-    <StoplightProvider value={isSidebarAndNavigatorHidden}>
+    <StoplightProvider value={{ enabled: isSidebarAndNavigatorHidden, leadingInset: stoplightLeadingInset }}>
       {content}
       {sendDialogOpen ? (
         <SendResourceWorkspaceDialogHost
@@ -219,22 +221,9 @@ export function MainContentPanel({
         </Panel>
       )
     }
-    if (navState.details?.type === 'source') {
-      return wrapWithStoplight(
-        <Panel variant="grow" className={className}>
-          <SourceInfoPage
-            sourceSlug={navState.details.sourceSlug}
-            workspaceId={activeWorkspaceId || ''}
-          />
-        </Panel>
-      )
-    }
-    // No source selected - empty state
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <p className="text-sm">{t("sourcesList.noSourcesConfigured")}</p>
-        </div>
+        <SourcesHubPage workspaceId={activeWorkspaceId || ''} navState={navState} />
       </Panel>
     )
   }
@@ -275,26 +264,37 @@ export function MainContentPanel({
         </Panel>
       )
     }
-    if (navState.details) {
-      const automation = automations.find(h => h.id === navState.details!.automationId)
-      if (automation) {
-        return wrapWithStoplight(
-          <Panel variant="grow" className={className}>
-            <AutomationInfoPage
-              automation={automation}
-              executions={executions}
-              testResult={automationTestResults?.[automation.id]}
-              onTest={() => handleTestAutomation(automation.id)}
-              onToggleEnabled={() => handleToggleAutomation(automation.id)}
-              onDuplicate={() => handleDuplicateAutomation(automation.id)}
-              onDelete={() => handleDeleteAutomation(automation.id)}
-              onReplay={handleReplayAutomation}
-              workspaceRootPath={activeWorkspace?.rootPath}
-            />
-          </Panel>
-        )
-      }
+    const automation = automations.find(item => item.id === navState.details?.automationId)
+    const detail = automation ? (
+      <AutomationInfoPage
+        automation={automation}
+        onClose={navState.filter?.automationType === 'scheduled' ? () => { void navigate(routes.view.automationsScheduled()) } : undefined}
+        executions={executions}
+        testResult={automationTestResults?.[automation.id]}
+        onTest={() => handleTestAutomation(automation.id)}
+        onToggleEnabled={() => handleToggleAutomation(automation.id)}
+        onDuplicate={() => handleDuplicateAutomation(automation.id)}
+        onDelete={() => handleDeleteAutomation(automation.id)}
+        onReplay={handleReplayAutomation}
+        workspaceId={automationWorkspace?.id}
+        workspaceRootPath={automationWorkspace?.rootPath}
+      />
+    ) : null
+    if (navState.filter?.automationType === 'scheduled') {
+      return wrapWithStoplight(
+        <Panel variant="grow" className={className}>
+          <ScheduledTasksOverview
+            automations={automations}
+            workspace={automationWorkspace}
+            onSelectAutomation={(automationId) => navigate(routes.view.automationsScheduled(automationId))}
+            selectedAutomationId={automation?.id}
+            detail={detail}
+            onCloseDetail={() => { void navigate(routes.view.automationsScheduled()) }}
+          />
+        </Panel>
+      )
     }
+    if (detail) return wrapWithStoplight(<Panel variant="grow" className={className}>{detail}</Panel>)
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
         <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -309,10 +309,7 @@ export function MainContentPanel({
   if (isWritingNavigation(navState)) {
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <WritingSessionContent
-          activeWorkspaceId={activeWorkspaceId}
-          remoteWorkspaceId={remoteWorkspaceId}
-        />
+        <ChatPanelPlaceholder />
       </Panel>
     )
   }
@@ -341,10 +338,7 @@ export function MainContentPanel({
     }
     return wrapWithStoplight(
       <Panel variant="grow" className={className}>
-        <SessionBaseContent
-          activeWorkspaceId={activeWorkspaceId}
-          remoteWorkspaceId={remoteWorkspaceId}
-        />
+        <ChatPanelPlaceholder empty />
       </Panel>
     )
   }
@@ -352,134 +346,8 @@ export function MainContentPanel({
   // Fallback (should not happen with proper NavigationState)
   return wrapWithStoplight(
     <Panel variant="grow" className={className}>
-      <SessionBaseContent
-        activeWorkspaceId={activeWorkspaceId}
-        remoteWorkspaceId={remoteWorkspaceId}
-      />
+      <ChatPanelPlaceholder empty />
     </Panel>
-  )
-}
-
-function SessionBaseContent({
-  activeWorkspaceId,
-  remoteWorkspaceId,
-}: {
-  activeWorkspaceId?: string | null
-  remoteWorkspaceId?: string | null
-}) {
-  const sessionIds = useAtomValue(sessionIdsAtom)
-  const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
-  const { state } = useSessionSelection()
-  const { navigateToSession } = useNavigationActions()
-  const baseSessionId = useMemo(() => resolveWritingSessionId({
-    sessionIds,
-    sessionMetaMap,
-    selectedSessionId: state.selected,
-    activeWorkspaceId,
-    remoteWorkspaceId,
-  }), [activeWorkspaceId, remoteWorkspaceId, sessionIds, sessionMetaMap, state.selected])
-
-  useEffect(() => {
-    if (baseSessionId) navigateToSession(baseSessionId)
-  }, [baseSessionId, navigateToSession])
-
-  if (!baseSessionId) return <ChatPanelPlaceholder />
-
-  return (
-    <SessionRouteContent
-      sessionId={baseSessionId}
-      activeWorkspaceId={activeWorkspaceId}
-      remoteWorkspaceId={remoteWorkspaceId}
-    />
-  )
-}
-
-function WritingSessionContent({
-  activeWorkspaceId,
-  remoteWorkspaceId,
-}: {
-  activeWorkspaceId?: string | null
-  remoteWorkspaceId?: string | null
-}) {
-  const sessionIds = useAtomValue(sessionIdsAtom)
-  const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
-  const { state, select } = useSessionSelection()
-  const primaryContentReady = React.useContext(WritingPrimaryContentReadyContext)
-  const [deferredSessionId, setDeferredSessionId] = useState<string | null>(null)
-  const [activatedWorkspaceId, setActivatedWorkspaceId] = useState<string | null>(null)
-  const workspaceId = activeWorkspaceId ?? remoteWorkspaceId ?? null
-
-  const defaultSessionId = useMemo(() => {
-    return resolveWritingSessionId({
-      sessionIds,
-      sessionMetaMap,
-      selectedSessionId: state.selected,
-      activeWorkspaceId,
-      remoteWorkspaceId,
-    })
-  }, [activeWorkspaceId, remoteWorkspaceId, sessionIds, sessionMetaMap, state.selected])
-
-  // AppShell supplies a deterministic readiness signal after the directory and
-  // selected document commit. Once activated, chat remains mounted while the
-  // user switches files; only a project switch closes the latch.
-  useEffect(() => {
-    if (!defaultSessionId) {
-      React.startTransition(() => {
-        setDeferredSessionId(null)
-        setActivatedWorkspaceId(null)
-      })
-      return
-    }
-    if (!primaryContentReady) return
-
-    React.startTransition(() => {
-      setDeferredSessionId(defaultSessionId)
-      setActivatedWorkspaceId(workspaceId)
-      if (state.selected !== defaultSessionId) {
-        select(defaultSessionId, sessionIds.indexOf(defaultSessionId))
-      }
-    })
-  }, [defaultSessionId, primaryContentReady, select, sessionIds, state.selected, workspaceId])
-
-  if (!deferredSessionId || activatedWorkspaceId !== workspaceId) {
-    return <ChatPanelPlaceholder empty={sessionIds.length === 0} />
-  }
-
-  return (
-    <SessionRouteContent
-      sessionId={deferredSessionId}
-      activeWorkspaceId={activeWorkspaceId}
-      remoteWorkspaceId={remoteWorkspaceId}
-    />
-  )
-}
-
-function ChatPanelPlaceholder({ empty = false }: { empty?: boolean }) {
-  const { t } = useTranslation()
-  const { navigate } = useNavigationActions()
-  const { rightSidebarButton } = useSessionPanelChrome()
-
-  return (
-    <div className="flex h-full min-h-0 flex-col" data-testid="writing-chat-placeholder">
-      <PanelHeader
-        className="border-b-0"
-        title={t('chat.session')}
-        rightSidebarButton={rightSidebarButton}
-        actions={(
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => navigate(routes.action.newSession())}
-          >
-            {t('session.newSession')}
-          </Button>
-        )}
-      />
-      <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        {empty ? <p className="text-sm">{t('session.noSessionsYet')}</p> : null}
-      </div>
-    </div>
   )
 }
 

@@ -1,5 +1,5 @@
 // input: Session registry lookups, persistence/flush pipeline, event sink adapter, watcher/metadata-guard hooks
-// output: Session metadata mutations — flag/archive/status/connection/rename/model/labels/thinking-level/working-dir/permission-mode/read-unread/viewing-session
+// output: Session metadata mutations — flag/pin/archive/status/connection/rename/model/labels/thinking-level/working-dir/permission-mode/read-unread/viewing-session
 // pos: Largest CRUD subdomain under the SessionManager facade; createSession/deleteSession stay in the Facade
 
 import type { SessionEvent } from '@craft-agent/shared/protocol'
@@ -74,6 +74,32 @@ export class SessionCrudMetadata {
       // Workaround: Bun's fs.watch({ recursive: true }) on Linux doesn't track
       // directories created after the watcher started.
       // https://github.com/oven-sh/bun/issues/15939
+      this.deps.notifyFileChange(managed.workspace.rootPath, `sessions/${sessionId}/session.jsonl`)
+    }
+  }
+
+  async pinSession(sessionId: string): Promise<void> {
+    await this.setPinned(sessionId, true)
+  }
+
+  async unpinSession(sessionId: string): Promise<void> {
+    await this.setPinned(sessionId, false)
+  }
+
+  private async setPinned(sessionId: string, isPinned: boolean): Promise<void> {
+    const managed = this.deps.getSession(sessionId)
+    if (managed) {
+      const previous = managed.isPinned
+      managed.isPinned = isPinned
+      this.deps.persistSession(managed)
+      try {
+        await this.deps.flushSession(managed.id)
+      } catch (error) {
+        managed.isPinned = previous
+        this.deps.persistSession(managed)
+        throw error
+      }
+      this.deps.sendEvent({ type: isPinned ? 'session_pinned' : 'session_unpinned', sessionId }, managed.workspace.id)
       this.deps.notifyFileChange(managed.workspace.rootPath, `sessions/${sessionId}/session.jsonl`)
     }
   }

@@ -32,6 +32,7 @@ export function AccountSettingsSection() {
             feishuLoginEnabled={clientAuthState.feishuLoginEnabled}
             usernameLoginEnabled={clientAuthState.usernameLoginEnabled === true}
             onSignedIn={onClientSignedIn}
+            presentation="settings"
           />
         ) : (
           <SettingsCard divided={false}>

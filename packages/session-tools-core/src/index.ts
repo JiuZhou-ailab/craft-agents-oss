@@ -69,13 +69,6 @@ export {
 
 // Source helpers
 export {
-  getSourcePath,
-  getSourceConfigPath,
-  getSourceGuidePath,
-  sourceExists,
-  sourceConfigExists,
-  loadSourceConfig,
-  listSourceSlugs,
   generateRequestId,
   // Multi-header credential helpers
   detectCredentialMode,

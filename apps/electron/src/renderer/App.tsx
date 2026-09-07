@@ -43,6 +43,7 @@ import { coerceInputText } from './lib/input-text'
 import { getSessionsToRefreshAfterStaleReconnect } from './lib/reconnect-recovery'
 import {
   formatSessionLoadFailure,
+  shouldApplyCreatedSessionSnapshot,
   shouldAutoCreateBaseSession,
   shouldTreatSessionLoadFailureAsTransportFallback,
 } from './lib/session-load'
@@ -576,8 +577,7 @@ function AppContent() {
 
       if (selectionGeneration !== workspaceSelectionGenerationRef.current) return []
 
-      // Free Conversation is app-owned and immediately usable. Projects remain
-      // valid at zero Sessions until the user explicitly starts one.
+      // Every opened workspace needs a usable composer when no conversation can be restored.
       if (loadingWorkspaceId && shouldAutoCreateBaseSession(loadingWorkspaceId, loadedSessions)) {
         const baseSession = await createSessionOnServer(loadingWorkspaceId)
         if (selectionGeneration !== workspaceSelectionGenerationRef.current) return []
@@ -946,7 +946,7 @@ function AppContent() {
   // text deltas bypass metadata projection while structural events update both views.
   useEffect(() => {
     // Handoff events end streaming and may change list-visible metadata.
-    const handoffEventTypes = new Set(['complete', 'error', 'interrupted', 'typed_error', 'session_status_changed', 'session_flagged', 'session_unflagged', 'name_changed', 'labels_changed', 'title_generated', 'async_operation'])
+    const handoffEventTypes = new Set(['complete', 'error', 'interrupted', 'typed_error', 'session_status_changed', 'session_flagged', 'session_unflagged', 'session_pinned', 'session_unpinned', 'name_changed', 'labels_changed', 'title_generated', 'async_operation'])
     // Helper to handle side effects (same logic for both paths)
     const handleEffects = (effects: Effect[], sessionId: string, eventType: string) => {
       for (const effect of effects) {
@@ -1059,6 +1059,8 @@ function AppContent() {
         window.electronAPI.getSessionMessages(sessionId)
           .then((createdSession: Session | null) => {
             if (createdSession) {
+              const currentSession = store.get(sessionAtomFamily(sessionId))
+              if (!shouldApplyCreatedSessionSnapshot(currentSession, createdSession)) return
               const existingMeta = store.get(sessionMetaMapAtom).has(sessionId)
               if (existingMeta) {
                 replaceLoadedSession(createdSession)
@@ -1260,16 +1262,16 @@ function AppContent() {
 
   // Deep link navigation is initialized later after handleInputChange is defined
 
-  const handleDeleteSession = useCallback(async (sessionId: string, skipConfirmation = false): Promise<boolean> => {
+  const handleDeleteSession = useCallback(async (sessionId: string, skipConfirmation = false, workspaceId?: string): Promise<boolean> => {
     // Show confirmation dialog before deleting (unless skipped or session is empty)
     if (!skipConfirmation) {
       // Check if session has any messages using session metadata from Jotai store
       // We use store.get() instead of closing over sessions to prevent memory leaks
       // (closures would retain the full sessions array with all messages)
       const metaMap = store.get(sessionMetaMapAtom)
-      const meta = metaMap.get(sessionId)
+      const meta = !workspaceId || workspaceId === store.get(windowWorkspaceIdAtom) ? metaMap.get(sessionId) : undefined
       // Session is empty if it has no lastFinalMessageId (no assistant responses) and no name (set on first user message)
-      const isEmpty = !meta || (!meta.lastFinalMessageId && !meta.name)
+      const isEmpty = !!meta && (!meta.lastFinalMessageId && !meta.name)
 
       if (!isEmpty) {
         const confirmed = await window.electronAPI.showDeleteSessionConfirmation(meta?.name || 'Untitled')
@@ -1279,7 +1281,8 @@ function AppContent() {
 
     const deletedMeta = store.get(sessionMetaMapAtom).get(sessionId)
     const focusedSessionId = parseSessionIdFromRoute(store.get(focusedPanelRouteAtom) ?? '')
-    await window.electronAPI.deleteSession(sessionId)
+    await window.electronAPI.deleteSession(sessionId, workspaceId)
+    if (workspaceId && workspaceId !== store.get(windowWorkspaceIdAtom)) return true
     await maintainBaseSessionAfterRemoval({
       sessionId,
       sessionWorkspaceId: deletedMeta?.workspaceId,
@@ -1289,17 +1292,19 @@ function AppContent() {
   }, [maintainBaseSessionAfterRemoval, store])
 
   // Auto-delete handler for empty sessions (fire-and-forget, no confirmation)
-  const handleAutoDeleteEmptySession = useCallback((sessionId: string) => {
+  const handleAutoDeleteEmptySession = useCallback(async (sessionId: string, focusReplacement = false) => {
     const deletedMeta = store.get(sessionMetaMapAtom).get(sessionId)
-    void window.electronAPI.deleteSession(sessionId)
-      .then(() => maintainBaseSessionAfterRemoval({
+    try {
+      const result = await window.electronAPI.sessionCommand(sessionId, { type: 'deleteIfEmpty' })
+      if (!result || !('deleted' in result) || !result.deleted) return
+      await maintainBaseSessionAfterRemoval({
         sessionId,
         sessionWorkspaceId: deletedMeta?.workspaceId,
-        focusReplacement: false,
-      }))
-      .catch((error) => {
-        console.error('[App] Failed to auto-delete empty session:', error)
+        focusReplacement,
       })
+    } catch (error) {
+      console.error('[App] Failed to auto-delete empty session:', error)
+    }
   }, [maintainBaseSessionAfterRemoval, store])
 
   const handleFlagSession = useCallback((sessionId: string) => {
@@ -1312,10 +1317,42 @@ function AppContent() {
     window.electronAPI.sessionCommand(sessionId, { type: 'unflag' })
   }, [updateSessionById])
 
-  const handleArchiveSession = useCallback((sessionId: string) => {
-    updateSessionById(sessionId, { isArchived: true, archivedAt: Date.now() })
-    window.electronAPI.sessionCommand(sessionId, { type: 'archive' })
-  }, [updateSessionById])
+  const updatePinnedSession = useCallback(async (sessionId: string, isPinned: boolean, workspaceId?: string): Promise<boolean> => {
+    const isCurrentWorkspace = !workspaceId || workspaceId === store.get(windowWorkspaceIdAtom)
+    const previous = store.get(sessionAtomFamily(sessionId))?.isPinned
+    if (isCurrentWorkspace) updateSessionById(sessionId, { isPinned })
+    try {
+      await window.electronAPI.sessionCommand(sessionId, { type: isPinned ? 'pin' : 'unpin' }, workspaceId)
+      return true
+    } catch (error) {
+      if (isCurrentWorkspace && (!workspaceId || workspaceId === store.get(windowWorkspaceIdAtom))) updateSessionById(sessionId, { isPinned: previous })
+      console.error(`[App] Failed to ${isPinned ? 'pin' : 'unpin'} session:`, error)
+      toast.error(isPinned ? '固定会话失败' : '取消固定失败')
+      return false
+    }
+  }, [store, updateSessionById])
+
+  const handlePinSession = useCallback(
+    (sessionId: string, workspaceId?: string) => updatePinnedSession(sessionId, true, workspaceId),
+    [updatePinnedSession],
+  )
+
+  const handleUnpinSession = useCallback(
+    (sessionId: string, workspaceId?: string) => updatePinnedSession(sessionId, false, workspaceId),
+    [updatePinnedSession],
+  )
+
+  const handleArchiveSession = useCallback(async (sessionId: string, workspaceId?: string) => {
+    try {
+      await window.electronAPI.sessionCommand(sessionId, { type: 'archive' }, workspaceId)
+      if (!workspaceId || workspaceId === store.get(windowWorkspaceIdAtom)) {
+        updateSessionById(sessionId, { isArchived: true, archivedAt: Date.now() })
+      }
+    } catch (error) {
+      console.error('[App] Failed to archive session:', error)
+      toast.error('归档会话失败')
+    }
+  }, [updateSessionById, store])
 
   const handleUnarchiveSession = useCallback((sessionId: string) => {
     updateSessionById(sessionId, { isArchived: false, archivedAt: undefined })
@@ -1383,10 +1420,15 @@ function AppContent() {
     })
   }, [store, t, updateSessionById])
 
-  const handleRenameSession = useCallback((sessionId: string, name: string) => {
-    updateSessionById(sessionId, { name })
-    window.electronAPI.sessionCommand(sessionId, { type: 'rename', name })
-  }, [updateSessionById])
+  const handleRenameSession = useCallback(async (sessionId: string, name: string, workspaceId?: string) => {
+    try {
+      await window.electronAPI.sessionCommand(sessionId, { type: 'rename', name }, workspaceId)
+      if (!workspaceId || workspaceId === store.get(windowWorkspaceIdAtom)) updateSessionById(sessionId, { name })
+    } catch (error) {
+      console.error('[App] Failed to rename session:', error)
+      toast.error('重命名会话失败')
+    }
+  }, [updateSessionById, store])
 
   const handleSendMessage = useCallback(async (sessionId: string, message: string, attachments?: FileAttachment[], skillSlugs?: string[], externalBadges?: ContentBadge[], sendOptions?: Pick<SendMessageOptions, 'oneTimeContext' | 'workspaceFreshnessContext' | 'hideUserMessage'> & { forceQueuedUserMessage?: boolean }) => {
     try {
@@ -1399,9 +1441,9 @@ function AppContent() {
       if (connectionSlug && isManagedLlmConnectionSlug(connectionSlug)) {
         const auth = await loadClientAuthState()
         if (auth && !auth.user) {
-          navigate(routes.view.settings('app'))
+          navigate(routes.view.settings('profile'))
           toast.info('请先登录以使用 Storyflow 托管模型')
-          return false
+          return 'rejected' as const
         }
       }
 
@@ -1560,7 +1602,7 @@ function AppContent() {
         workspaceFreshnessContext: sendOptions?.workspaceFreshnessContext,
         hideUserMessage,
       })
-      return true
+      return 'accepted' as const
     } catch (error) {
       console.error('Failed to send message:', error)
       updateSessionById(sessionId, (s) => ({
@@ -1575,7 +1617,7 @@ function AppContent() {
           }
         ]
       }))
-      return false
+      return 'unknown' as const
     }
   }, [
     updateSessionById,
@@ -2328,6 +2370,8 @@ function AppContent() {
     onRenameSession: handleRenameSession,
     onFlagSession: handleFlagSession,
     onUnflagSession: handleUnflagSession,
+    onPinSession: handlePinSession,
+    onUnpinSession: handleUnpinSession,
     onArchiveSession: handleArchiveSession,
     onUnarchiveSession: handleUnarchiveSession,
     onMarkSessionRead: handleMarkSessionRead,
@@ -2377,6 +2421,8 @@ function AppContent() {
     handleRenameSession,
     handleFlagSession,
     handleUnflagSession,
+    handlePinSession,
+    handleUnpinSession,
     handleArchiveSession,
     handleUnarchiveSession,
     handleMarkSessionRead,
@@ -2525,7 +2571,9 @@ function AppContent() {
           workspaceId={windowWorkspaceId}
           workspaceRouteKey={windowWorkspaceId}
           onSwitchWorkspaceByRouteKey={handleSwitchWorkspaceByRouteKey}
+          onActivateWorkspace={activateRuntimeWorkspace}
           onCreateSession={handleCreateSession}
+          onSendMessage={handleSendMessage}
           onInputChange={handleInputChange}
           getDraft={getDraft}
           onAutoDeleteEmptySession={handleAutoDeleteEmptySession}

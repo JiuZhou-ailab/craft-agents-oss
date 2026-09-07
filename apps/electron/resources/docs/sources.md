@@ -242,8 +242,8 @@ Would you like me to show you what issues are currently open?
 ## Overview
 
 Sources are stored as folders under:
-- `~/.agents/sources/{sourceSlug}/` by default for reusable global sources
-- `~/.craft-agent/workspaces/{workspaceId}/sources/{sourceSlug}/` for workspace-specific overrides
+- `~/.craft-agent/sources/{sourceSlug}/` for reusable global sources
+- `<projectRoot>/.craft-agent/sources/{sourceSlug}/` for project-specific overrides
 
 Each source folder contains:
 - `config.json` - Source configuration (required)
@@ -918,7 +918,7 @@ Technical steps:
 
 1. Create the source folder:
    ```bash
-   mkdir -p ~/.agents/sources/my-source
+   mkdir -p ~/.craft-agent/sources/my-source
    ```
 
 2. Write `config.json` with appropriate settings (see schemas above)

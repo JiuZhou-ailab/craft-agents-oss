@@ -165,6 +165,8 @@ export type PermissionsConfigFile = z.infer<typeof PermissionsConfigSchema>;
  * Compiled API endpoint rule for runtime checking
  */
 export interface CompiledApiEndpointRule {
+  /** Omitted only for explicitly app-wide or Project-wide endpoint rules. */
+  sourceSlug?: string;
   method: string;
   pathPattern: RegExp;
 }

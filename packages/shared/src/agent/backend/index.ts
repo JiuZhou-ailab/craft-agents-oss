@@ -61,7 +61,6 @@ export {
 } from './connection-runtime.ts';
 
 // Shared infrastructure
-export { BaseEventAdapter } from './base-event-adapter.ts';
 export { EventQueue } from './event-queue.ts';
 
 // Provider-specific event adapter

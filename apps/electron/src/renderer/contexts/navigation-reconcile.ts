@@ -15,12 +15,6 @@ export type AutoSelectionResolver = (
   options?: AutoSelectionOptions
 ) => NavigationState
 
-export function shouldPreserveProjectLandingRoute(params: URLSearchParams): boolean {
-  if (params.get('panels')) return false
-  const route = params.get('route')
-  return !route || route === 'writing' || route === 'allSessions'
-}
-
 export function shouldDefaultInitialRouteToWriting(params: URLSearchParams): boolean {
   return !params.get('route') && !params.get('panels')
 }

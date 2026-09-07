@@ -16,11 +16,9 @@ Automations allow you to trigger actions automatically when specific events occu
 
 ## automations.json Location
 
-Automations are configured in `automations.json` at the root of your workspace:
+Standalone tasks created from **Scheduled Tasks** do not require a Project. Their configuration lives in the application's free-conversation runtime: `<CRAFT_CONFIG_DIR>/runtime/free/automations.json` (by default `~/.craft-agent/runtime/free/automations.json`). The creation prompt includes the exact configuration path.
 
-```
-~/.craft-agent/workspaces/{workspaceId}/automations.json
-```
+Existing Project automations remain in `<project-root>/automations.json` and retain the Host's Project execution grant. Do not move or rewrite existing Project automations when creating a standalone task.
 
 ## Recommended CLI Commands
 
@@ -289,6 +287,23 @@ Use the optional `name` field to give an automation a human-readable display nam
   ]
 }
 ```
+
+### Bound Conversation
+
+Set matcher `sessionId` to reuse an existing conversation for every prompt run. When creating a standalone scheduled task, bind it to the creation conversation using `sessionId` from `<session_state>` or `get_session_info({})`. Preserve this binding when editing the task.
+
+```json
+{
+  "id": "daily-review",
+  "name": "Daily review",
+  "sessionId": "260907-daily-review",
+  "cron": "0 9 * * *",
+  "timezone": "Asia/Shanghai",
+  "actions": [{ "type": "prompt", "prompt": "Summarize today's news" }]
+}
+```
+
+The bound conversation keeps its history, model, sources, and permission mode. Runs use the normal message queue when the conversation is busy. A missing, archived, hidden, or foreign-workspace conversation fails the run; it is never silently replaced. Pause or delete the task, or explicitly rebind it to an available conversation. Omitting `sessionId` retains the legacy behavior of creating a session for each prompt run.
 
 ### Regex Matching (for most events)
 

@@ -130,7 +130,87 @@ describe('ActivityRail free-conversation scope', () => {
 
     expect(html).not.toContain('data-session-id="draft"')
     expect(html).toContain('data-session-id="sent"')
-    expect(html).toContain('自由对话<span class="ml-1 font-normal">(1)</span>')
+    expect(html).toContain('自由<span class="ml-1 font-normal">(1)</span>')
+  })
+
+  it('projects active remote metadata under its catalog owner before session actions', () => {
+    const remote = meta('remote-session', 'server-workspace', 'Remote')
+    expect(resolveActivityWorkspaceSessionMetas(PROJECT_WORKSPACE_ID, PROJECT_WORKSPACE_ID, [], [remote], true, 'server-workspace'))
+      .toEqual([{ ...remote, workspaceId: PROJECT_WORKSPACE_ID }])
+  })
+
+  it('applies persisted order to pinned project rows', () => {
+    installElectronApi()
+    const previousStorage = globalThis.localStorage
+    globalThis.localStorage = { getItem: (key: string) => key === `craft-activity-session-order:${PROJECT_WORKSPACE_ID}` ? '["second","first"]' : null } as Storage
+    try {
+      const store = createStore()
+      store.set(sessionMetaMapAtom, new Map([
+        ['first', { ...meta('first', PROJECT_WORKSPACE_ID, 'First'), isPinned: true, messageCount: 1 }],
+        ['second', { ...meta('second', PROJECT_WORKSPACE_ID, 'Second'), isPinned: true, messageCount: 1 }],
+      ]))
+      store.set(sessionMetadataReadyAtom, true)
+      const html = renderToStaticMarkup(<Provider store={store}><FocusProvider><ActivityRail
+        activeItem="recent" runtimeWorkspaceId={PROJECT_WORKSPACE_ID}
+        workspaces={[{ id: PROJECT_WORKSPACE_ID, name: 'Project', slug: 'project', rootPath: '/project', createdAt: 1 }]}
+        onSelectSession={() => {}}
+      /></FocusProvider></Provider>)
+      expect(html.indexOf('data-session-id="second"')).toBeLessThan(html.indexOf('data-session-id="first"'))
+    } finally { globalThis.localStorage = previousStorage }
+  })
+
+  it('renders pinned and free conversations in peer sections with draggable rows', () => {
+    installElectronApi()
+    const store = createStore()
+    store.set(sessionMetaMapAtom, new Map([
+      ['fixed', { ...meta('fixed', FREE_CONVERSATION_WORKSPACE_ID, '自动化会话'), isPinned: true, messageCount: 1 }],
+      ['regular', { ...meta('regular', FREE_CONVERSATION_WORKSPACE_ID, '普通会话'), messageCount: 1 }],
+    ]))
+    store.set(sessionMetadataReadyAtom, true)
+
+    const html = renderToStaticMarkup(
+      <Provider store={store}>
+        <FocusProvider>
+          <ActivityRail
+            activeItem="recent"
+            runtimeWorkspaceId={FREE_CONVERSATION_WORKSPACE_ID}
+            onSelectSession={() => {}}
+          />
+        </FocusProvider>
+      </Provider>
+    )
+
+    const fixedSection = html.match(/<section aria-label="固定">([\s\S]*?)<\/section>/)?.[1]
+    const freeSection = html.match(/<section aria-label="自由">([\s\S]*?)<\/section>/)?.[1]
+    expect(fixedSection).toContain('data-session-id="fixed"')
+    expect(freeSection).toContain('data-session-id="regular"')
+    expect(freeSection).not.toContain('data-session-id="fixed"')
+    expect(html).toContain('data-session-group="fixed"')
+    expect(html).toContain('固定')
+    expect(html).toContain('data-session-group="regular"')
+    expect(html).toContain('data-session-id="fixed" data-session-fixed="true"')
+    expect(html).toContain('data-session-id="regular" data-session-fixed="false"')
+    expect(html.match(/data-session-drag-handle="true"/g)).toHaveLength(2)
+  })
+
+  it('shows a pinned project conversation in the global pinned section while its project is collapsed', () => {
+    installElectronApi()
+    const store = createStore()
+    store.set(sessionMetaMapAtom, new Map([
+      ['project-pin', { ...meta('project-pin', PROJECT_WORKSPACE_ID, 'Project reminder'), isPinned: true, messageCount: 1 }],
+    ]))
+    store.set(sessionMetadataReadyAtom, true)
+    const html = renderToStaticMarkup(
+      <Provider store={store}>
+        <FocusProvider>
+          <ActivityRail activeItem="recent" runtimeWorkspaceId={PROJECT_WORKSPACE_ID} onSelectSession={() => {}}
+            workspaces={[{ id: PROJECT_WORKSPACE_ID, name: 'Project', slug: 'project', rootPath: '/tmp/project', createdAt: 1 }]} />
+        </FocusProvider>
+      </Provider>,
+    )
+    expect(html.match(/<section aria-label="固定">([\s\S]*?)<\/section>/)?.[1]).toContain('data-session-id="project-pin"')
+    expect(html.match(/<section aria-label="自由">([\s\S]*?)<\/section>/)?.[1]).not.toContain('data-session-id="project-pin"')
+    expect(html.match(/data-session-id="project-pin"/g)).toHaveLength(1)
   })
 
   it('never renders a project conversation, even when the atom overlay holds one', () => {
@@ -248,7 +328,7 @@ describe('ActivityRail free-conversation scope', () => {
       </Provider>
     )
 
-    const sectionStart = html.indexOf('<section aria-label="自由对话">')
+    const sectionStart = html.indexOf('<section aria-label="自由">')
     const sectionHtml = html.slice(sectionStart, html.indexOf('</section>', sectionStart))
     expect(sectionHtml).toContain('aria-label="新建自由对话"')
   })

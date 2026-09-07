@@ -293,13 +293,17 @@ describe('app shell layout defaults', () => {
     expect(appShellSource).not.toContain('data-testid="activity-rail-collapsed"')
     expect(appShellSource).not.toContain('data-activity-rail-collapsed')
     expect(rendererCssSource).not.toContain("html[data-activity-rail-collapsed='true']")
+    expect(appShellSource).toContain(
+      '|| (isAutomationsNavigation(navState) && (!isProjectRuntime || isScheduledRoute))',
+    )
     expect(appShellSource).toContain('const contentNeedsStoplightCompensation = isAutoCompact')
     expect(appShellSource).toContain('|| (!isActivityRailVisible && hideSessionListNavigator)')
     expect(appShellSource).toContain(
       'const contentHeaderLeadingInset = !isAutoCompact && !isActivityRailVisible && hideSessionListNavigator',
     )
     expect(appShellSource).toContain('? activityRailWidth + 16')
-    expect(appShellSource).toContain("'--panel-header-leading-inset': `${contentHeaderLeadingInset}px`")
+    expect(appShellSource).toContain('stoplightLeadingInset={contentHeaderLeadingInset ?? undefined}')
+    expect(appShellSource).not.toContain('--panel-header-leading-inset')
     expect(appShellSource).toContain('isSidebarAndNavigatorHidden={contentNeedsStoplightCompensation}')
     expect(appShellSource).toContain('compensateForStoplight={!isActivityRailVisible}')
     expect(appShellSource).not.toContain('const isSidebarAndNavigatorHidden = false')
@@ -327,11 +331,13 @@ describe('app shell layout defaults', () => {
     expect(activityRailSource).toContain('className="titlebar-drag-region shrink-0"')
     expect(activityRailSource).toContain('aria-label="调整侧边栏宽度"')
     expect(activityRailSource).toContain('storage.KEYS.activityRailWidth')
-    expect(panelHeaderSource).toContain("var(--panel-header-leading-inset, ${STOPLIGHT_PADDING}px)")
+    expect(panelHeaderSource).toContain('stoplightCompensation.leadingInset ?? STOPLIGHT_PADDING')
     expect(panelHeaderSource).toContain('transition={PANEL_SPRING}')
+    expect(panelStackSource).toContain('isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden && index === 0}')
+    expect(panelStackSource).toContain('stoplightLeadingInset={index === 0 ? stoplightLeadingInset : undefined}')
     expect(windowManagerSource).toContain('const MACOS_TRAFFIC_LIGHT_POSITION = { x: 17, y: 13 }')
-    expect(windowManagerSource).toContain('hasShadow: false')
-    expect(windowManagerSource).toContain('window.setHasShadow(false)')
+    expect(windowManagerSource).toContain('hasShadow: true')
+    expect(windowManagerSource).not.toContain('window.setHasShadow(false)')
     expect(rendererCssSource).toContain('html[data-platform="darwin"] body::after')
   })
 

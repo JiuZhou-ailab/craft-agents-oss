@@ -104,8 +104,8 @@
   --destructive-rgb: 180, 60, 50;           /* RGB for shadow-tinted */
 
   /* === SHADOW OPACITY (light mode = subtle, dark mode = stronger) === */
-  --shadow-border-opacity: 0.1;             /* Border ring opacity */
-  --shadow-blur-opacity: 0.09;              /* Blur/spread shadow opacity */
+  --shadow-border-opacity: 0.07;            /* Border ring opacity */
+  --shadow-blur-opacity: 0.055;             /* Blur/spread shadow opacity */
 
   /* === SHADOW VALUES (reusable across utility classes and component overrides) === */
   /* Default controls stay flat; elevation is reserved for floating surfaces. */
@@ -243,8 +243,8 @@
   --destructive-rgb: 200, 70, 60;            /* RGB for shadow-tinted */
 
   /* === SHADOW OPACITY (stronger in dark mode for visibility) === */
-  --shadow-border-opacity: 0.18;
-  --shadow-blur-opacity: 0.18;
+  --shadow-border-opacity: 0.14;
+  --shadow-blur-opacity: 0.14;
 
   /* === MIX VARIANTS === */
   --foreground-1\.5: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
@@ -307,7 +307,7 @@ html[data-theme-mismatch]::before {
   pointer-events: none;
 }
 
-/* The native macOS shadow is disabled; retain one quiet inside edge so the
+/* Complement the native macOS shadow with one quiet inside edge so the
    window stays defined against similarly colored desktop backgrounds. */
 html[data-platform="darwin"] body::after {
   content: '';
@@ -315,7 +315,7 @@ html[data-platform="darwin"] body::after {
   inset: 0;
   z-index: 99999;
   pointer-events: none;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
 /* =============================================================================

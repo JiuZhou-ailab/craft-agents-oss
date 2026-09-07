@@ -206,14 +206,14 @@ export interface SessionToolContext {
    */
   loadSourceConfig(sourceSlug: string): SourceConfig | null;
 
+  /** Resolve the Host-authoritative folder for a visible Source. */
+  resolveSourcePath(sourceSlug: string): string | null;
+
   /** Create a new global Skill without overwriting. */
   createSkillDocument?(skillSlug: string, content: string): SkillDocument | Promise<SkillDocument>;
 
   /** Load a global Skill document. */
   loadSkillDocument?(skillSlug: string): SkillDocument | null;
-
-  /** Whether the visible definition is externally owned and immutable. */
-  isSourceDefinitionReadOnly?(sourceSlug: string): boolean;
 
   /** Whether the Host grants this exact Source definition permission to execute. */
   isSourceExecutionAllowed(sourceSlug: string): boolean;

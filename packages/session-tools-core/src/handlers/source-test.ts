@@ -18,12 +18,11 @@ import {
   validateJsonFileHasFields,
   validateSourceConfigBasic,
 } from '../validation.ts';
-import {
-  sourceExists,
-  getSourceConfigPath,
-  getSourceGuidePath,
-  getSourcePath,
-} from '../source-helpers.ts';
+function requireSourcePath(ctx: SessionToolContext, sourceSlug: string): string {
+  const sourcePath = ctx.resolveSourcePath(sourceSlug);
+  if (!sourcePath) throw new Error(`Source '${sourceSlug}' is not visible to this session.`);
+  return sourcePath;
+}
 
 export interface SourceTestArgs {
   sourceSlug: string;
@@ -58,13 +57,14 @@ export async function handleSourceTest(
   let connectionError: string | undefined;
 
   // 1. Check source exists
-  if (!sourceExists(ctx.workspacePath, sourceSlug)) {
+  const sourcePath = ctx.resolveSourcePath(sourceSlug);
+  if (!sourcePath) {
     return errorResponse(`Source '${sourceSlug}' not found in workspace or global sources.`);
   }
 
   // 2. Schema validation
   lines.push('## Schema Validation');
-  const configPath = getSourceConfigPath(ctx.workspacePath, sourceSlug);
+  const configPath = join(sourcePath, 'config.json');
   const schemaResult = validateJsonFileHasFields(configPath, ['slug', 'name', 'type']);
 
   if (schemaResult.valid) {
@@ -85,8 +85,6 @@ export async function handleSourceTest(
   if (!ctx.isSourceExecutionAllowed(sourceSlug)) {
     return errorResponse(`Source '${sourceSlug}' is not enabled by Host settings.`);
   }
-  const definitionReadOnly = ctx.isSourceDefinitionReadOnly?.(sourceSlug) === true;
-
   // Validate loaded config with basic validator
   const configValidation = validateSourceConfigBasic(source);
   if (!configValidation.valid) {
@@ -98,7 +96,6 @@ export async function handleSourceTest(
 
   // 4. Icon handling
   lines.push('\n## Icon Status');
-  const sourcePath = getSourcePath(ctx.workspacePath, sourceSlug);
   const iconResult = handleIconCheck(ctx, sourcePath, source);
   lines.push(...iconResult.lines);
   if (iconResult.hasWarning) hasWarnings = true;
@@ -139,12 +136,10 @@ export async function handleSourceTest(
   // broken source into the live tool list. 401/403 still pass: the probe maps
   // those to connectionStatus=connected, and checkAuthStatus refreshes tokens.
   const autoEnable = args.autoEnable !== false;
-  const readOnlyDisabled = definitionReadOnly && source.enabled === false;
   const shouldAutoEnable = autoEnable
     && !hasErrors
-    && connectionStatus === 'connected'
-    && !readOnlyDisabled;
-  const willFlipEnabled = shouldAutoEnable && source.enabled === false && !definitionReadOnly;
+    && connectionStatus === 'connected';
+  const willFlipEnabled = shouldAutoEnable && source.enabled === false;
 
   if (ctx.saveSourceConfig) {
     const updatedSource: SourceConfig = {
@@ -157,19 +152,13 @@ export async function handleSourceTest(
     };
     try {
       ctx.saveSourceConfig(updatedSource);
-      lines.push(definitionReadOnly
-        ? '\n_Storyflow connection state updated; shared definition unchanged._'
-        : '\n_Config updated with test results._');
+      lines.push('\n_Config updated with test results._');
       if (willFlipEnabled) {
         lines.push('✓ Source auto-enabled in config');
       }
     } catch {
       // Silently ignore save errors
     }
-  }
-
-  if (readOnlyDisabled) {
-    lines.push('ℹ Source remains disabled because its shared definition is read-only.');
   }
 
   // Try to activate the source in the running session (backend may not support this).
@@ -284,7 +273,7 @@ function checkCompleteness(
   let hasWarning = false;
 
   // Check guide.md
-  const guidePath = getSourceGuidePath(ctx.workspacePath, source.slug);
+  const guidePath = join(requireSourcePath(ctx, source.slug), 'guide.md');
   if (!ctx.fs.exists(guidePath)) {
     hasWarning = true;
     lines.push('⚠ No guide.md file');
@@ -453,7 +442,7 @@ async function testApiConnectionWithAuth(
   // Build LoadedSource for credential manager
   const loadedSource = {
     config: source,
-    folderPath: getSourcePath(ctx.workspacePath, sourceSlug),
+    folderPath: requireSourcePath(ctx, sourceSlug),
     workspaceRootPath: ctx.workspacePath,
     workspaceId: ctx.workspaceId,
   };
@@ -771,7 +760,7 @@ async function testMcpConnection(
         if (ctx.credentialManager) {
           const loadedSource = {
             config: source,
-            folderPath: getSourcePath(ctx.workspacePath, sourceSlug),
+            folderPath: requireSourcePath(ctx, sourceSlug),
             workspaceRootPath: ctx.workspacePath,
             workspaceId: ctx.workspaceId,
           };
@@ -901,7 +890,7 @@ async function checkAuthStatus(
     } else if (ctx.credentialManager) {
       const loadedSource = {
         config: source,
-        folderPath: getSourcePath(ctx.workspacePath, sourceSlug),
+        folderPath: requireSourcePath(ctx, sourceSlug),
         workspaceRootPath: ctx.workspacePath,
         workspaceId: ctx.workspaceId,
       };

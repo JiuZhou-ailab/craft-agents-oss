@@ -16,7 +16,6 @@ import {
   loadSourceConfig,
   loadWorkspaceSources,
   markSourceAuthenticated,
-  SHARED_AGENTS_ROOT_DIR,
   type FolderSourceConfig,
 } from '../index.ts';
 import { getWorkspaceSourcesPath } from '../../workspaces/storage.ts';
@@ -232,12 +231,11 @@ describe('global source storage', () => {
     expect(existsSync(outsideConfig)).toBe(true);
   });
 
-  it('rejects an external Project config symlink while preserving global interop symlinks', () => {
+  it('rejects an external Project config symlink while preserving global symlinks', () => {
     const workspaceRoot = makeWorkspaceRoot('config-symlink-boundary');
     const outsideRoot = makeWorkspaceRoot('config-symlink-outside');
     const projectSlug = `${TEST_PREFIX}-project-config-link`;
     const globalSlug = `${TEST_PREFIX}-global-config-link`;
-    const sharedSlug = `${TEST_PREFIX}-shared-config-link`;
     const externalConfig = (slug: string, name: string) => JSON.stringify({
       id: `${slug}_test`,
       name,
@@ -250,26 +248,19 @@ describe('global source storage', () => {
 
     const projectSourceDir = join(workspaceRoot, '.craft-agent', 'sources', projectSlug);
     const globalSourceDir = join(GLOBAL_SOURCES_DIR, globalSlug);
-    const sharedSourceDir = join(SHARED_AGENTS_SOURCES_DIR, sharedSlug);
     mkdirSync(projectSourceDir, { recursive: true });
     mkdirSync(globalSourceDir, { recursive: true });
-    mkdirSync(sharedSourceDir, { recursive: true });
     touchedGlobalSlugs.add(globalSlug);
-    touchedSharedSlugs.add(sharedSlug);
 
     const projectExternalConfig = join(outsideRoot, 'project.json');
     const globalExternalConfig = join(outsideRoot, 'global.json');
-    const sharedExternalConfig = join(outsideRoot, 'shared.json');
     writeFileSync(projectExternalConfig, externalConfig(projectSlug, 'Project External'));
     writeFileSync(globalExternalConfig, externalConfig(globalSlug, 'Global External'));
-    writeFileSync(sharedExternalConfig, externalConfig(sharedSlug, 'Shared External'));
     symlinkSync(projectExternalConfig, join(projectSourceDir, 'config.json'));
     symlinkSync(globalExternalConfig, join(globalSourceDir, 'config.json'));
-    symlinkSync(sharedExternalConfig, join(sharedSourceDir, 'config.json'));
 
     expect(() => loadSourceConfig(workspaceRoot, projectSlug)).toThrow('symbolic link');
     expect(loadSourceConfig(GLOBAL_AGENT_ROOT_DIR, globalSlug)?.name).toBe('Global External');
-    expect(loadSourceConfig(SHARED_AGENTS_ROOT_DIR, sharedSlug)?.name).toBe('Shared External');
   });
 
   it('rejects external Project Source icons while preserving global icon symlinks', () => {

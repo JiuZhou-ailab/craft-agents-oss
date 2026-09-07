@@ -1,9 +1,13 @@
+// input: Focused-mode state and optional numeric leading inset from the shell layout
+// output: Shared macOS traffic-light compensation consumed by panel headers
+// pos: Renderer context that keeps title geometry synchronized with rail animation
+
 /**
  * StoplightContext
  *
  * Provides stoplight (macOS traffic lights) compensation state to child components.
- * When true, PanelHeader will automatically add left padding to avoid overlapping
- * with the red/yellow/green window controls.
+ * The numeric inset keeps panel titles on the same screen coordinate while the
+ * activity rail collapses, instead of interpolating between incompatible CSS values.
  *
  * Used by MainContentPanel to propagate focused mode state to all pages without
  * requiring each page to handle it explicitly.
@@ -11,15 +15,19 @@
 
 import { createContext, useContext } from 'react'
 
-const StoplightContext = createContext(false)
+export interface StoplightCompensation {
+  enabled: boolean
+  leadingInset?: number
+}
+
+const StoplightContext = createContext<StoplightCompensation>({ enabled: false })
 
 export const StoplightProvider = StoplightContext.Provider
 
 /**
- * Hook to check if stoplight compensation should be applied.
- * Returns true when the content is in focused mode and needs to avoid
- * overlapping with macOS traffic lights.
+ * Returns both the focused-mode flag and its numeric title inset so the rail
+ * and title can share one spring interpolation without a one-frame jump.
  */
-export function useCompensateForStoplight(): boolean {
+export function useStoplightCompensation(): StoplightCompensation {
   return useContext(StoplightContext)
 }

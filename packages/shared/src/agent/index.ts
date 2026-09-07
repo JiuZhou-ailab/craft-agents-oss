@@ -105,6 +105,7 @@ export {
   type PermissionsConfigFile,
   type MergedPermissionsConfig,
   type PermissionsContext,
+  type ActiveSourcePermissionRef,
 } from './permissions-config.ts';
 
 // Export the Storyflow Product Host layer used by PiAgent

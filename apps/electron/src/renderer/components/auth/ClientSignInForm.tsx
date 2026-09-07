@@ -1,5 +1,5 @@
-// input: Renderer startup and main-process client auth IPC
-// output: Reusable managed-account login surface
+// input: Renderer startup, main-process client auth IPC, and standalone or settings presentation
+// output: Reusable managed-account login surface with context-appropriate responsive geometry
 // pos: Renderer authentication UI used at managed capability boundaries
 
 import { useEffect, useState, type FormEvent } from 'react'
@@ -18,6 +18,7 @@ import { SettingsCard, SettingsCardContent } from '@/components/settings/Setting
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 const AUTH_MOTION_EASE = [0.16, 1, 0.3, 1] as const
 
@@ -29,12 +30,14 @@ export function ClientSignInForm({
   feishuLoginEnabled,
   usernameLoginEnabled,
   onSignedIn,
+  presentation = 'standalone',
 }: {
   emailPasswordEnabled: boolean
   emailSignUpEnabled: boolean
   feishuLoginEnabled: boolean
   usernameLoginEnabled: boolean
   onSignedIn: () => Promise<void>
+  presentation?: 'standalone' | 'settings'
 }) {
   const [identifier, setIdentifier] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -212,13 +215,34 @@ export function ClientSignInForm({
   const identifierPlaceholder = authMode === 'sign-up'
     ? 'email@example.com'
     : usernameLoginEnabled ? 'zjding 或 email@example.com' : 'email@example.com'
+  const isSettingsPresentation = presentation === 'settings'
 
   return (
-    <motion.section className="w-full max-w-[420px]" {...authPanelMotion}>
-      <SettingsCard className="border border-border/60 bg-background shadow-minimal" divided={false}>
-        <SettingsCardContent className="p-7 max-[520px]:p-5">
-          <header className="mb-7 text-center">
-            <div className="mx-auto flex size-11 items-center justify-center rounded-[10px] bg-foreground-2 shadow-minimal">
+    <motion.section
+      className={cn('w-full', isSettingsPresentation ? 'max-w-none' : 'max-w-[420px]')}
+      {...authPanelMotion}
+    >
+      <SettingsCard
+        className={cn(
+          isSettingsPresentation
+            ? 'border-border/60 bg-transparent'
+            : 'border border-border/60 bg-background shadow-minimal',
+        )}
+        divided={false}
+      >
+        <SettingsCardContent
+          className={cn(
+            isSettingsPresentation
+              ? 'grid grid-cols-[minmax(180px,0.72fr)_minmax(320px,1.28fr)] gap-8 px-6 py-7 max-[760px]:grid-cols-1 max-[760px]:gap-6 max-[520px]:p-5'
+              : 'p-7 max-[520px]:p-5',
+          )}
+        >
+          <header className={cn(isSettingsPresentation ? 'text-left max-[760px]:text-center' : 'mb-7 text-center')}>
+            <div className={cn(
+              'flex size-11 items-center justify-center rounded-[10px] bg-foreground-2 shadow-minimal',
+              !isSettingsPresentation && 'mx-auto',
+              isSettingsPresentation && 'max-[760px]:mx-auto',
+            )}>
               <CraftAgentsSymbol className="size-7 text-accent" />
             </div>
             <p className="mt-4 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">

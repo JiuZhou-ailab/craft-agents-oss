@@ -24,6 +24,8 @@ import {
   handleSessionStatusChanged,
   handleSessionFlagged,
   handleSessionUnflagged,
+  handleSessionPinned,
+  handleSessionUnpinned,
   handleSessionArchived,
   handleSessionUnarchived,
   handleNameChanged,
@@ -163,6 +165,12 @@ export function processEvent(
 
     case 'session_unflagged':
       return handleSessionUnflagged(state, event)
+
+    case 'session_pinned':
+      return handleSessionPinned(state, event)
+
+    case 'session_unpinned':
+      return handleSessionUnpinned(state, event)
 
     case 'session_archived':
       return handleSessionArchived(state, event)

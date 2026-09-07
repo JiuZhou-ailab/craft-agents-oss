@@ -1,4 +1,7 @@
 #!/usr/bin/env bun
+// input: Explicit CLI options and verbatim positional arguments or stdin
+// output: RPC commands, streamed responses, and process exit status
+// pos: Terminal client boundary; option parsing must not reinterpret user content
 /**
  * craft-cli — Terminal client for Craft Agent server.
  *
@@ -43,58 +46,63 @@ export interface CliArgs {
 
 export function parseArgs(argv: string[]): CliArgs {
   const args = argv.slice(2) // skip bun + script path
-  const { values, tokens } = parseNodeArgs({
-    args,
-    allowPositionals: true,
-    strict: false,
-    tokens: true,
-    options: {
-      url: { type: 'string' },
-      token: { type: 'string' },
-      workspace: { type: 'string' },
-      timeout: { type: 'string' },
-      json: { type: 'boolean' },
-      'tls-ca': { type: 'string' },
-      'send-timeout': { type: 'string' },
-      source: { type: 'string', multiple: true },
-      mode: { type: 'string' },
-      'output-format': { type: 'string' },
-      'no-cleanup': { type: 'boolean' },
-      'disable-spinner': { type: 'boolean' },
-      'no-spinner': { type: 'boolean' },
-      verbose: { type: 'boolean', short: 'v' },
-      'server-entry': { type: 'string' },
-      'workspace-dir': { type: 'string' },
-      provider: { type: 'string' },
-      model: { type: 'string' },
-      'api-key': { type: 'string' },
-      'base-url': { type: 'string' },
-      help: { type: 'boolean', short: 'h' },
-      version: { type: 'boolean' },
-      'validate-server': { type: 'boolean' },
-    } as const,
-  })
+  const options = {
+    url: { type: 'string' },
+    token: { type: 'string' },
+    workspace: { type: 'string' },
+    timeout: { type: 'string' },
+    json: { type: 'boolean' },
+    'tls-ca': { type: 'string' },
+    'send-timeout': { type: 'string' },
+    source: { type: 'string', multiple: true },
+    mode: { type: 'string' },
+    'output-format': { type: 'string' },
+    'no-cleanup': { type: 'boolean' },
+    'disable-spinner': { type: 'boolean' },
+    'no-spinner': { type: 'boolean' },
+    verbose: { type: 'boolean', short: 'v' },
+    'server-entry': { type: 'string' },
+    'workspace-dir': { type: 'string' },
+    provider: { type: 'string' },
+    model: { type: 'string' },
+    'api-key': { type: 'string' },
+    'base-url': { type: 'string' },
+    help: { type: 'boolean', short: 'h' },
+    version: { type: 'boolean' },
+    'validate-server': { type: 'boolean' },
+  } as const
 
   const rest: string[] = []
+  const optionArgs: string[] = []
   let command = ''
+  let positionalOnly = false
 
-  const knownOptions = new Set([
-    'url', 'token', 'workspace', 'timeout', 'json', 'tls-ca', 'send-timeout', 'source',
-    'mode', 'output-format', 'no-cleanup', 'disable-spinner', 'no-spinner', 'verbose',
-    'server-entry', 'workspace-dir', 'provider', 'model', 'api-key', 'base-url',
-  ])
-  for (const parsedToken of tokens) {
-    if (parsedToken.kind === 'positional') {
-      if (!command) command = parsedToken.value
-      else rest.push(parsedToken.value)
+  // Only declared, complete options enter the platform parser. A message such
+  // as "- hello" is user content, never a cluster containing the -h option.
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index]!
+    if (!positionalOnly && arg === '--') {
+      positionalOnly = true
       continue
     }
-    if (parsedToken.kind !== 'option') continue
-    if (parsedToken.name === 'help') command = 'help'
-    else if (parsedToken.name === 'version') command = 'version'
-    else if (parsedToken.name === 'validate-server') command = 'validate'
-    else if (!knownOptions.has(parsedToken.name)) rest.push(args[parsedToken.index] ?? parsedToken.rawName)
+    const name = arg === '-h' ? 'help' : arg === '-v' ? 'verbose'
+      : arg.startsWith('--') ? arg.slice(2).split('=', 1)[0]! : ''
+    const option = !positionalOnly && Object.hasOwn(options, name)
+      ? options[name as keyof typeof options] : undefined
+    if (!option) {
+      if (!command && (positionalOnly || !arg.startsWith('-'))) command = arg
+      else rest.push(arg)
+      continue
+    }
+    optionArgs.push(arg)
+    if (option.type === 'string' && !arg.includes('=') && index + 1 < args.length) {
+      optionArgs.push(args[++index]!)
+    }
+    if (name === 'help') command = 'help'
+    else if (name === 'version') command = 'version'
+    else if (name === 'validate-server') command = 'validate'
   }
+  const { values } = parseNodeArgs({ args: optionArgs, options })
 
   const stringValue = (value: string | boolean | undefined): string | undefined =>
     typeof value === 'string' ? value : undefined

@@ -186,7 +186,7 @@ export class WindowManager {
       ...(isMac && {
         titleBarStyle: 'hiddenInset',
         trafficLightPosition: MACOS_TRAFFIC_LIGHT_POSITION,
-        hasShadow: false,
+        hasShadow: true,
         vibrancy: 'under-window',
         visualEffectState: 'active',
       }),
@@ -217,10 +217,6 @@ export class WindowManager {
 
     // Show window when first paint is ready (faster perceived startup)
     window.once('ready-to-show', () => {
-      // Main-process source hot-reloads do not recreate existing windows. Set
-      // this again immediately before first paint so every new macOS window
-      // consistently drops the heavy native shadow.
-      if (isMac) window.setHasShadow(false)
       window.show()
     })
 

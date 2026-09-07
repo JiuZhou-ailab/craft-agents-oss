@@ -1,5 +1,5 @@
 // input: Session metadata events and one renderer-side status mutation
-// output: Precise global-refresh policy and ownership-aware optimistic status commits
+// output: Cross-workspace rail refresh policy and ownership-aware optimistic status commits
 // pos: Session-status transition boundary independent from the broader session atom store
 
 import type { SessionEvent, SessionStatus } from '../../shared/types'
@@ -29,14 +29,19 @@ const GLOBAL_SESSION_META_REFRESH_EVENT_TYPES = new Set<SessionEvent['type']>([
   // Archiving changes membership in every cached workspace snapshot.
   'session_archived',
   'session_unarchived',
+  // The ActivityRail can render cached sessions owned by another runtime.
+  'session_flagged',
+  'session_unflagged',
+  'session_pinned',
+  'session_unpinned',
   'user_message',
 ])
 
 /**
  * Global session metadata is a cross-workspace snapshot. Events whose exact
- * fields are already applied to the active workspace atom must not invalidate
- * that whole snapshot; the active atom overlays it until the next workspace
- * mount performs an authoritative load.
+ * fields are already applied to the active workspace atom usually need no
+ * global refresh. Membership-changing flag, pin, and archive events refresh
+ * cached sessions owned by inactive workspaces as well.
  */
 export function shouldRefreshGlobalSessionMetasForEvent(eventType: SessionEvent['type']): boolean {
   return GLOBAL_SESSION_META_REFRESH_EVENT_TYPES.has(eventType)

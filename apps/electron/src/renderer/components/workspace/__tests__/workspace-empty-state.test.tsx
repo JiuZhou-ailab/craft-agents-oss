@@ -39,7 +39,7 @@ describe('WorkspaceEmptyState', () => {
     expect(html).toContain('data-workspace-action="open-skills"')
     expect(html).toContain('flex h-full min-h-0 flex-1 items-center justify-center overflow-y-auto px-5 py-8')
     // Match chat-opening action cards: soft border + label/desc, not stacked primary buttons.
-    expect(html).toContain('min-h-[52px] rounded-[7px] border border-border/60 bg-background')
+    expect(html).toContain('min-h-[44px] rounded-[7px] border border-border/60 bg-background')
     expect(html).toContain('shadow-minimal')
     expect(html).not.toContain('data-slot="button"')
     expect(html).not.toContain('lucide-folder-open')

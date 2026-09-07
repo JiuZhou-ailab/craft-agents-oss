@@ -46,7 +46,6 @@ import {
 import {
   loadSource as loadSourceImpl,
   saveSourceConfig as saveSourceConfigImpl,
-  updateSourceConnectionState,
   getSourceDefinitionIdentity,
   isSourceUsable,
 } from '../sources/storage.ts';
@@ -272,6 +271,9 @@ export function createSessionToolContext(options: SessionToolContextOptions): Se
       const source = loadVisibleSource(sourceSlug);
       return source?.config as unknown as SourceConfig | null;
     },
+    resolveSourcePath: (sourceSlug: string): string | null => {
+      return loadVisibleSource(sourceSlug)?.folderPath ?? null;
+    },
     createSkillDocument: (skillSlug: string, content: string) => {
       const skill = createSkillImpl(skillSlug, content);
       return { path: skill.filePath, content };
@@ -280,9 +282,6 @@ export function createSessionToolContext(options: SessionToolContextOptions): Se
       const skill = loadSkillImpl(skillSlug);
       if (!skill) return null;
       return { path: skill.filePath, content: readFileSync(skill.filePath, 'utf-8') };
-    },
-    isSourceDefinitionReadOnly: (sourceSlug: string): boolean => {
-      return loadVisibleSource(sourceSlug)?.origin === 'shared-global';
     },
     isSourceExecutionAllowed,
     saveSourceConfig: (source: SourceConfig) => {
@@ -296,15 +295,6 @@ export function createSessionToolContext(options: SessionToolContextOptions): Se
       }
 
       const connectionStatus = normalizeConnectionStatus(source.connectionStatus);
-      if (loaded.origin === 'shared-global') {
-        updateSourceConnectionState(workspacePath, source.slug, {
-          connectionStatus,
-          connectionError: source.connectionError,
-          lastTestedAt: source.lastTestedAt,
-        });
-        return;
-      }
-
       saveSourceConfigImpl(loaded.workspaceRootPath, {
         ...source,
         connectionStatus,

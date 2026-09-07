@@ -56,6 +56,8 @@ export {
   canUpdateSdkCwd,
   flagSession,
   unflagSession,
+  pinSession,
+  unpinSession,
   setSessionStatus,
   // Pending plan execution (Accept & Compact flow)
   setPendingPlanExecution,

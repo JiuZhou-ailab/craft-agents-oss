@@ -1,5 +1,5 @@
-// input: Active workspace ID and Electron automation IPC APIs
-// output: Workspace automation UI state and mutation handlers
+// input: Project or standalone task runtime ID and Electron automation APIs
+// output: Runtime-owned metadata, action results, deletion confirmation, and mutation handlers
 // pos: Renderer hook boundary between AppShell automation UI and backend automation config
 
 /**
@@ -10,14 +10,13 @@
  * - Subscribing to live updates
  * - Test, toggle, duplicate, delete handlers
  * - Delete confirmation state
- * - Syncing automations to Jotai atom for cross-component access
+ * - Each consumer owns an explicit runtime; concurrent loads are coalesced
  */
 
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSetAtom } from 'jotai'
 import { toast } from 'sonner'
-import { automationsAtom } from '@/atoms/automations'
+import type { Workspace } from '../../shared/types'
 import { parseAutomationsConfig, type AutomationListItem, type TestResult, type ExecutionEntry } from '@/components/automations/types'
 
 type AutomationsLoadApi = Pick<typeof window.electronAPI, 'getAutomations' | 'getAutomationLastExecuted'>
@@ -70,6 +69,7 @@ export function loadAutomationsForWorkspace(
 
 export interface UseAutomationsResult extends UseAutomationActionsResult {
   automations: AutomationListItem[]
+  automationWorkspace: Workspace | null
 }
 
 export interface UseAutomationActionsResult {
@@ -91,8 +91,20 @@ export function useAutomationActions(
   automations: AutomationListItem[],
 ): UseAutomationActionsResult {
   const { t } = useTranslation()
-  const [automationTestResults, setAutomationTestResults] = useState<Record<string, TestResult>>({})
-  const [automationPendingDelete, setAutomationPendingDelete] = useState<string | null>(null)
+  const [testResultsByRuntime, setTestResultsByRuntime] = useState<Record<string, Record<string, TestResult>>>({})
+  const [pendingDelete, setPendingDelete] = useState<{ workspaceId: string; automationId: string } | null>(null)
+  const automationTestResults = activeWorkspaceId ? testResultsByRuntime[activeWorkspaceId] ?? {} : {}
+  const automationPendingDelete = pendingDelete && pendingDelete.workspaceId === activeWorkspaceId ? pendingDelete.automationId : null
+  const setAutomationPendingDelete = useCallback((automationId: string | null) => {
+    setPendingDelete(automationId && activeWorkspaceId ? { workspaceId: activeWorkspaceId, automationId } : null)
+  }, [activeWorkspaceId])
+  const setTestResult = useCallback((automationId: string, result: TestResult) => {
+    if (!activeWorkspaceId) return
+    setTestResultsByRuntime(previous => ({
+      ...previous,
+      [activeWorkspaceId]: { ...previous[activeWorkspaceId], [automationId]: result },
+    }))
+  }, [activeWorkspaceId])
 
   // Shared lookup — avoids repeating automations.find() in every callback
   const findAutomation = useCallback((id: string) => automations.find(h => h.id === id), [automations])
@@ -102,11 +114,12 @@ export function useAutomationActions(
     const automation = findAutomation(automationId)
     if (!automation || !activeWorkspaceId) return
 
-    setAutomationTestResults(prev => ({ ...prev, [automationId]: { state: 'running' } }))
+    setTestResult(automationId, { state: 'running' })
 
     window.electronAPI.testAutomation({
       workspaceId: activeWorkspaceId,
       automationId: automation.id,
+      sessionId: automation.sessionId,
       automationName: automation.name,
       actions: automation.actions,
       permissionMode: automation.permissionMode,
@@ -115,25 +128,22 @@ export function useAutomationActions(
     }).then((result) => {
       const actions = result.actions
       if (!actions || actions.length === 0) {
-        setAutomationTestResults(prev => ({ ...prev, [automationId]: { state: 'error', stderr: 'No actions to execute' } }))
+        setTestResult(automationId, { state: 'error', stderr: 'No actions to execute' })
         return
       }
       const hasError = actions.some(a => !a.success)
       const state = hasError ? 'error' : 'success'
       const stderr = actions.map(a => ('stderr' in a ? a.stderr : 'error' in a ? a.error : undefined)).filter(Boolean).join('\n')
       const duration = actions.reduce((sum, a) => sum + (a.duration ?? 0), 0)
-      setAutomationTestResults(prev => ({
-        ...prev,
-        [automationId]: {
-          state,
-          stderr: stderr || undefined,
-          duration: duration || undefined,
-        },
-      }))
+      setTestResult(automationId, {
+        state,
+        stderr: stderr || undefined,
+        duration: duration || undefined,
+      })
     }).catch((err: Error) => {
-      setAutomationTestResults(prev => ({ ...prev, [automationId]: { state: 'error', stderr: err.message } }))
+      setTestResult(automationId, { state: 'error', stderr: err.message })
     })
-  }, [findAutomation, activeWorkspaceId])
+  }, [findAutomation, activeWorkspaceId, setTestResult])
 
   const handleToggleAutomation = useCallback((automationId: string) => {
     const automation = findAutomation(automationId)
@@ -156,9 +166,7 @@ export function useAutomationActions(
   }, [findAutomation, activeWorkspaceId])
 
   // Delete: show confirmation dialog
-  const handleDeleteAutomation = useCallback((automationId: string) => {
-    setAutomationPendingDelete(automationId)
-  }, [])
+  const handleDeleteAutomation = setAutomationPendingDelete
 
   const pendingDeleteAutomation = automationPendingDelete ? findAutomation(automationPendingDelete) : undefined
 
@@ -167,7 +175,7 @@ export function useAutomationActions(
     window.electronAPI.deleteAutomation(activeWorkspaceId, pendingDeleteAutomation.event, pendingDeleteAutomation.matcherIndex)
       .catch(() => toast.error(t('toast.failedToDeleteAutomation')))
     setAutomationPendingDelete(null)
-  }, [pendingDeleteAutomation, activeWorkspaceId])
+  }, [pendingDeleteAutomation, activeWorkspaceId, setAutomationPendingDelete])
 
   // Fetch execution history for a specific automation
   const getAutomationHistory = useCallback(async (automationId: string): Promise<ExecutionEntry[]> => {
@@ -229,48 +237,38 @@ export function useAutomationActions(
   }
 }
 
+const EMPTY_AUTOMATIONS: AutomationListItem[] = []
+
 export function useAutomations(
   activeWorkspaceId: string | null | undefined,
 ): UseAutomationsResult {
-  const [automations, setAutomations] = useState<AutomationListItem[]>([])
-
-  // Sync automations to Jotai atom for cross-component access (MainContentPanel)
-  const setAutomationsAtom = useSetAtom(automationsAtom)
+  const [loaded, setLoaded] = useState<{ workspace: Workspace; automations: AutomationListItem[] } | null>(null)
+  const current = loaded?.workspace.id === activeWorkspaceId ? loaded : null
+  const automations = current?.automations ?? EMPTY_AUTOMATIONS
+  const automationWorkspace = current?.workspace ?? null
   useEffect(() => {
-    setAutomationsAtom(automations)
-  }, [automations, setAutomationsAtom])
-
-  // Load automations from server and hydrate lastExecutedAt from history in one step.
-  // This avoids the race where a config reload wipes timestamps before the
-  // history effect can re-merge them.
-  const loadAndHydrate = useCallback(async () => {
     if (!activeWorkspaceId) return
-    try {
-      const items = await loadAutomationsForWorkspace(activeWorkspaceId)
-      setAutomations(items)
-    } catch {
-      setAutomations([])
+    let cancelled = false
+    let revision = 0
+    const load = async () => {
+      const request = ++revision
+      try {
+        const [workspace, items] = await Promise.all([
+          window.electronAPI.resolveRuntimeWorkspace(activeWorkspaceId),
+          loadAutomationsForWorkspace(activeWorkspaceId),
+        ])
+        if (!cancelled && request === revision) {
+          setLoaded(workspace ? { workspace, automations: items } : null)
+        }
+      } catch {
+        if (!cancelled && request === revision) setLoaded(null)
+      }
     }
+    void load()
+    const unsubscribe = window.electronAPI.onAutomationsChanged(() => { void load() })
+    return () => { cancelled = true; unsubscribe() }
   }, [activeWorkspaceId])
 
-  // Initial load
-  useEffect(() => {
-    // Automations are hydrated from the workspace filesystem, an external store.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadAndHydrate()
-  }, [loadAndHydrate])
-
-  // Subscribe to live automations updates (when automations.json changes on disk)
-  useEffect(() => {
-    if (!activeWorkspaceId) return
-    const cleanup = window.electronAPI.onAutomationsChanged(() => { loadAndHydrate() })
-    return () => { cleanup() }
-  }, [activeWorkspaceId, loadAndHydrate])
-
   const actions = useAutomationActions(activeWorkspaceId, automations)
-
-  return {
-    automations,
-    ...actions,
-  }
+  return { automations, automationWorkspace, ...actions }
 }

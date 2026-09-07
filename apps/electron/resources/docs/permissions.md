@@ -12,8 +12,14 @@ Explore mode is a read-only mode that blocks potentially destructive operations.
 Custom permission rules let you allow specific operations that would otherwise be blocked.
 
 Permission files are located at:
-- Workspace: `~/.craft-agent/workspaces/{slug}/permissions.json`
-- Source: `~/.craft-agent/workspaces/{slug}/sources/{source}/permissions.json`
+- Project: `<projectRoot>/permissions.json`
+- Project Source: `<projectRoot>/.craft-agent/sources/{source}/permissions.json`
+- Global Source: `~/.craft-agent/sources/{source}/permissions.json`
+
+Source permissions follow the Source definition's owner, not the workspace that
+uses it. An active Global Source therefore keeps the same Host-owned rules in
+Free Conversation and Projects. Project and Project Source rules can expand
+permissions only after the Host has granted trust to that Project.
 
 ## Auto-Scoping for Source Permissions
 
@@ -101,6 +107,12 @@ For **workspace-level** permissions.json (global rules), use full patterns:
 ### allowedApiEndpoints
 
 Fine-grained rules for API source requests.
+
+Rules in a Source's `permissions.json` apply only to that Source, even when another
+active Source uses the same HTTP method and path. The Host supplies this identity;
+it is not a field in the permission file or tool input. App-wide and explicitly
+trusted Project rules keep their broader scope. Remembered API approvals are
+bound to the registered tool as well as its HTTP operation.
 
 ```json
 {

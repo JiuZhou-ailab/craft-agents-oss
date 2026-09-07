@@ -62,11 +62,16 @@ describe('client auth IPC propagation', () => {
   it('keeps managed sign-in at the account capability boundary', () => {
     const rendererEntry = readElectronFile('renderer/main.tsx')
     const signInForm = readElectronFile('renderer/components/auth/ClientSignInForm.tsx')
+    const accountSection = readElectronFile('renderer/components/account/AccountSettingsSection.tsx')
 
     expect(rendererEntry).not.toContain('ClientAuthGate')
     expect(signInForm).toContain('signUpClient')
     expect(signInForm).toContain('signInClient')
     expect(signInForm).toContain('signInWithFeishuClient')
+    expect(accountSection).toContain('presentation="settings"')
+    expect(signInForm).toContain("presentation?: 'standalone' | 'settings'")
+    expect(signInForm).toContain('grid-cols-[minmax(180px,0.72fr)_minmax(320px,1.28fr)]')
+    expect(signInForm).toContain("isSettingsPresentation ? 'max-w-none' : 'max-w-[420px]'")
   })
 })
 

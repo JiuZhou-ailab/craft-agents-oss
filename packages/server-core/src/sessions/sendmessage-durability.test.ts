@@ -184,6 +184,96 @@ describe('sendMessage durability', () => {
     expect(observedOrder.slice(0, 3)).toEqual(['ack', 'user_message', 'title_generated'])
   })
 
+  it('names edit sessions from user intent and gives the same clean input to title inference', async () => {
+    const managed = buildSession('edit-title')
+    managed.name = undefined
+    const metadata = '<edit_request><label>Scheduled Task</label><context>Create a scheduled task</context></edit_request>\n\n'
+    const instruction = 'Remind me to write my weekly report on Friday'
+    let titleInput: string | undefined
+    ;(sm as any).generateTitle = async (_managed: unknown, input: string) => { titleInput = input }
+    await sm.sendMessage('edit-title', metadata + instruction, undefined, undefined, {
+      badges: [{ type: 'context', label: 'Scheduled Task', rawText: metadata, start: 0, end: metadata.length }],
+    }).catch(() => { /* expected post-ack agent-init failure */ })
+    expect(readPersistedTitle('edit-title')).toBe(instruction)
+    expect(titleInput).toBe(instruction)
+    expect(managed.messages[0]?.content).toBe(metadata + instruction)
+  })
+
+  it('queues a concurrent send while the first message is still being durably accepted', async () => {
+    const managed = buildSession('concurrent-admission')
+    let enterFlush!: () => void
+    let releaseFlush!: () => void
+    let finishChat!: () => void
+    let acknowledgeSecond!: () => void
+    const flushing = new Promise<void>(resolve => { enterFlush = resolve })
+    const flushGate = new Promise<void>(resolve => { releaseFlush = resolve })
+    const chatGate = new Promise<void>(resolve => { finishChat = resolve })
+    const secondAck = new Promise<void>(resolve => { acknowledgeSecond = resolve })
+    const flush = sm.flushSession.bind(sm)
+    let firstFlush = true
+    sm.flushSession = async id => {
+      if (firstFlush) {
+        firstFlush = false
+        enterFlush()
+        await flushGate
+      }
+      await flush(id)
+    }
+    const chats: string[] = []
+    const agent = {
+      getModel: () => 'test-model', setAllSources() {}, getSessionId: () => undefined, dispose() {},
+      chat: async function* (message: string) {
+        chats.push(message)
+        if (message === 'first') await chatGate
+        yield { type: 'text_complete', text: `reply:${message}` }
+        yield { type: 'complete' }
+      },
+    }
+    ;(sm as any).getOrCreateAgentLocked = async () => agent
+    const first = sm.sendMessage(managed.id, 'first')
+    await flushing
+    const second = sm.sendMessage(managed.id, 'second', undefined, undefined, undefined, undefined, acknowledgeSecond)
+    // Give the competing send time to reach admission while the first flush is blocked.
+    await Bun.sleep(20)
+    releaseFlush()
+    try {
+      await secondAck
+      expect(managed.messages.find(message => message.content === 'second')?.isQueued).toBe(true)
+      expect(managed.messageQueue).toHaveLength(1)
+    } finally {
+      finishChat()
+      await Promise.all([first, second])
+      for (let i = 0; i < 100 && (chats.length < 2 || (sm as any).agentLease.hasActiveOperations(managed.id)); i++) await Bun.sleep(5)
+    }
+    expect(chats).toEqual(['first', 'second'])
+    expect(managed.messages.filter(message => message.role === 'assistant').map(message => message.content))
+      .toEqual(['reply:first', 'reply:second'])
+  })
+
+  it('releases send admission when preflight fails so the next send can run', async () => {
+    const managed = buildSession('admission-preflight-failure')
+    const ensureMessagesLoaded = (sm as any).ensureMessagesLoaded.bind(sm)
+    let first = true
+    ;(sm as any).ensureMessagesLoaded = async (session: typeof managed) => {
+      if (first) {
+        first = false
+        throw new Error('preflight unavailable')
+      }
+      await ensureMessagesLoaded(session)
+    }
+    ;(sm as any).getOrCreateAgentLocked = async () => ({
+      getModel: () => 'test-model', setAllSources() {}, getSessionId: () => undefined, dispose() {},
+      async *chat() { yield { type: 'text_complete', text: 'reply' }; yield { type: 'complete' } },
+    })
+    const failed = sm.sendMessage(managed.id, 'failed')
+    const next = sm.sendMessage(managed.id, 'next')
+    await expect(failed).rejects.toThrow('preflight unavailable')
+    await next
+    expect(managed.messages.filter(message => message.role === 'user').map(message => message.content)).toEqual(['next'])
+    expect(managed.messages.some(message => message.content === 'reply')).toBe(true)
+    expect((sm as any).agentLease.hasActiveOperations(managed.id)).toBe(false)
+  })
+
   it('user message is on disk before onAck fires (mid-stream / queued branch)', async () => {
     const sessionId = 'durability-midstream'
     const managed = buildSession(sessionId)
@@ -617,6 +707,39 @@ describe('sendMessage durability', () => {
     expect(acked).toBe(true)
     expect((sm as unknown as { sessions: Map<string, unknown> }).sessions.has(sessionId)).toBe(false)
     expect(existsSync(getSessionFilePath(tmpRoot, sessionId))).toBe(false)
+  })
+
+  it('only auto-deletes a known empty idle Session', async () => {
+    const managed = buildSession('conditional-delete')
+    ;(sm as any).persistSession(managed)
+    await sm.flushSession(managed.id)
+    managed.messagesLoaded = false
+    expect(await sm.deleteEmptySession(managed.id)).toBe(false)
+    expect(existsSync(getSessionFilePath(tmpRoot, managed.id))).toBe(true)
+    managed.messagesLoaded = true
+    expect(await sm.deleteEmptySession(managed.id)).toBe(true)
+    expect(existsSync(getSessionFilePath(tmpRoot, managed.id))).toBe(false)
+  })
+
+  it('preserves an accepted send before and after its durable acknowledgement', async () => {
+    const managed = buildSession('conditional-delete-send')
+    let entered!: () => void
+    let resume!: () => void
+    const started = new Promise<void>(resolve => { entered = resolve })
+    const gate = new Promise<void>(resolve => { resume = resolve })
+    ;(sm as any).ensureMessagesLoaded = async () => { entered(); await gate }
+    let acked = false
+    const send = sm.sendMessage(managed.id, 'Keep my request', undefined, undefined, undefined, undefined, () => { acked = true })
+    await started
+    try {
+      expect(await sm.deleteEmptySession(managed.id)).toBe(false)
+    } finally {
+      resume()
+      await send
+    }
+    expect(acked).toBe(true)
+    expect(await sm.deleteEmptySession(managed.id)).toBe(false)
+    expect(readPersistedMessageIds(managed.id).length).toBeGreaterThan(0)
   })
 
   it('releases the Project lock before waiting for the active runtime lease', async () => {

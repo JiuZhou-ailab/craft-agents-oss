@@ -28,14 +28,14 @@ import type {
   SdkMcpServerConfig,
 } from '@craft-agent/shared/mcp';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { ApiOperationPermission } from '@craft-agent/shared/sources/types';
+import type { ApiToolPermissionDefinition, ApiToolPermission } from '@craft-agent/shared/sources/types';
 import { guardLargeResult } from '@craft-agent/shared/utils';
 import {
   saveBinaryResponse,
   detectExtensionFromMagic,
   sanitizeFilename,
 } from '@craft-agent/shared/utils/binary-detection';
-import { materializeApiOperationRequest } from '@craft-agent/shared/sources';
+import { canonicalizeApiPath, materializeApiOperationRequest } from '@craft-agent/shared/sources';
 
 export class McpClientPool {
   /** Active MCP clients keyed by source slug */
@@ -54,7 +54,7 @@ export class McpClientPool {
   private proxyTools = new Map<string, { slug: string; originalName: string; capabilityRef: string }>();
 
   /** Host-owned HTTP semantics for declarative in-process API tools. */
-  private proxyToolPermissions = new Map<string, ApiOperationPermission>();
+  private proxyToolPermissions = new Map<string, ApiToolPermissionDefinition>();
 
   /** Optional debug logger */
   private debugFn: ((msg: string) => void) | undefined;
@@ -405,13 +405,22 @@ export class McpClientPool {
       : undefined;
   }
 
-  /** Return immutable HTTP semantics for a declarative API tool call. */
+  /** Resolve registered API semantics; Source identity always comes from the pool. */
   getProxyToolPermission(
     toolName: string,
     input: Record<string, unknown>,
-  ): { method: string; path: string } | undefined {
+  ): ApiToolPermission | undefined {
     const permission = this.proxyToolPermissions.get(toolName);
-    if (!permission) return undefined;
+    const source = this.proxyTools.get(toolName);
+    if (!permission || !source) return undefined;
+    if ('kind' in permission) {
+      // Only Host-registered flexible tools may supply their method and path.
+      // Malformed requests fail closed here and are rejected by the MCP schema.
+      if (typeof input.method !== 'string' || typeof input.path !== 'string') {
+        return { sourceSlug: source.slug, method: 'INVALID', path: '/.storyflow/invalid-api-operation' };
+      }
+      return { sourceSlug: source.slug, method: input.method, path: canonicalizeApiPath(input.path) };
+    }
     let path: string;
     try {
       path = materializeApiOperationRequest(
@@ -424,7 +433,7 @@ export class McpClientPool {
       // allowlist candidate. The MCP schema will reject the call itself.
       path = '/.storyflow/invalid-api-operation';
     }
-    return { method: permission.method, path };
+    return { sourceSlug: source.slug, method: permission.method, path };
   }
 }
 

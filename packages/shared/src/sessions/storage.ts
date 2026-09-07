@@ -257,6 +257,7 @@ export async function createSession(
     sessionStatus?: SessionConfig['sessionStatus'];
     labels?: string[];
     isFlagged?: boolean;
+    isPinned?: boolean;
   }
 ): Promise<SessionConfig> {
   ensureSessionsDir(workspaceRootPath);
@@ -289,6 +290,7 @@ export async function createSession(
     sessionStatus: options?.sessionStatus,
     labels: options?.labels,
     isFlagged: options?.isFlagged,
+    isPinned: options?.isPinned,
   };
 
   // Save empty session
@@ -695,6 +697,7 @@ export async function updateSessionMetadata(
   sessionId: string,
   updates: Partial<Pick<SessionConfig,
     | 'isFlagged'
+    | 'isPinned'
     | 'name'
     | 'sessionStatus'
     | 'labels'
@@ -716,6 +719,7 @@ export async function updateSessionMetadata(
   if (!session) return;
 
   if (updates.isFlagged !== undefined) session.isFlagged = updates.isFlagged;
+  if (updates.isPinned !== undefined) session.isPinned = updates.isPinned;
   if (updates.name !== undefined) session.name = updates.name;
   if (updates.sessionStatus !== undefined) session.sessionStatus = updates.sessionStatus;
   if (updates.labels !== undefined) session.labels = updates.labels;
@@ -747,6 +751,20 @@ export async function flagSession(workspaceRootPath: string, sessionId: string):
  */
 export async function unflagSession(workspaceRootPath: string, sessionId: string): Promise<void> {
   await updateSessionMetadata(workspaceRootPath, sessionId, { isFlagged: false });
+}
+
+/**
+ * Pin a session in navigation without changing automation-visible flags.
+ */
+export async function pinSession(workspaceRootPath: string, sessionId: string): Promise<void> {
+  await updateSessionMetadata(workspaceRootPath, sessionId, { isPinned: true });
+}
+
+/**
+ * Unpin a session in navigation without changing automation-visible flags.
+ */
+export async function unpinSession(workspaceRootPath: string, sessionId: string): Promise<void> {
+  await updateSessionMetadata(workspaceRootPath, sessionId, { isPinned: false });
 }
 
 /**

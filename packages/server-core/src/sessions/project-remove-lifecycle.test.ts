@@ -234,6 +234,7 @@ describe('Project removal lifecycle', () => {
           import { SessionManager } from '${SESSION_MANAGER_MODULE_PATH}';
           const manager = new SessionManager();
           const events = [];
+          const bootWorkspaceIds = [];
           let releaseDispose;
           const disposeBlocked = new Promise(resolve => { releaseDispose = resolve; });
           manager.configWatchers.set(${JSON.stringify(projectRoot)}, { stop() { events.push('watcher:stop'); } });
@@ -246,7 +247,8 @@ describe('Project removal lifecycle', () => {
           });
           manager.reinitializeAuth = async () => {};
           manager.setupConfigWatcher = (rootPath, projectId) => {
-            events.push('boot:setup');
+            bootWorkspaceIds.push(projectId);
+            if (projectId === 'project-old') events.push('boot:setup');
             manager.configWatchers.set(rootPath, { stop() {} });
             manager.automationSystems.set(rootPath, { async dispose() {} });
           };
@@ -262,6 +264,7 @@ describe('Project removal lifecycle', () => {
             removed,
             during,
             after: events,
+            bootWorkspaceIds,
             watchers: manager.configWatchers.size,
             automations: manager.automationSystems.size,
             hostCount: manager.getWorkspaces().length,
@@ -279,8 +282,9 @@ describe('Project removal lifecycle', () => {
         removed: true,
         during: ['watcher:stop', 'automation:dispose-start'],
         after: ['watcher:stop', 'automation:dispose-start', 'automation:dispose-end'],
-        watchers: 0,
-        automations: 0,
+        bootWorkspaceIds: ['__storyflow_free__'],
+        watchers: 1,
+        automations: 1,
         hostCount: 0,
       })
     } finally {

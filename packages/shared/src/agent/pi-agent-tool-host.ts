@@ -30,6 +30,7 @@ import { getSessionDataPath, getSessionPath, getSessionPlansPath } from '../sess
 
 // Centralized PreToolUse pipeline
 import { runPreToolUseChecks } from './core/pre-tool-use.ts';
+import type { ActiveSourcePermissionRef } from './permissions-config.ts';
 import { executeBrowserToolCommand } from './browser-tool-runtime.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 import {
@@ -45,6 +46,17 @@ import { isLocalMcpEnabled } from '../workspaces/storage.ts';
 import { PiAgentTransport } from './pi-agent-transport.ts';
 
 export abstract class PiAgentToolHost extends PiAgentTransport {
+  private getActiveSourcePermissionRefs(): ActiveSourcePermissionRef[] {
+    const activeSlugs = this.sourceManager.getActiveSlugs();
+    return this.sourceManager.getAllSources()
+      .filter(source => activeSlugs.has(source.config.slug))
+      .map(source => ({
+        slug: source.config.slug,
+        ownerRootPath: source.workspaceRootPath,
+        grantAuthority: source.origin === 'workspace' ? 'project' : 'host',
+      }));
+  }
+
   /**
    * Handle a pre_tool_use_request from the subprocess.
    * Runs the centralized permission pipeline and sends the decision back.
@@ -88,6 +100,7 @@ export abstract class PiAgentToolHost extends PiAgentTransport {
       workingDirectory: this.config.session?.workingDirectory,
       fileAccessBoundary: this.config.fileAccessBoundary,
       activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
+      activeSources: this.getActiveSourcePermissionRefs(),
       allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
       hasSourceActivation: !!this.onSourceActivationRequest,
       permissionManager: this.permissionManager,
@@ -157,6 +170,7 @@ export abstract class PiAgentToolHost extends PiAgentTransport {
           workingDirectory: this.config.session?.workingDirectory,
           fileAccessBoundary: this.config.fileAccessBoundary,
           activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
+          activeSources: this.getActiveSourcePermissionRefs(),
           allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
           hasSourceActivation: !!this.onSourceActivationRequest,
           permissionManager: this.permissionManager,

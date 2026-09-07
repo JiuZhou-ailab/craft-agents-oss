@@ -2,12 +2,14 @@
  * AutomationInfoPage
  *
  * Detail view for a selected automation, using the Info_Page compound component system.
- * Follows SourceInfoPage pattern: Hero → Sections (When, Then, Settings, History, JSON).
+ * input: Selected automation, runtime scope, and task actions
+ * output: Compact title/action header and sections for schedule, actions, settings, and history
+ * pos: Detail content shared by the scheduled-task side column and other automation routes
  */
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { PauseCircle, Hash } from 'lucide-react'
+import { MoreHorizontal, X, PauseCircle, Hash } from 'lucide-react'
 import {
   Info_Page,
   Info_Section,
@@ -17,6 +19,8 @@ import {
   Info_Markdown,
 } from '@/components/info'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
+import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent } from '@/components/ui/styled-dropdown'
+import { Button } from '@/components/ui/button'
 import { AutomationAvatar } from './AutomationAvatar'
 import { AutomationMenu } from './AutomationMenu'
 import { AutomationActionRow } from './AutomationActionRow'
@@ -39,8 +43,10 @@ export interface AutomationInfoPageProps {
   onDuplicate?: () => void
   onDelete?: () => void
   onReplay?: (automationId: string, event: string) => void
+  workspaceId?: string
   workspaceRootPath?: string
   className?: string
+  onClose?: () => void
 }
 
 export function AutomationInfoPage({
@@ -52,11 +58,14 @@ export function AutomationInfoPage({
   onDuplicate,
   onDelete,
   onReplay,
+  workspaceId,
   workspaceRootPath,
   className,
+  onClose,
 }: AutomationInfoPageProps) {
-  const { t } = useTranslation()
-  const nextRuns = automation.cron ? computeNextRuns(automation.cron) : []
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage || i18n.language || 'en'
+  const nextRuns = automation.cron ? computeNextRuns(automation.cron, 3, automation.timezone) : []
 
   // Lightweight per-mount fetch — mirrors the pattern used in MessagingSettingsPage.
   // Only fired when the matcher actually declares a topic to avoid unnecessary IPC.
@@ -81,38 +90,45 @@ export function AutomationInfoPage({
     <EditPopover
       trigger={<EditButton />}
       {...getEditConfig('automation-config', workspaceRootPath)}
+      conversationWorkspaceId={workspaceId}
       secondaryAction={{ label: t('automations.editFile'), filePath: `${workspaceRootPath}/automations.json` }}
     />
   ) : undefined
 
   return (
     <Info_Page className={className}>
-      <Info_Page.Header
-        title={automation.name}
-        titleMenu={
-          <AutomationMenu
-            automationId={automation.id}
-            automationName={automation.name}
-            enabled={automation.enabled}
-            onToggleEnabled={onToggleEnabled}
-            onTest={onTest}
-            onDuplicate={onDuplicate}
-            onDelete={onDelete}
-          />
-        }
-      />
-
-      <Info_Page.Content>
-        {/* Hero */}
-        <div className="flex items-start justify-between">
-          <Info_Page.Hero
-            avatar={<AutomationAvatar event={automation.event} fluid />}
-            title={automation.name}
-            tagline={automation.summary}
-          />
+      <header className="shrink-0 border-b px-5 pt-5 pb-4" data-testid="automation-detail-header">
+        <div className="flex items-start gap-3">
+          <AutomationAvatar event={automation.event} size="sm" />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold tracking-tight">{automation.name}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {!automation.enabled ? t('automations.pausedTitle') : nextRuns[0]
+                ? `${t('automations.labelNextRuns')} · ${new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', ...(automation.timezone ? { timeZone: automation.timezone } : {}) }).format(nextRuns[0])}`
+                : automation.summary}
+            </p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-7" aria-label={automation.name}><MoreHorizontal className="size-4" /></Button>
+            </DropdownMenuTrigger>
+            <StyledDropdownMenuContent align="end">
+              <AutomationMenu automationId={automation.id} automationName={automation.name} enabled={automation.enabled}
+                onToggleEnabled={onToggleEnabled} onTest={onTest} onDuplicate={onDuplicate} onDelete={onDelete} />
+            </StyledDropdownMenuContent>
+          </DropdownMenu>
+          {onClose ? <Button variant="ghost" size="icon" className="size-7" aria-label={t('common.close')} onClick={onClose}><X className="size-4" /></Button> : null}
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          {automation.sessionId && workspaceId ? (
+            <Button variant="outline" size="sm" onClick={() => {
+              void window.electronAPI.openUrl(`craftagents://workspace/${encodeURIComponent(workspaceId)}/allSessions/session/${encodeURIComponent(automation.sessionId!)}?window=focused`)
+            }}>{t('automations.openSession')}</Button>
+          ) : null}
           {editActions}
         </div>
-
+      </header>
+      <Info_Page.Content>
         {/* Disabled warning */}
         {!automation.enabled && (
           <Info_Alert variant="warning" icon={<PauseCircle className="h-4 w-4" />}>
@@ -158,8 +174,18 @@ export function AutomationInfoPage({
                         const spansYears = nextRuns.length > 1 && nextRuns[0].getFullYear() !== nextRuns[nextRuns.length - 1].getFullYear()
                         return nextRuns.map((date, i) => (
                           <span key={i} className="text-sm text-foreground/70">
-                            {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(spansYears && { year: 'numeric' }) })}{' '}
-                            {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            {date.toLocaleDateString(locale, {
+                              month: 'short',
+                              day: 'numeric',
+                              ...(spansYears && { year: 'numeric' }),
+                              ...(automation.timezone ? { timeZone: automation.timezone } : {}),
+                            })}{' '}
+                            {date.toLocaleTimeString(locale, {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                              ...(automation.timezone ? { timeZone: automation.timezone } : {}),
+                            })}
                           </span>
                         ))
                       })()}
@@ -250,7 +276,7 @@ export function AutomationInfoPage({
           title={t('automations.sectionRecentActivity')}
           description={executions.length > 0 ? t('automations.lastNRuns', { count: executions.length }) : undefined}
         >
-          <AutomationEventTimeline entries={executions} onReplay={onReplay} />
+          <AutomationEventTimeline workspaceId={workspaceId} entries={executions} onReplay={onReplay} />
         </Info_Section>
 
         {/* Section: Raw config (JSON) */}

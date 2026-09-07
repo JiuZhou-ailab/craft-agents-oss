@@ -96,14 +96,15 @@ export default function McpHubPage({ workspaceId }: McpHubPageProps) {
   }, [adding, sources, t, workspaceId])
 
   return (
-    <main className="h-full min-h-0 overflow-y-auto bg-background text-foreground">
-      <div className="mx-auto w-full max-w-5xl px-6 py-8 sm:px-8 sm:py-10">
-        <header>
+    <main className="relative h-full min-h-0 overflow-y-auto bg-background text-foreground">
+      <div aria-hidden="true" className="titlebar-drag-region absolute inset-x-0 top-0 h-5 sm:h-6" />
+      <div className="mx-auto w-full max-w-5xl px-6 pt-5 pb-8 sm:px-8 sm:pt-6">
+        <header className="titlebar-drag-region">
           <h1 className="text-2xl font-semibold tracking-tight">{t('mcpHub.title')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('mcpHub.description')}</p>
         </header>
 
-        <div className="relative mt-6">
+        <div className="relative mt-4">
           <label className="sr-only" htmlFor="mcp-hub-search">{t('mcpHub.searchLabel')}</label>
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
@@ -211,7 +212,7 @@ function McpServerDialog({
 
   return (
     <Dialog open={Boolean(server)} onOpenChange={open => { if (!open) onClose() }}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-[960px]">
         {server ? (
           <>
             <DialogHeader>

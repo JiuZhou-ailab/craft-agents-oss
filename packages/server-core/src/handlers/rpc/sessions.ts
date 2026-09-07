@@ -341,10 +341,10 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
     }
   })
 
-  // Respond to a permission request (bash command approval)
+  // Respond to a permission request, including explicit Session-mode or admin options.
   // Returns true if the response was delivered, false if agent/session is gone
-  server.handle(RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION, async (_ctx, sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean) => {
-    return sessionManager.respondToPermission(sessionId, requestId, allowed, alwaysAllow)
+  server.handle(RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION, async (_ctx, sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean, options?: import('@craft-agent/shared/protocol').PermissionResponseOptions) => {
+    return sessionManager.respondToPermission(sessionId, requestId, allowed, alwaysAllow, options)
   })
 
   server.handle(RPC_CHANNELS.sessions.RESPOND_TO_USER_QUESTION, async (_ctx, sessionId: string, requestId: string, response: import('@craft-agent/shared/protocol').UserQuestionResponse) => {
@@ -368,10 +368,16 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
     command: import('@craft-agent/shared/protocol').SessionCommand
   ) => {
     switch (command.type) {
+      case 'deleteIfEmpty':
+        return { deleted: await sessionManager.deleteEmptySession(sessionId) }
       case 'flag':
         return sessionManager.flagSession(sessionId)
       case 'unflag':
         return sessionManager.unflagSession(sessionId)
+      case 'pin':
+        return sessionManager.pinSession(sessionId)
+      case 'unpin':
+        return sessionManager.unpinSession(sessionId)
       case 'archive':
         return sessionManager.archiveSession(sessionId)
       case 'unarchive':

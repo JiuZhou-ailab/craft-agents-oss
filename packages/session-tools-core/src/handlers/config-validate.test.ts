@@ -30,6 +30,10 @@ function createCtx(workspacePath: string) {
     },
     validators: undefined,
     loadSourceConfig: () => null,
+    resolveSourcePath: (slug: string) => {
+      const sourcePath = join(workspacePath, 'sources', slug);
+      return existsSync(sourcePath) ? sourcePath : null;
+    },
     isSourceExecutionAllowed: () => false,
   } as const;
 }

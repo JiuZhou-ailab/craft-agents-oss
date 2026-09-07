@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import type { ApiToolPermission } from '../../sources/types.ts';
 import { expandPath } from '../../utils/paths.ts';
 import { isPathWithinProjectRoot } from '../../workspaces/paths.ts';
 import {
@@ -44,7 +45,11 @@ import {
   PERMISSION_MODE_CONFIG,
   type PermissionMode,
 } from '../mode-manager.ts';
-import { permissionsConfigCache, type PermissionsContext } from '../permissions-config.ts';
+import {
+  permissionsConfigCache,
+  type ActiveSourcePermissionRef,
+  type PermissionsContext,
+} from '../permissions-config.ts';
 import type { PrerequisiteCheckResult } from './prerequisite-manager.ts';
 
 // ============================================================
@@ -496,7 +501,7 @@ export interface PreToolUseInput {
   /** Tool input object */
   input: Record<string, unknown>;
   /** Host-owned HTTP semantics for a declarative in-process API tool. */
-  apiOperation?: { method: string; path: string };
+  apiOperation?: ApiToolPermission;
   /** Current session ID */
   sessionId: string;
   /** Current permission mode */
@@ -519,6 +524,8 @@ export interface PreToolUseInput {
   };
   /** Currently active source slugs */
   activeSourceSlugs: string[];
+  /** Owner-resolved permission identities for the active Sources. */
+  activeSources: ActiveSourcePermissionRef[];
   /** All available sources (for source-exists check) */
   allSourceSlugs: string[];
   /** Whether the agent supports source activation (has onSourceActivationRequest callback) */
@@ -654,6 +661,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     workingDirectory,
     fileAccessBoundary,
     activeSourceSlugs,
+    activeSources,
     allSourceSlugs,
     hasSourceActivation,
     permissionManager,
@@ -677,7 +685,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   // Build permissions context for custom permissions.json rules
   const permissionsContext: PermissionsContext = {
     workspaceRootPath,
-    activeSourceSlugs,
+    activeSources,
     allowProjectGrants,
   };
 
@@ -946,7 +954,7 @@ export function shouldPromptInAskMode(
   permissionManager: PermissionManagerLike,
   permissionsContext: PermissionsContext,
   plansFolderPath?: string,
-  apiOperation?: { method: string; path: string },
+  apiOperation?: ApiToolPermission,
   onDebug?: (message: string) => void,
 ): PromptInfo | null {
 
@@ -955,17 +963,18 @@ export function shouldPromptInAskMode(
   if (apiOperation) {
     const method = apiOperation.method.toUpperCase();
     const apiDescription = `${method} ${apiOperation.path}`;
-    if (method === 'GET' || isApiEndpointAllowed(method, apiOperation.path, permissionsContext)) {
+    const approvalKey = `${toolName}: ${apiDescription}`;
+    if (isApiEndpointAllowed(method, apiOperation.path, permissionsContext, apiOperation.sourceSlug)) {
       return null;
     }
-    if (permissionManager.isCommandWhitelisted(apiDescription)) {
+    if (permissionManager.isCommandWhitelisted(approvalKey)) {
       onDebug?.(`Auto-allowing API "${apiDescription}" (previously approved)`);
       return null;
     }
     return {
       promptType: 'api_mutation',
       description: `API: ${apiDescription}`,
-      command: apiDescription,
+      command: approvalKey,
     };
   }
 

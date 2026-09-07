@@ -72,6 +72,8 @@ export interface Session {
   messages: Message[]
   isProcessing: boolean
   isFlagged?: boolean
+  /** Whether this session is fixed in navigation independently of business flags. */
+  isPinned?: boolean
   /** Permission mode for this session ('safe', 'ask', 'allow-all') */
   permissionMode?: PermissionMode
   sessionStatus?: SessionStatus
@@ -133,6 +135,7 @@ export interface CreateSessionOptions {
   sessionStatus?: SessionStatus
   labels?: string[]
   isFlagged?: boolean
+  isPinned?: boolean
   enabledSourceSlugs?: string[]
   /**
    * Message ID to branch from. This is a hard context cutoff:
@@ -197,6 +200,8 @@ export type SessionEvent =
   | { type: 'user_message'; sessionId: string; message: Message; status: 'accepted' | 'queued' | 'processing'; optimisticMessageId?: string }
   | { type: 'session_flagged'; sessionId: string }
   | { type: 'session_unflagged'; sessionId: string }
+  | { type: 'session_pinned'; sessionId: string }
+  | { type: 'session_unpinned'; sessionId: string }
   | { type: 'session_archived'; sessionId: string }
   | { type: 'session_unarchived'; sessionId: string }
   | { type: 'name_changed'; sessionId: string; name?: string }
@@ -265,8 +270,11 @@ export interface NovelSelectionRewriteResult {
 // ---------------------------------------------------------------------------
 
 export type SessionCommand =
+  | { type: 'deleteIfEmpty' }
   | { type: 'flag' }
   | { type: 'unflag' }
+  | { type: 'pin' }
+  | { type: 'unpin' }
   | { type: 'archive' }
   | { type: 'unarchive' }
   | { type: 'rename'; name: string }
@@ -358,6 +366,8 @@ export interface PermissionRequest extends BasePermissionRequest {
 
 export interface PermissionResponseOptions {
   rememberForMinutes?: number
+  /** Explicitly switch this Session to execution mode before resuming the tool. */
+  permissionMode?: 'allow-all'
 }
 
 // Re-export for handler convenience
@@ -698,6 +708,7 @@ export type TestAutomationAction =
   | { type: 'webhook'; url: string; method?: string; headers?: Record<string, string>; bodyFormat?: 'json' | 'form' | 'raw'; body?: unknown; captureResponse?: boolean; auth?: { type: 'basic'; username: string; password: string } | { type: 'bearer'; token: string } }
 
 export interface TestAutomationPayload {
+  sessionId?: string
   workspaceId: string
   automationId?: string
   automationName?: string

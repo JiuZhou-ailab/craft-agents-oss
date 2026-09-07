@@ -1,5 +1,5 @@
 // input: Built Electron app, a v0.17-style local Project, and a deterministic OpenAI-compatible HTTP stub
-// output: Assertions for identity/lock upgrades, a real Pi edit turn, version restore, and restart recovery
+// output: Assertions for upgrades, login routing, safe Session cleanup, a real Pi edit turn, version restore, and restart recovery
 // pos: Release-gate smoke test for the desktop product's durable core loop
 
 import { spawnSync } from 'node:child_process'
@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { strict as assert } from 'node:assert'
 import { FREE_CONVERSATION_WORKSPACE_ID } from '@craft-agent/shared/protocol'
 import {
@@ -66,6 +66,7 @@ async function main(): Promise<void> {
     assert.equal(auth.configured, true, 'account smoke must exercise the configured sign-in form')
     assert.equal(auth.authenticated, false, 'account smoke fixture must start signed out')
     await smokeAccountCenter(app)
+    await smokeManagedLoginRedirect(app)
     await assertRootViewportCannotScroll(app)
     await smokeFreeConversationSkillImport(app)
 
@@ -88,7 +89,7 @@ async function main(): Promise<void> {
       `async function (workspaceId, rootPath, connection, model) {
         return await window.electronAPI.createSession(workspaceId, {
           name: 'Core E2E',
-          permissionMode: 'allow-all',
+          permissionMode: 'ask',
           workingDirectory: rootPath,
           llmConnection: connection,
           model,
@@ -97,6 +98,15 @@ async function main(): Promise<void> {
       [WORKSPACE_ID, fixture.workspaceRoot, CONNECTION_SLUG, MODEL_ID],
     )
     assert.equal(readFileSync(fixture.targetFile, 'utf8'), ORIGINAL, 'workspace changed during session creation')
+
+    await callOn<void>(app, `function (sessionId) {
+      window.__corePermissionRequests = []
+      window.electronAPI.onSessionEvent(event => {
+        if (event.type === 'permission_request' && event.sessionId === sessionId) {
+          window.__corePermissionRequests.push(event.request.requestId)
+        }
+      })
+    }`, [session.id])
 
     await callOn<void>(
       app,
@@ -108,8 +118,24 @@ async function main(): Promise<void> {
       }`,
       [session.id],
     )
+    await callOn<void>(app, `function (id) {
+      window.dispatchEvent(new CustomEvent('craft-agent-navigate', { detail: { route: 'allSessions/session/' + id } }))
+    }`, [session.id])
+    await waitFor(app, `!!document.querySelector('[data-tutorial="permission-banner"]')`, 30_000, 'Pi edit permission prompt')
+    // Structured input also renders an inert height-measurement copy.
+    await clickSelector(app, '.input-container [data-tutorial="permission-allow-all-button"]')
+    await waitFor(app, `document.querySelector('[data-tutorial="permission-mode-dropdown"]')?.classList.contains('text-accent')`,
+      10_000, 'Allow All updates the visible execution mode')
     await waitForAgent(app, session.id, fixture.targetFile)
     assert.equal(readFileSync(fixture.targetFile, 'utf8'), AGENT_EDIT)
+    assert.equal(readFileSync(join(fixture.workspaceRoot, 'allow-all-proof.txt'), 'utf8'), 'Second tool executed\n')
+    assert.equal(await evalOn<number>(app, 'window.__corePermissionRequests.length'), 1, 'the next Pi tool must execute without another prompt')
+
+    const cleanup = await callOn<{ deleted: boolean }>(app,
+      `async function (id) { return await window.electronAPI.sessionCommand(id, { type: 'deleteIfEmpty' }) }`,
+      [session.id],
+    )
+    assert.equal(cleanup.deleted, false, 'automatic cleanup must retain a Session with a user message')
 
     const version = await callOn<{ created: boolean; commitHash?: string }>(
       app,
@@ -159,6 +185,9 @@ async function main(): Promise<void> {
       [WORKSPACE_ID],
     )
     assert.ok(recovered.some(candidate => candidate.id === session.id))
+    const recoveredMode = await callOn<{ permissionMode: string }>(app,
+      'async function (id) { return await window.electronAPI.getSessionPermissionModeState(id) }', [session.id])
+    assert.equal(recoveredMode.permissionMode, 'ask', 'Project restart must renew execute consent; Session files cannot grant capabilities')
     assert.equal(readFileSync(fixture.targetFile, 'utf8'), AGENT_EDIT)
 
     process.stdout.write('core Electron E2E: PASS\n')
@@ -354,6 +383,40 @@ async function smokeAccountCenter(app: LaunchedApp): Promise<void> {
   }
 }
 
+async function smokeManagedLoginRedirect(app: LaunchedApp): Promise<void> {
+  await clickSelector(app, '[role="dialog"] button[aria-label]')
+  await waitFor(app, `!document.querySelector('#client-auth-identifier')`, 5_000, 'profile dismissal')
+  await clickSelector(app, '[data-testid="activity-projects"] button[title="新建任务"]')
+  await waitFor(app, `new URL(location.href).searchParams.get('route')?.includes('/session/')`,
+    15_000, 'project task creation activates its owning runtime')
+  const sessionId = await evalOn<string>(app, `new URL(location.href).searchParams.get('route').split('/session/')[1]`)
+  try {
+    await callOn<void>(app, `async function (id) {
+      await window.electronAPI.sessionCommand(id, { type: 'setConnection', connectionSlug: 'storyflow-managed' })
+    }`, [sessionId])
+    await clickSelector(app, '[data-tutorial="chat-input"][contenteditable="true"]')
+    await app.cdp.send('Input.insertText', { text: 'Login preflight probe' }, app.sid)
+    await clickSelector(app, '[data-tutorial="send-button"]')
+    await waitFor(app, `!!document.querySelector('#client-auth-identifier')`, 10_000, 'send preflight opens profile sign-in')
+    const transcript = await callOn<{ messages: unknown[] }>(app,
+      `async function (id) { return await window.electronAPI.getSessionMessages(id) }`, [sessionId])
+    assert.equal(transcript.messages.length, 0, 'login rejection must happen before sending')
+  } catch (error) {
+    const diagnostic = await evalOn(app, `({
+      url: location.href,
+      text: document.body.innerText.slice(0, 2500),
+      inputs: [...document.querySelectorAll('[contenteditable]')].map(element => ({
+        html: element.outerHTML.slice(0, 600),
+        rect: element.getBoundingClientRect().toJSON(),
+      })),
+    })`)
+    process.stderr.write(`login preflight diagnostic: ${JSON.stringify(diagnostic)}\n`)
+    throw error
+  } finally {
+    await callOn<void>(app, `async function (id) { await window.electronAPI.deleteSession(id) }`, [sessionId])
+  }
+}
+
 async function clickSelector(app: LaunchedApp, selector: string): Promise<void> {
   const selectorLiteral = JSON.stringify(selector)
   await waitFor(
@@ -370,7 +433,16 @@ async function clickSelector(app: LaunchedApp, selector: string): Promise<void> 
     })()`,
     15_000,
     `clickable target: ${selector}`,
-  )
+  ).catch(async error => {
+    const diagnostic = await evalOn(app, `(() => {
+      const element = document.querySelector(${selectorLiteral})
+      const rect = element?.getBoundingClientRect()
+      return { text: document.body.innerText.slice(-3000), element: element?.outerHTML,
+        rect, hit: rect && document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.outerHTML.slice(0, 1000) }
+    })()`)
+    process.stderr.write(`click diagnostic: ${JSON.stringify(diagnostic)}\n`)
+    throw error
+  })
   const box = await callOn<{ x: number; y: number } | null>(
     app,
     `function (selector) {
@@ -538,6 +610,13 @@ function toolCallChunks(model: string, targetFile: string): string[] {
             id: 'call_core_e2e_edit',
             type: 'function',
             function: { name: 'edit', arguments: args },
+          }, {
+            index: 1,
+            id: 'call_core_e2e_write',
+            type: 'function',
+            function: { name: 'write', arguments: JSON.stringify({
+              path: join(dirname(targetFile), 'allow-all-proof.txt'), content: 'Second tool executed\n',
+            }) },
           }],
         },
         finish_reason: null,

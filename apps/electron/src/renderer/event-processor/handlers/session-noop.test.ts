@@ -16,10 +16,12 @@ import {
   handleSessionArchived,
   handleSessionFlagged,
   handleSessionModelChanged,
+  handleSessionPinned,
   handleSessionShared,
   handleSessionStatusChanged,
   handleSessionUnarchived,
   handleSessionUnflagged,
+  handleSessionUnpinned,
   handleSessionUnshared,
   handleSourcesChanged,
   handleStatus,
@@ -40,12 +42,14 @@ import type {
   SessionArchivedEvent,
   SessionFlaggedEvent,
   SessionModelChangedEvent,
+  SessionPinnedEvent,
   SessionSharedEvent,
   SessionStatusChangedEvent,
   SessionState,
   StatusEvent,
   SessionUnarchivedEvent,
   SessionUnflaggedEvent,
+  SessionUnpinnedEvent,
   SessionUnsharedEvent,
   SourcesChangedEvent,
   TitleGeneratedEvent,
@@ -199,6 +203,26 @@ describe('session event no-op guards', () => {
     }
 
     expect(handleSessionUnflagged(state, event).state).toBe(state)
+  })
+
+  it('keeps the original state for duplicate pinned status', () => {
+    const state = makeState({ isPinned: true })
+    const event: SessionPinnedEvent = {
+      type: 'session_pinned',
+      sessionId: 'session-1',
+    }
+
+    expect(handleSessionPinned(state, event).state).toBe(state)
+  })
+
+  it('keeps the original state for duplicate unpinned status', () => {
+    const state = makeState({ isPinned: false })
+    const event: SessionUnpinnedEvent = {
+      type: 'session_unpinned',
+      sessionId: 'session-1',
+    }
+
+    expect(handleSessionUnpinned(state, event).state).toBe(state)
   })
 
   it('keeps the original state for duplicate archived status', () => {

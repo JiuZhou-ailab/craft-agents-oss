@@ -353,7 +353,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
   // Get source name for header
   const sourceName = source?.config.name || sourceSlug
   const renderEditActions = (configKey: EditContextKey, fileName: string) => {
-    if (!source || source.origin === 'shared-global') return null
+    if (!source) return null
     const filePath = `${source.folderPath}/${fileName}`
     return (
       <ResourceEditActions
@@ -377,7 +377,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
             sourceName={sourceName}
             onOpenInNewWindow={handleOpenInNewWindow}
             onShowInFinder={handleOpenSourceFolder}
-            onDelete={source?.origin === 'shared-global' ? undefined : handleDelete}
+            onDelete={handleDelete}
           />
         }
       />
@@ -390,15 +390,6 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
             title={source.config.name}
             tagline={source.config.tagline}
           />
-
-          {source.origin === 'shared-global' && (
-            <Info_Alert variant="info">
-              <Info_Alert.Title>{t('sourceInfo.sharedReadOnlyTitle')}</Info_Alert.Title>
-              <Info_Alert.Description>
-                {t('sourceInfo.sharedReadOnlyDescription')}
-              </Info_Alert.Description>
-            </Info_Alert>
-          )}
 
           {/* Disabled Warning */}
           {isProjectStdioSourceDisabled(source, localMcpEnabled) && (

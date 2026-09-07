@@ -1,5 +1,5 @@
 // input: Workspace sessions, Pi product projections, persistence stores, and Host services
-// output: Durable product session state, projected Pi events, and explicit user commands
+// output: Atomic durable send admission, projected Pi events, user commands, and bound automation dispatch
 // pos: Storyflow Product Host session boundary; Pi owns Agent turn execution
 
 import type { EventSink } from '@craft-agent/server-core/transport'
@@ -328,7 +328,7 @@ export class SessionManager implements ISessionManager {
       // the scheduler and event handlers start at boot — not lazily on first
       // client connect. This is critical for headless servers where no UI may
       // ever connect, yet scheduled/event-driven automations must still fire.
-      const workspaces = getWorkspaces()
+      const workspaces = listSessionWorkspaces()
       for (const workspace of workspaces) {
         try {
           await this.withProjectLifecycleLock(workspace.id, async () => {
@@ -460,7 +460,25 @@ export class SessionManager implements ISessionManager {
       getSessionRuntimeHooks().onSessionStarted()
     } else if (was && !processing) {
       getSessionRuntimeHooks().onSessionStopped()
+      this.schedulePendingSourceReload(managed)
     }
+  }
+
+  /**
+   * Apply a Source refresh only after the active Pi lease drains. This must not
+   * be awaited from the processing-stop callback because that callback runs
+   * inside the lease that reloadSessionSources() needs to acquire exclusively.
+   */
+  private schedulePendingSourceReload(managed: ManagedSession): void {
+    if (!managed.pendingSourceReload || managed.isProcessing || managed.runtimeState) return
+
+    managed.pendingSourceReload = false
+    void this.reloadSessionSources(managed).catch(error => {
+      if (this.sessions.get(managed.id) === managed && !managed.runtimeState) {
+        managed.pendingSourceReload = true
+      }
+      getSessionLog().error(`Deferred source reload failed for session ${managed.id}:`, error)
+    })
   }
 
   private async withLifecycleLockKey<T>(
@@ -933,6 +951,16 @@ export class SessionManager implements ISessionManager {
       changed = true
     }
 
+    // Pinned navigation state is independent from automation-facing flags.
+    if ((managed.isPinned ?? false) !== (header.isPinned ?? false)) {
+      managed.isPinned = header.isPinned ?? false
+      this.sendEvent(
+        { type: header.isPinned ? 'session_pinned' : 'session_unpinned', sessionId },
+        managed.workspace.id
+      )
+      changed = true
+    }
+
     // Session status
     if (managed.sessionStatus !== header.sessionStatus) {
       managed.sessionStatus = header.sessionStatus
@@ -1142,6 +1170,7 @@ export class SessionManager implements ISessionManager {
               workspaceId,
               workspaceRootPath,
               prompt: pending.prompt,
+              sessionId: pending.sessionId,
               labels: pending.labels,
               permissionMode: pending.permissionMode,
               mentions: pending.mentions,
@@ -1175,7 +1204,7 @@ export class SessionManager implements ISessionManager {
           if (result.status === 'rejected') {
             getSessionLog().error(`[Automations] Failed to execute prompt action ${idx + 1}:`, result.reason)
           } else {
-            getSessionLog().info(`[Automations] Created session ${result.value.sessionId} from prompt action`)
+            getSessionLog().info(`[Automations] Executed prompt action in session ${result.value.sessionId}`)
           }
         }
       },
@@ -1196,16 +1225,16 @@ export class SessionManager implements ISessionManager {
     watcher?.notifyFileChange(relativePath)
   }
 
-  /**
-   * Reload sources for all sessions in a workspace, skipping those currently processing.
-   */
+  /** Reload sources for all sessions, deferring active Pi turns until they settle. */
   private async reloadSourcesForWorkspace(workspaceRootPath: string): Promise<void> {
     for (const [_, managed] of this.sessions) {
       if (managed.workspace.rootPath === workspaceRootPath) {
         if (managed.isProcessing) {
-          getSessionLog().info(`Skipping source reload for session ${managed.id} (processing)`)
+          managed.pendingSourceReload = true
+          getSessionLog().info(`Deferring source reload for session ${managed.id} until processing stops`)
           continue
         }
+        managed.pendingSourceReload = false
         await this.reloadSessionSources(managed)
       }
     }
@@ -2474,6 +2503,7 @@ export class SessionManager implements ISessionManager {
       sessionStatus: options?.sessionStatus,
       labels: options?.labels,
       isFlagged: options?.isFlagged,
+      isPinned: options?.isPinned,
     })
 
     if (isFreeConversationWorkspaceId(workspace.id)) {
@@ -2940,6 +2970,16 @@ export class SessionManager implements ISessionManager {
       this.crudMetadata.unflagSession(sessionId))
   }
 
+  async pinSession(sessionId: string): Promise<void> {
+    return this.withRequiredSessionOperation(sessionId, () =>
+      this.crudMetadata.pinSession(sessionId))
+  }
+
+  async unpinSession(sessionId: string): Promise<void> {
+    return this.withRequiredSessionOperation(sessionId, () =>
+      this.crudMetadata.unpinSession(sessionId))
+  }
+
   /** Archive a session (delegates to SessionCrudMetadata). */
   async archiveSession(sessionId: string): Promise<void> {
     await this.withSessionOperation(sessionId, undefined, () =>
@@ -3204,7 +3244,7 @@ export class SessionManager implements ISessionManager {
     // Select a spread of user messages (first, middle, last) to capture the session's purpose
     const allUserContents = managed.messages
       .filter((m) => m.role === 'user')
-      .map((m) => m.content)
+      .map((m) => sanitizeForTitle(m.content))
     const userMessages = selectSpreadMessages(allUserContents)
 
     getSessionLog().info(`refreshTitle: Selected ${userMessages.length} spread messages from ${allUserContents.length} total`)
@@ -3316,18 +3356,26 @@ export class SessionManager implements ISessionManager {
   }
 
   async deleteSession(sessionId: string): Promise<void> {
+    await this.deleteSessionConditionally(sessionId, false)
+  }
+
+  async deleteEmptySession(sessionId: string): Promise<boolean> {
+    return this.deleteSessionConditionally(sessionId, true)
+  }
+
+  private async deleteSessionConditionally(sessionId: string, onlyIfEmpty: boolean): Promise<boolean> {
     const managed = this.sessions.get(sessionId)
     if (!managed) {
       getSessionLog().warn(`Cannot delete session: ${sessionId} not found`)
-      return
+      return false
     }
-    if (managed.runtimeState === 'deleting') return
+    if (managed.runtimeState === 'deleting') return false
 
     const claim = await this.withProjectLifecycleLock(
       managed.workspace.id,
-      () => this.deleteSessionLocked(sessionId),
+      () => this.deleteSessionLocked(sessionId, onlyIfEmpty),
     )
-    if (!claim) return
+    if (!claim) return false
 
     const {
       managed: claimedSession,
@@ -3413,11 +3461,22 @@ export class SessionManager implements ISessionManager {
     this.sendEvent({ type: 'session_deleted', sessionId }, projectId)
     this.emitUnreadSummaryChanged()
     getSessionLog().info(`Deleted session ${sessionId}`)
+    return true
   }
 
-  private async deleteSessionLocked(sessionId: string): Promise<SessionDeletionClaim | undefined> {
+  private async deleteSessionLocked(sessionId: string, onlyIfEmpty = false): Promise<SessionDeletionClaim | undefined> {
     const managed = this.sessions.get(sessionId)
     if (!managed || managed.runtimeState === 'deleting') return
+    // Check and tombstone under the same Project lock. Unknown/cold content and
+    // accepted work are never empty; a client timeout cannot revoke that work.
+    if (onlyIfEmpty && (
+      !managed.messagesLoaded
+      || managed.messages.length > 0
+      || (managed.messageCount ?? 0) > 0
+      || managed.isProcessing
+      || managed.messageQueue.length > 0
+      || this.agentLease.hasActiveOperations(sessionId)
+    )) return
     if (managed.runtimeState) {
       throw new Error(`Session ${sessionId} is already being changed; retry deletion.`)
     }
@@ -3521,7 +3580,9 @@ export class SessionManager implements ISessionManager {
     }
 
     const releaseSessionOperation = this.beginSessionOperationLease(managed)
+    let releaseAdmission: (() => void) | undefined
     try {
+    releaseAdmission = await this.agentLease.acquireSendAdmission(sessionId)
 
     // Clear any pending plan execution state when a new user message is sent.
     // This acts as a safety valve - if the user moves on, we don't want to
@@ -3658,12 +3719,13 @@ export class SessionManager implements ISessionManager {
         if (options?.badges) {
           for (const badge of options.badges) {
             if (badge.rawText && badge.label) {
-              titleSource = titleSource.replace(badge.rawText, badge.label)
+              titleSource = titleSource.replace(badge.rawText, badge.type === 'context' ? '' : badge.label)
             }
           }
         }
         // Sanitize: strip any remaining bracket mentions, XML blocks, tags
         const sanitized = sanitizeForTitle(titleSource)
+        if (!isLowSignal(sanitized)) titleMessageToGenerate = sanitized
         initialTitle = sanitized.slice(0, 50) + (sanitized.length > 50 ? '…' : '')
         managed.name = initialTitle
       }
@@ -3694,7 +3756,6 @@ export class SessionManager implements ISessionManager {
           title: initialTitle,
         }, managed.workspace.id)
 
-        if (!isLowSignal(message)) titleMessageToGenerate = message
       }
     } else {
       ackAccepted(generateMessageId(), 'hidden')
@@ -3743,6 +3804,8 @@ export class SessionManager implements ISessionManager {
     // Capture the generation to detect if a new request supersedes this one.
     // This prevents the finally block from clobbering state when a follow-up message arrives.
     const myGeneration = managed.processingGeneration
+    // Later sends may now queue, without waiting for this turn's model execution.
+    releaseAdmission()
     const turnWatchdog = new TurnWatchdog({
       hardTimeoutMs: SESSION_TURN_HARD_TIMEOUT_MS,
       onTimeout: timeout => this.handleTurnWatchdogTimeout(sessionId, myGeneration, timeout),
@@ -4161,6 +4224,7 @@ export class SessionManager implements ISessionManager {
       void this.generateTitle(managed, titleMessageToGenerate)
     }
     } finally {
+      releaseAdmission?.()
       releaseSessionOperation()
     }
   }
@@ -4592,9 +4656,9 @@ export class SessionManager implements ISessionManager {
     alwaysAllow: boolean,
     options?: import('@craft-agent/shared/protocol').PermissionResponseOptions,
   ): boolean {
-    const managed = this.sessions.get(sessionId)
-    if (managed?.agent) {
-      const requestMeta = this.pendingPermissionRequests.get(requestId)
+    const managed = this.getMutableSession(sessionId)
+    const requestMeta = this.pendingPermissionRequests.get(requestId)
+    if (managed?.agent?.hasPendingPermission(requestId) && requestMeta?.sessionId === sessionId) {
       this.pendingPermissionRequests.delete(requestId)
 
       if (requestMeta?.type === 'admin_approval') {
@@ -4613,11 +4677,16 @@ export class SessionManager implements ISessionManager {
         }
       }
 
+      // Reuse the authoritative mode mutation (runtime, UI event, persistence)
+      // before releasing Pi's pending tool_call hook. Admin approvals stay separate.
+      if (allowed && options?.permissionMode === 'allow-all' && requestMeta.type !== 'admin_approval') {
+        this.crudMetadata.setSessionPermissionMode(sessionId, 'allow-all')
+      }
       getSessionLog().info(`Permission response for ${requestId}: allowed=${allowed}, alwaysAllow=${alwaysAllow}`)
       managed.agent.respondToPermission(requestId, allowed, alwaysAllow)
       return true
     } else {
-      getSessionLog().warn(`Cannot respond to permission - no agent for session ${sessionId}`)
+      getSessionLog().warn(`Cannot respond to permission - no live matching request for session ${sessionId}`)
       return false
     }
   }
@@ -5393,6 +5462,33 @@ export class SessionManager implements ISessionManager {
       throw new Error('Project automations are disabled by Host settings')
     }
 
+    if (input.sessionId) {
+      const managed = this.sessions.get(input.sessionId)
+      if (!managed) throw new Error(`Session ${input.sessionId} not found`)
+      const release = this.beginSessionOperationLease(managed)
+      let delivery: Promise<void>
+      try {
+        if (managed.workspace.id !== workspace.id || managed.workspace.rootPath !== workspaceRootPath) {
+          throw new Error('Automation conversation belongs to another workspace')
+        }
+        if (managed.isArchived || managed.hidden) {
+          throw new Error('Automation conversation is archived or hidden')
+        }
+        // Existing conversations retain their model, permissions, and sources.
+        // sendMessage owns busy-session queuing and the normal execution lifecycle.
+        const effectivePrompt = canonicalizeSkillReferences(prompt, resolved?.skillSlugs ?? [])
+        delivery = this.sendMessage(managed.id, effectivePrompt, undefined, undefined, {
+          skillSlugs: resolved?.skillSlugs,
+        })
+      } finally {
+        // sendMessage synchronously takes its own operation lease. Never retain
+        // this validation lease while cold runtime acquisition waits for leases.
+        release()
+      }
+      await delivery
+      return { sessionId: managed.id }
+    }
+
     // Use automation name if provided, otherwise fall back to prompt snippet
     const fallback = `Automation: ${prompt.slice(0, 50)}${prompt.length > 50 ? '...' : ''}`
     const sessionName = automationName || fallback
@@ -5428,6 +5524,7 @@ export class SessionManager implements ISessionManager {
         llmConnection,
         model,
         thinkingLevel,
+        isPinned: true,
       })
     })
 

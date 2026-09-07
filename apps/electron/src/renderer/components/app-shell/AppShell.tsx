@@ -65,7 +65,6 @@ import {
   StyledDropdownMenuSubContent,
 } from "@/components/ui/styled-dropdown"
 import { SessionList, type ChatGroupingMode } from "./SessionList"
-import { WritingPrimaryContentReadyContext } from "./MainContentPanel"
 import { PanelStackContainer } from "./PanelStackContainer"
 import { ResizableColumn } from "./ResizableColumn"
 import type { ChatDisplayHandle } from "./ChatDisplay"
@@ -107,7 +106,7 @@ import { useAction } from "@/actions"
 import { useFocusZone } from "@/hooks/keyboard"
 import { useFocusActions } from "@/context/FocusContext"
 import { hasSessionHistoryContent } from "@/utils/session"
-import type { LoadedSource, LoadedSkill, SourceFilter, AutomationFilter, WorkspaceVersionEntry, WorkspaceVersionFileChange, WhatsNewManifest } from "../../../shared/types"
+import type { LoadedSource, LoadedSkill, AutomationFilter, WorkspaceVersionEntry, WorkspaceVersionFileChange, WhatsNewManifest } from "../../../shared/types"
 import {
   ensureSessionMessagesLoadedAtom,
   reconcileSessionTranscriptWorkingSetAtom,
@@ -146,7 +145,6 @@ import {
   isAutomationsNavigation,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
-import { SourcesListPanel } from "./SourcesListPanel"
 import { AutomationsListPanel } from "../automations/AutomationsListPanel"
 import { AUTOMATION_TYPE_TO_FILTER_KIND } from "../automations/types"
 import { useAutomations } from "@/hooks/useAutomations"
@@ -156,7 +154,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { PanelHeader } from "./PanelHeader"
 import { SendToWorkspaceDialog } from "./SendToWorkspaceDialog"
 import { MessagingDialogHost } from "@/components/messaging/MessagingDialogHost"
-import { EditPopover, getEditConfig, type EditContextKey } from "@/components/ui/EditPopover"
+import { EditPopover, getEditConfig } from "@/components/ui/EditPopover"
 import { GLOBAL_SETTINGS_SUBPAGES, SettingsDialog } from "@/pages/settings/SettingsNavigator"
 import {
   PANEL_GAP,
@@ -886,6 +884,8 @@ function AppShellContent({
     onDeleteSession,
     onFlagSession,
     onUnflagSession,
+    onPinSession,
+    onUnpinSession,
     onArchiveSession,
     onUnarchiveSession,
     onSessionStatusChange,
@@ -1003,7 +1003,6 @@ function AppShellContent({
   const {
     goBack,
     goForward,
-    navigateToSource,
     navigateToSession,
     settingsSubpage,
     closeSettings,
@@ -1015,24 +1014,6 @@ function AppShellContent({
   // UNIFIED NAVIGATION STATE - single source of truth from NavigationContext
   // Derived from focused panel's route — all panels are peers
   const navState = useNavigationState()
-  // Skills now owns a full-width Hub. Conversation views use the Activity Rail,
-  // so neither surface should keep the legacy navigator consuming content width.
-  const hideSessionListNavigator = isSkillsNavigation(navState)
-    || (
-      showActivityRail
-      && !isAutoCompact
-      && (
-        isSessionsNavigation(navState)
-        || (isProjectRuntime && isWritingNavigation(navState))
-      )
-    )
-  const contentNeedsStoplightCompensation = isAutoCompact
-    || (!isActivityRailVisible && hideSessionListNavigator)
-  const contentHeaderLeadingInset = !isAutoCompact && !isActivityRailVisible && hideSessionListNavigator
-    ? activityRailWidth + 16
-    : null
-  const visibleSessionListWidth = hideSessionListNavigator ? 0 : sessionListWidth
-
   const store = useStore()
   const panelStack = useAtomValue(panelStackAtom)
   const panelCount = useAtomValue(panelCountAtom)
@@ -1066,9 +1047,6 @@ function AppShellContent({
   }, [navState])
 
   const sessionFilter = sessionsContext?.filter ?? null
-
-  // Derive source filter from navigation state (only when in sources navigator)
-  const sourceFilter: SourceFilter | null = isSourcesNavigation(navState) ? navState.filter ?? null : null
 
   // Derive automation filter from navigation state (only when in automations navigator)
   const automationFilter: AutomationFilter | null = isAutomationsNavigation(navState) ? navState.filter ?? null : null
@@ -1290,34 +1268,35 @@ function AppShellContent({
     }
     onSelectWorkspace(targetWorkspaceId)
   }, [onOpenFreeConversations, onSelectWorkspace])
+  const isScheduledRoute = isAutomationsNavigation(navState)
+    && navState.filter?.automationType === 'scheduled'
   const {
-    automations, automationTestResults,
+    automations, automationWorkspace, automationTestResults,
     automationPendingDelete, pendingDeleteAutomation, setAutomationPendingDelete,
     handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, confirmDeleteAutomation,
     getAutomationHistory, handleReplayAutomation,
-  } = useAutomations(projectWorkspaceId)
+  } = useAutomations(isScheduledRoute ? FREE_CONVERSATION_WORKSPACE_ID : projectWorkspaceId)
 
-  // Whether local MCP servers are enabled (affects stdio source status)
-  const [localMcpEnabled, setLocalMcpEnabled] = React.useState(false)
+  // Skills and scheduled tasks own their lists. Conversations use the Activity Rail.
+  const hideSessionListNavigator = isSkillsNavigation(navState)
+    || isSourcesNavigation(navState)
+    || (isAutomationsNavigation(navState) && (!isProjectRuntime || isScheduledRoute))
+    || (
+      showActivityRail
+      && !isAutoCompact
+      && (
+        isSessionsNavigation(navState)
+        || (isProjectRuntime && isWritingNavigation(navState))
+      )
+    )
+  const contentNeedsStoplightCompensation = isAutoCompact
+    || (!isActivityRailVisible && hideSessionListNavigator)
+  const contentHeaderLeadingInset = !isAutoCompact && !isActivityRailVisible && hideSessionListNavigator
+    ? activityRailWidth + 16
+    : null
+  const visibleSessionListWidth = hideSessionListNavigator ? 0 : sessionListWidth
 
   const enabledModes = PERMISSION_MODE_ORDER
-
-  // Load workspace settings on workspace change
-  React.useEffect(() => {
-    if (!projectWorkspaceId) {
-      setLocalMcpEnabled(true)
-      return
-    }
-    let cancelled = false
-    window.electronAPI.getWorkspaceSettings(projectWorkspaceId).then((settings) => {
-      if (!cancelled && settings) {
-        setLocalMcpEnabled(settings.localMcpEnabled ?? false)
-      }
-    }).catch((err) => {
-      console.error('[Chat] Failed to load workspace settings:', err)
-    })
-    return () => { cancelled = true }
-  }, [projectWorkspaceId])
 
   // Reset UI state when workspace changes
   // This prevents stale search queries, focused items, and filter state from persisting
@@ -1497,12 +1476,6 @@ function AppShellContent({
   // Ensure session messages are loaded when selected; evict out-of-working-set transcripts.
   const ensureMessagesLoaded = useSetAtom(ensureSessionMessagesLoadedAtom)
   const reconcileSessionTranscriptWorkingSet = useSetAtom(reconcileSessionTranscriptWorkingSetAtom)
-
-  // Handle selecting a source from the list (preserves current filter type)
-  const handleSourceSelect = React.useCallback((source: LoadedSource) => {
-    if (!activeWorkspaceId) return
-    navigateToSource(source.config.slug)
-  }, [activeWorkspaceId, navigateToSource])
 
   // Handle selecting an automation from the list
   const handleAutomationSelect = React.useCallback((automationId: string) => {
@@ -2513,7 +2486,6 @@ function AppShellContent({
   const savedNovelDocumentChangeVersionRef = React.useRef(0)
   const novelDocumentChangeVersionFlushRef = React.useRef<number | null>(null)
   const [novelDocumentLoading, setNovelDocumentLoading] = React.useState(false)
-  const [loadedNovelDocumentPath, setLoadedNovelDocumentPath] = React.useState<string | null>(null)
   const [novelDocumentSaving, setNovelDocumentSaving] = React.useState(false)
   const [novelDocumentError, setNovelDocumentError] = React.useState<string | null>(null)
   const [novelVersionDialogOpen, setNovelVersionDialogOpen] = React.useState(false)
@@ -2642,7 +2614,6 @@ function AppShellContent({
     if (!selectedNovelDocumentPath) {
       replaceNovelDocumentContent('')
       setNovelDocumentLoading(false)
-      setLoadedNovelDocumentPath(null)
       setNovelDocumentError(null)
       return
     }
@@ -2650,7 +2621,6 @@ function AppShellContent({
     let cancelled = false
     const readStartedAt = performance.now()
     setNovelDocumentLoading(true)
-    setLoadedNovelDocumentPath(null)
     setNovelDocumentError(null)
 
     window.electronAPI.readFile(selectedNovelDocumentPath)
@@ -2678,7 +2648,6 @@ function AppShellContent({
       .finally(() => {
         if (!cancelled) {
           setNovelDocumentLoading(false)
-          setLoadedNovelDocumentPath(selectedNovelDocumentPath)
 
           const switchStart = novelDocumentSwitchStartRef.current
           if (switchStart?.filePath === selectedNovelDocumentPath) {
@@ -2708,9 +2677,6 @@ function AppShellContent({
   const novelDocumentDirty = !!selectedNovelFile && (
     novelDocumentContent !== savedNovelDocumentContent
     || novelDocumentChangeVersion !== savedNovelDocumentChangeVersion
-  )
-  const writingPrimaryContentReady = showNovelWorkspaceSidebar && (
-    !selectedNovelDocumentPath || loadedNovelDocumentPath === selectedNovelDocumentPath
   )
   const handleMoveNovelWorkspaceEntry = React.useCallback(async (
     entry: WorkspaceFileTreeNode,
@@ -3548,7 +3514,7 @@ function AppShellContent({
       ...options,
       workspaceFreshnessContext: preparation.brief,
     })
-    if (accepted === true && preparation.checkpoint) {
+    if (accepted === 'accepted' && preparation.checkpoint) {
       setKnownWorkspaceCommit(
         preparation.checkpoint.rootPath,
         sessionId,
@@ -3702,13 +3668,13 @@ function AppShellContent({
 
   // Wrap delete handler to clear selection when deleting the currently selected session
   // This prevents stale state during re-renders that could cause crashes
-  const handleDeleteSession = useCallback(async (sessionId: string, skipConfirmation?: boolean): Promise<boolean> => {
+  const handleDeleteSession = useCallback(async (sessionId: string, skipConfirmation?: boolean, workspaceId?: string): Promise<boolean> => {
     // Clear selection first if this is the selected session
-    if (session.selected === sessionId) {
+    if (session.selected === sessionId && (!workspaceId || workspaceId === activeWorkspaceId)) {
       setSession({ selected: null })
     }
-    return onDeleteSession(sessionId, skipConfirmation)
-  }, [session.selected, setSession, onDeleteSession])
+    return onDeleteSession(sessionId, skipConfirmation, workspaceId)
+  }, [session.selected, setSession, onDeleteSession, activeWorkspaceId])
 
   const mentionFiles = React.useMemo<MentionFileReference[]>(() => {
     return novelWorkspaceFiles.map(file => ({
@@ -4200,18 +4166,6 @@ function AppShellContent({
     setTimeout(() => focusZone('chat', { intent: 'programmatic' }), 50)
   }, [activeWorkspace, focusZone, navigate])
 
-  // Delete Source - simplified since agents system is removed
-  const handleDeleteSource = useCallback(async (sourceSlug: string) => {
-    if (!activeWorkspace) return
-    try {
-      await window.electronAPI.deleteSource(activeWorkspace.id, sourceSlug)
-      toast.success(t('toast.deletedSource'))
-    } catch (error) {
-      console.error('[Chat] Failed to delete source:', error)
-      toast.error(t('toast.failedToDeleteSource'))
-    }
-  }, [activeWorkspace])
-
   // Respond to menu bar "New Chat" trigger
   const menuTriggerRef = useRef(menuNewChatTrigger)
   useEffect(() => {
@@ -4653,9 +4607,6 @@ function AppShellContent({
           paddingRight: PANEL_EDGE_INSET,
           paddingLeft: 0,
           gap: showActivityRail ? 0 : PANEL_GAP,
-          ...(contentHeaderLeadingInset !== null
-            ? { '--panel-header-leading-inset': `${contentHeaderLeadingInset}px` }
-            : {}),
         } as React.CSSProperties}
       >
         <AnimatePresence initial={false}>
@@ -4699,8 +4650,10 @@ function AppShellContent({
                 onOpenWhatsNew={handleWhatsNewClick}
                 sessionActions={{
                   onRename: onRenameSession,
+                  onPin: onPinSession,
+                  onUnpin: onUnpinSession,
                   onArchive: onArchiveSession,
-                  onDelete: (sessionId) => { void handleDeleteSession(sessionId) },
+                  onDelete: async (sessionId, workspaceId) => { await handleDeleteSession(sessionId, undefined, workspaceId) },
                 }}
                 whatsNew={{
                   unseen: hasUnseenReleaseNotes,
@@ -4717,11 +4670,10 @@ function AppShellContent({
           className="flex min-w-0 flex-1"
           style={{ paddingBottom: PANEL_EDGE_INSET, gap: PANEL_GAP }}
         >
-          <WritingPrimaryContentReadyContext.Provider value={writingPrimaryContentReady}>
           <PanelStackContainer
           sidebarSlot={null}
           sidebarWidth={0}
-          navigatorSlot={
+          navigatorSlot={hideSessionListNavigator ? null :
             <div
               ref={sessionListPanelRef}
               style={{ width: isAutoCompact ? '100%' : navigatorPanelWidth }}
@@ -5310,24 +5262,8 @@ function AppShellContent({
                       </StyledDropdownMenuContent>
                     </DropdownMenu>
                   )}
-                  {/* Add Source button (only for sources mode) - uses filter-aware edit config */}
-                  {isSourcesNavigation(navState) && activeWorkspace && (
-                    <EditPopover
-                      trigger={
-                        <HeaderIconButton
-                          icon={<Plus className="h-4 w-4" />}
-                          tooltip={t("sidebarMenu.addSource")}
-                          data-tutorial="add-source-button"
-                        />
-                      }
-                      {...getEditConfig(
-                        sourceFilter?.kind === 'type' ? `add-source-${sourceFilter.sourceType}` as EditContextKey : 'add-source',
-                        activeWorkspace.rootPath
-                      )}
-                    />
-                  )}
                   {/* Add Automation button (only for automations mode) */}
-                  {isAutomationsNavigation(navState) && isProjectRuntime && activeWorkspace && (
+                  {isAutomationsNavigation(navState) && automationWorkspace && (
                     <EditPopover
                       trigger={
                         <HeaderIconButton
@@ -5335,30 +5271,15 @@ function AppShellContent({
                           tooltip={t("sidebarMenu.addAutomation")}
                         />
                       }
-                      {...getEditConfig('automation-config', activeWorkspace.rootPath)}
+                      {...getEditConfig(isScheduledRoute ? 'scheduled-task' : 'automation-config', automationWorkspace.rootPath)}
+                      conversationWorkspaceId={automationWorkspace.id}
                     />
                   )}
                 </>
               }
             />
             {/* Content: SessionList, SourcesListPanel, or SettingsNavigator based on navigation state */}
-            {isSourcesNavigation(navState) && (
-              /* Sources List - filtered by type if sourceFilter is active */
-              <SourcesListPanel
-                sources={sources}
-                sourceFilter={sourceFilter}
-                workspaceId={activeWorkspaceId ?? undefined}
-                workspaceRootPath={activeWorkspace?.rootPath}
-                activeWorkspaceId={activeWorkspaceId}
-                workspaces={workspaces}
-                onDeleteSource={handleDeleteSource}
-                onSourceClick={handleSourceSelect}
-                onDiscoverMcp={() => navigate(routes.view.mcpMarket())}
-                selectedSourceSlug={isSourcesNavigation(navState) && navState.details?.type === 'source' ? navState.details.sourceSlug : null}
-                localMcpEnabled={localMcpEnabled}
-              />
-            )}
-            {isAutomationsNavigation(navState) && isProjectRuntime && (
+            {isAutomationsNavigation(navState) && automationWorkspace && (
               /* Automations List - filtered by type if automationFilter is active */
               <AutomationsListPanel
                 automations={automations}
@@ -5369,8 +5290,8 @@ function AppShellContent({
                 onDuplicateAutomation={handleDuplicateAutomation}
                 onDeleteAutomation={handleDeleteAutomation}
                 selectedAutomationId={isAutomationsNavigation(navState) && navState.details ? navState.details.automationId : null}
-                workspaceRootPath={activeWorkspace?.rootPath}
-                activeWorkspaceId={activeWorkspaceId}
+                workspaceRootPath={automationWorkspace?.rootPath}
+                activeWorkspaceId={automationWorkspace?.id}
                 workspaces={workspaces}
               />
             )}
@@ -5468,6 +5389,7 @@ function AppShellContent({
             </div>
           ) : null}
           isSidebarAndNavigatorHidden={contentNeedsStoplightCompensation}
+          stoplightLeadingInset={contentHeaderLeadingInset ?? undefined}
           isCompact={isAutoCompact}
           isResizing={!!isResizing}
           hidePanelCloseButton={showPrimarySidebar}
@@ -5514,7 +5436,6 @@ function AppShellContent({
             </ResizableColumn>
           ) : null}
         </AnimatePresence>
-          </WritingPrimaryContentReadyContext.Provider>
         </div>
 
         {showActivityRail ? activityRailControls : null}

@@ -340,7 +340,8 @@ export interface ElectronAPI {
   /** Best-effort: drop idle main-process transcript cache (mirrors renderer working set). */
   releaseSessionMessages(sessionId: string): Promise<boolean>
   createSession(workspaceId: string, options?: CreateSessionOptions): Promise<Session>
-  deleteSession(sessionId: string): Promise<void>
+  /** Global session surfaces pass their owner; omitted scope means the active runtime. */
+  deleteSession(sessionId: string, workspaceId?: string): Promise<void>
   /** In-place rewind to a user message (Pi navigateTree); stays on the same session. */
   rewindSession(
     sessionId: string,
@@ -356,7 +357,8 @@ export interface ElectronAPI {
   respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>
 
   // Consolidated session command handler
-  sessionCommand(sessionId: string, command: SessionCommand): Promise<void | ShareResult | RefreshTitleResult | NovelSelectionRewriteResult | { count: number }>
+  /** Owner scope is handled by transport without switching the focused workspace. */
+  sessionCommand(sessionId: string, command: SessionCommand, workspaceId?: string): Promise<void | ShareResult | RefreshTitleResult | NovelSelectionRewriteResult | { count: number } | { deleted: boolean }>
 
   // Server info (REMOTE_ELIGIBLE — returns data from whichever server owns the workspace)
   getServerHomeDir(): Promise<string>

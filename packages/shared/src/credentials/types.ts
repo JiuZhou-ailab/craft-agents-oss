@@ -33,7 +33,7 @@ export type CredentialType =
   // Workspace credentials
   | 'workspace_oauth'    // Workspace MCP OAuth token
   | 'remote_server_token' // Remote workspace server bearer token
-  // Source credentials (stored at ~/.craft-agent/workspaces/{ws}/sources/{slug}/)
+  // Source credentials (stored securely and keyed by consumer/source identity)
   | 'source_oauth'       // OAuth tokens for MCP/API sources
   | 'source_bearer'      // Bearer tokens
   | 'source_apikey'      // API keys

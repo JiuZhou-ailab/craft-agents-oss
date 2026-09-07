@@ -1,6 +1,6 @@
 // input: ManagedSession identity checks and an agent factory callback
-// output: withAgentRuntimeLease / withAgentRuntimeLock / beginSessionOperationLease concurrency primitives
-// pos: Serializes runtime acquisition and exclusive control-plane mutations per session
+// output: Send-admission gates, runtime leases, exclusive locks, and active-operation checks
+// pos: Separates atomic message admission from runtime ownership and exclusive mutations
 
 import type { AgentInstance, ManagedSession } from './managed-session'
 
@@ -26,6 +26,7 @@ export class AgentRuntimeLease {
   constructor(private deps: AgentRuntimeLeaseDeps) {}
 
   private agentRuntimeLocks: Map<string, Promise<void>> = new Map()
+  private sendAdmissionTails: Map<string, Promise<void>> = new Map()
   /** Active compatible operations sharing one stable Pi subprocess. */
   private agentRuntimeLeaseCounts: Map<string, number> = new Map()
   /** Exclusive mutations wait here until every active operation releases the subprocess. */
@@ -85,6 +86,28 @@ export class AgentRuntimeLease {
     const waiters = this.agentRuntimeLeaseWaiters.get(sessionId)
     this.agentRuntimeLeaseWaiters.delete(sessionId)
     for (const resolve of waiters ?? []) resolve()
+  }
+
+  /** Synchronous admission check for non-destructive idle cleanup. */
+  hasActiveOperations(sessionId: string): boolean {
+    return (this.agentRuntimeLeaseCounts.get(sessionId) ?? 0) > 0
+  }
+
+  /** Hold only until a send is durably queued or claims the processing generation. */
+  async acquireSendAdmission(sessionId: string): Promise<() => void> {
+    const previous = this.sendAdmissionTails.get(sessionId) ?? Promise.resolve()
+    let unlock!: () => void
+    const gate = new Promise<void>(resolve => { unlock = resolve })
+    const tail = previous.then(() => gate)
+    this.sendAdmissionTails.set(sessionId, tail)
+    await previous
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      unlock()
+      if (this.sendAdmissionTails.get(sessionId) === tail) this.sendAdmissionTails.delete(sessionId)
+    }
   }
 
   /** Keep short pre-runtime session work ahead of deletion and invalidation. */

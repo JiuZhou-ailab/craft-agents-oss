@@ -1,4 +1,4 @@
-// input: One panel-stack entry, focus state, proportional sizing, optional shell action, and minimum width
+// input: One panel-stack entry, focus state, title inset, proportional sizing, optional shell action, and minimum width
 // output: One flat content pane with panel-specific chrome
 // pos: Content pane renderer inside the continuous app workbench
 
@@ -32,6 +32,7 @@ interface PanelSlotProps {
   /** Whether this panel is the focused panel in a multi-panel layout */
   isFocusedPanel: boolean
   isSidebarAndNavigatorHidden: boolean
+  stoplightLeadingInset?: number
   /** Flex-grow weight for proportional sizing */
   proportion: number
   /** Optional sash element rendered before this panel */
@@ -51,6 +52,7 @@ export function PanelSlot({
   isOnly,
   isFocusedPanel,
   isSidebarAndNavigatorHidden,
+  stoplightLeadingInset,
   proportion,
   sash,
   isCompact,
@@ -134,6 +136,7 @@ export function PanelSlot({
             <MainContentPanel
               navStateOverride={navState}
               isSidebarAndNavigatorHidden={isSidebarAndNavigatorHidden}
+              stoplightLeadingInset={stoplightLeadingInset}
             />
           </SessionPanelChromeProvider>
         </div>

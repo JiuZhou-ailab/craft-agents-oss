@@ -1,6 +1,6 @@
-// input: Project content state for a new conversation panel
-// output: Regression coverage for folder-first chat opening commands
-// pos: Protects the empty-session opening contract shown before the first user message
+// input: Project or free-chat context for a new conversation panel
+// output: Regression coverage for unified rotating tips, prompt starters, and project commands
+// pos: Protects the shared empty-session opening contract shown before the first user message
 
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'bun:test'
@@ -21,6 +21,7 @@ describe('resolveChatOpeningPrompt', () => {
     expect(opening.hintKey).toBe('chatOpening.project.emptyHint')
     expect(opening.workspaceName).toBe('空白作品')
     expect(opening.sections.map(section => section.id)).toEqual(['project'])
+    expect(opening.tipKeys).toHaveLength(8)
     expect(opening.actions.map(action => ({
       id: action.id,
       command: action.kind === 'command' ? action.command : null,
@@ -47,7 +48,7 @@ describe('resolveChatOpeningPrompt', () => {
     ])
   })
 
-  it('offers rotating tips without turning guidance into an action', () => {
+  it('combines rotating tips with compact prompt starters in free chat', () => {
     const opening = resolveChatOpeningPrompt({
       workspaceName: '自由对话',
       isProject: false,
@@ -56,8 +57,15 @@ describe('resolveChatOpeningPrompt', () => {
 
     expect(opening.titleKey).toBe('chatOpening.general.title')
     expect(opening.workspaceName).toBeUndefined()
-    expect(opening.sections).toEqual([])
-    expect(opening.actions).toEqual([])
+    expect(opening.sections.map(section => section.id)).toEqual(['tools'])
+    expect(opening.actions.map(action => ({
+      id: action.id,
+      kind: action.kind,
+      promptKey: action.kind === 'prompt' ? action.promptKey : null,
+    }))).toEqual([
+      { id: 'tools.skill', kind: 'prompt', promptKey: 'chatOpening.tools.skill.prompt' },
+      { id: 'tools.tutorial', kind: 'prompt', promptKey: 'chatOpening.tools.tutorial.prompt' },
+    ])
     expect(opening.tipKeys).toEqual([
       'chatInput.placeholder.mention',
       'chatInput.placeholder.shiftTab',

@@ -1,5 +1,5 @@
 // input: Session state, transcript messages, tool activities, and chat input callbacks.
-// output: Scrollable chat transcript, action overlays, and composer for a selected session.
+// output: Unified new-chat starters, rotating tips, transcript, action overlays, and composer.
 // pos: Main renderer surface for session conversation panels.
 
 import * as React from "react"
@@ -491,8 +491,8 @@ function ChatOpeningEmptyState({
   ].filter((part): part is string => Boolean(part))
 
   return (
-    <div className="flex min-h-[420px] items-center justify-center px-6 py-12">
-      <div className="w-full max-w-[680px] text-center">
+    <div className="flex min-h-[420px] items-center justify-center px-6 py-10">
+      <div className="w-full max-w-[620px] text-center">
         <div className="text-[17px] font-medium leading-6 text-foreground">
           {t(opening.titleKey)}
         </div>
@@ -504,37 +504,29 @@ function ChatOpeningEmptyState({
         <div className="mt-1 text-xs text-muted-foreground/70">
           {t(opening.hintKey)}
         </div>
-        {tipKeys.length > 0 ? (
-          <ul
-            className="mx-auto mt-6 w-fit max-w-[520px] list-disc space-y-1.5 pl-5 text-left text-sm leading-6 text-foreground/65 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            tabIndex={tipQueue.length > 3 ? 0 : undefined}
-            onPointerEnter={() => setTipsPaused(true)}
-            onPointerLeave={() => setTipsPaused(false)}
-            onFocus={() => setTipsPaused(true)}
-            onBlur={() => setTipsPaused(false)}
-          >
-            {tipKeys.map(tipKey => <li key={tipKey}>{t(tipKey)}</li>)}
-          </ul>
-        ) : null}
         {opening.sections.length > 0 ? (
-          <div className="mt-6 space-y-4 text-left">
+          <div className="mt-5 space-y-3 text-left">
             {opening.sections.map((section) => (
               <section key={section.id}>
                 <div className="mb-2 px-1 text-[11px] font-medium text-muted-foreground">
                   {t(section.labelKey)}
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className={cn(
+                  'grid grid-cols-1 gap-2',
+                  section.actions.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
+                )}>
                   {section.actions.map((action) => (
                     <button
                       key={action.id}
                       type="button"
                       onClick={() => onAction(action)}
-                      className="min-h-[52px] rounded-[7px] border border-border/60 bg-background px-3 py-2 text-left shadow-minimal transition-colors hover:border-foreground/20 hover:bg-foreground/[0.03]"
+                      title={t(action.descriptionKey)}
+                      className="min-h-10 rounded-[7px] border border-border/60 bg-background px-2.5 py-1.5 text-left shadow-minimal outline-none transition-[background-color,border-color,transform] hover:border-foreground/20 hover:bg-foreground/[0.03] active:translate-y-px focus-visible:ring-1 focus-visible:ring-ring"
                     >
-                      <span className="block text-sm font-medium text-foreground/85">
+                      <span className="block text-[12px] font-medium leading-4 text-foreground/85">
                         {t(action.labelKey)}
                       </span>
-                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                      <span className="block truncate text-[10px] leading-4 text-muted-foreground">
                         {t(action.descriptionKey)}
                       </span>
                     </button>
@@ -542,6 +534,29 @@ function ChatOpeningEmptyState({
                 </div>
               </section>
             ))}
+          </div>
+        ) : null}
+        {tipKeys.length > 0 ? (
+          <div
+            className="mx-auto mt-5 min-h-[72px] max-w-[520px] overflow-hidden outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            tabIndex={tipQueue.length > 3 ? 0 : undefined}
+            onPointerEnter={() => setTipsPaused(true)}
+            onPointerLeave={() => setTipsPaused(false)}
+            onFocus={() => setTipsPaused(true)}
+            onBlur={() => setTipsPaused(false)}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.ul
+                key={tipOffset}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? undefined : { opacity: 0, y: -5 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+                className="w-full list-disc space-y-1 pl-5 text-left text-xs leading-5 text-foreground/60"
+              >
+                {tipKeys.map(tipKey => <li key={tipKey}>{t(tipKey)}</li>)}
+              </motion.ul>
+            </AnimatePresence>
           </div>
         ) : null}
       </div>
@@ -660,8 +675,18 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   const internalTextareaRef = React.useRef<RichTextInputHandle>(null)
   const textareaRef = externalTextareaRef || internalTextareaRef
   const handleOpeningAction = React.useCallback((action: ChatOpeningAction) => {
-    onChatOpeningCommand?.(action.command)
-  }, [onChatOpeningCommand])
+    if (action.kind === 'command') {
+      onChatOpeningCommand?.(action.command)
+      return
+    }
+
+    const prompt = t(action.promptKey)
+    onInputChange?.(prompt)
+    textareaRef.current?.focus()
+    window.setTimeout(() => {
+      textareaRef.current?.setSelectionRange(prompt.length, prompt.length)
+    }, 0)
+  }, [onChatOpeningCommand, onInputChange, t, textareaRef])
   const [sendMessageKey, setSendMessageKey] = useState<'enter' | 'cmd-enter'>('enter')
   const [openAnnotationRequest, setOpenAnnotationRequest] = React.useState<{
     messageId: string
@@ -1516,7 +1541,8 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
           pendingPermission.sessionId,
           pendingPermission.requestId,
           permResponse.allowed,
-          permResponse.alwaysAllow
+          permResponse.alwaysAllow,
+          permResponse.options,
         )
         return
       }

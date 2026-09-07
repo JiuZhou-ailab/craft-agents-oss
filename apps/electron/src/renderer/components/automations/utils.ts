@@ -53,9 +53,9 @@ export function describeCron(cron: string): string {
 /**
  * Compute the next N run times for a cron expression using croner.
  */
-export function computeNextRuns(cron: string, count: number = 3): Date[] {
+export function computeNextRuns(cron: string, count: number = 3, timezone?: string): Date[] {
   try {
-    const job = new Cron(cron)
+    const job = new Cron(cron, timezone ? { timezone } : undefined)
     return job.nextRuns(count)
   } catch {
     return []

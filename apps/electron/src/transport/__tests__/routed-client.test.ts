@@ -55,7 +55,7 @@ function stubClient(overrides?: Partial<WsRpcClient>): WsRpcClient {
 }
 
 // Use real channel constants — RoutedClient routes based on isLocalOnly()
-import { isLocalOnly, RPC_CHANNELS } from '@craft-agent/shared/protocol'
+import { isLocalOnly, RPC_CHANNELS, FREE_CONVERSATION_WORKSPACE_ID } from '@craft-agent/shared/protocol'
 
 const LOCAL_CHANNEL = RPC_CHANNELS.window.GET_WORKSPACE   // LOCAL_ONLY
 const REMOTE_CHANNEL = RPC_CHANNELS.sessions.GET           // REMOTE_ELIGIBLE
@@ -63,6 +63,24 @@ const SWITCH_CHANNEL = RPC_CHANNELS.window.SWITCH_WORKSPACE
 
 describe('RoutedClient', () => {
   describe('routing', () => {
+    it('keeps standalone tasks and local updates on the Host from a remote Project', async () => {
+      const local = stubClient()
+      const remote = stubClient()
+      const client = new RoutedClient(local, remote)
+      await client.invoke(RPC_CHANNELS.automations.GET, FREE_CONVERSATION_WORKSPACE_ID)
+      await client.invoke(RPC_CHANNELS.automations.TEST, { workspaceId: FREE_CONVERSATION_WORKSPACE_ID, sessionId: 'bound' })
+      await client.invoke(RPC_CHANNELS.automations.GET, 'remote-project')
+      expect(local.invoke).toHaveBeenCalledTimes(2)
+      expect(remote.invoke).toHaveBeenCalledTimes(1)
+      const changed = mock(() => {})
+      const unsubscribe = client.on(RPC_CHANNELS.automations.CHANGED, changed)
+      for (const callback of (local as any)._listeners.get(RPC_CHANNELS.automations.CHANGED)) callback()
+      expect(changed).toHaveBeenCalledTimes(1)
+      unsubscribe()
+      expect((local as any)._listeners.get(RPC_CHANNELS.automations.CHANGED).size).toBe(0)
+      expect((remote as any)._listeners.get(RPC_CHANNELS.automations.CHANGED).size).toBe(0)
+    })
+
     it('routes LOCAL_ONLY invokes to localClient', async () => {
       const local = stubClient({ invoke: mock(async () => 'local-result') })
       const workspace = stubClient()
@@ -273,5 +291,67 @@ describe('isLocalOnly consistency', () => {
 
   it('correctly classifies session channels as REMOTE_ELIGIBLE', () => {
     expect(isLocalOnly(REMOTE_CHANNEL)).toBe(false)
+  })
+})
+
+
+describe('explicit session owner routing', () => {
+  it('routes first-call local session mutations locally while a remote project is active', async () => {
+    const local = stubClient({ invoke: mock(async (channel: string) => channel === RPC_CHANNELS.window.RESOLVE_RUNTIME_WORKSPACE ? { id: 'local-project' } : undefined) })
+    const remote = stubClient()
+    const routed = new RoutedClient(local, remote)
+    for (const type of ['pin', 'unpin', 'rename', 'archive']) {
+      await routed.invoke(RPC_CHANNELS.sessions.COMMAND, 'same-id', { type }, 'local-project')
+      expect(local.invoke).toHaveBeenLastCalledWith(RPC_CHANNELS.sessions.COMMAND, 'same-id', { type })
+    }
+    await routed.invoke(RPC_CHANNELS.sessions.DELETE, 'same-id', 'local-project')
+    expect(local.invoke).toHaveBeenLastCalledWith(RPC_CHANNELS.sessions.DELETE, 'same-id')
+    expect(remote.invoke).not.toHaveBeenCalled()
+    expect(routed.getConnectionState()).toEqual(remote.getConnectionState())
+    expect(remote.destroy).not.toHaveBeenCalled()
+  })
+
+  it('resolves remote list and command ownership without switching the active client', async () => {
+    const remoteServer = { url: 'wss://other', credentialRef: 'other-credential', remoteWorkspaceId: 'remote-id' }
+    const local = stubClient({ invoke: mock(async () => ({ id: 'catalog-id', remoteServer })) })
+    const other = stubClient({ invoke: mock(async () => [{ id: 'same-id', workspaceId: 'remote-id' }]) })
+    const routed = new RoutedClient(local, local)
+    routed.setClientFactory(() => other)
+    const sessions = await routed.invoke(RPC_CHANNELS.sessions.LIST_BY_WORKSPACE, 'catalog-id')
+    expect(other.invoke).toHaveBeenLastCalledWith(RPC_CHANNELS.sessions.LIST_BY_WORKSPACE, 'remote-id')
+    expect(sessions[0].workspaceId).toBe('catalog-id')
+    await routed.invoke(RPC_CHANNELS.sessions.COMMAND, 'same-id', { type: 'unpin' }, 'catalog-id')
+    expect(other.invoke).toHaveBeenLastCalledWith(RPC_CHANNELS.sessions.COMMAND, 'same-id', { type: 'unpin' })
+    expect(other.destroy).toHaveBeenCalledTimes(2)
+    expect(local.invoke).not.toHaveBeenCalledWith(RPC_CHANNELS.window.SWITCH_WORKSPACE, 'catalog-id')
+  })
+
+  it('destroys an independent owner connection when a mutation fails', async () => {
+    const local = stubClient({ invoke: mock(async () => ({ remoteServer: { url: 'wss://other', credentialRef: 'other', remoteWorkspaceId: 'remote-id' } })) })
+    const other = stubClient({ invoke: mock(async () => { throw new Error('Permission denied') }) })
+    const routed = new RoutedClient(local, local)
+    routed.setClientFactory(() => other)
+    await expect(routed.invoke(RPC_CHANNELS.sessions.COMMAND, 'session', { type: 'pin' }, 'other'))
+      .rejects.toThrow('Permission denied')
+    expect(other.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it('reuses the active owner connection without mapping the session ID', async () => {
+    const local = stubClient({ invoke: mock(async () => ({ remoteServer: { url: 'wss://active', credentialRef: 'active', remoteWorkspaceId: 'remote-id' } })) })
+    const active = stubClient()
+    const routed = new RoutedClient(local, active)
+    routed.setWorkspaceMapping('catalog-id', 'remote-id')
+    await routed.invoke(RPC_CHANNELS.sessions.COMMAND, 'catalog-id', { type: 'unpin' }, 'catalog-id')
+    expect(active.invoke).toHaveBeenLastCalledWith(RPC_CHANNELS.sessions.COMMAND, 'catalog-id', { type: 'unpin' })
+    expect(active.destroy).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when an explicit owner no longer exists', async () => {
+    const local = stubClient({ invoke: mock(async () => null) })
+    const remote = stubClient()
+    const routed = new RoutedClient(local, remote)
+    await expect(routed.invoke(RPC_CHANNELS.sessions.COMMAND, 'same-id', { type: 'pin' }, 'removed'))
+      .rejects.toThrow('Workspace not found')
+    expect(remote.invoke).not.toHaveBeenCalled()
   })
 })

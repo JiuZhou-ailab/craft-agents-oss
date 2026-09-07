@@ -1,5 +1,5 @@
 // input: Handler-facing session lifecycle, auth, transport, and workspace contracts
-// output: Provider-independent SessionManager interface consumed by RPC handlers
+// output: Provider-independent session and bound-automation execution interface consumed by RPC handlers
 // pos: Dependency inversion boundary between server handlers and session orchestration
 
 /**
@@ -58,6 +58,8 @@ export interface ISessionManager {
   releaseIdleSessionMessages(sessionId: string): Promise<boolean>
   createSession(workspaceId: string, options?: CreateSessionOptions): Promise<Session>
   deleteSession(sessionId: string): Promise<void>
+  /** Atomic, non-destructive cleanup: false when content or in-flight work exists. */
+  deleteEmptySession(sessionId: string): Promise<boolean>
   rewindUserMessage(
     sessionId: string,
     userMessageId: string,
@@ -69,6 +71,8 @@ export interface ISessionManager {
 
   flagSession(sessionId: string): Promise<void>
   unflagSession(sessionId: string): Promise<void>
+  pinSession(sessionId: string): Promise<void>
+  unpinSession(sessionId: string): Promise<void>
   archiveSession(sessionId: string): Promise<void>
   unarchiveSession(sessionId: string): Promise<void>
   renameSession(sessionId: string, name: string): Promise<void>
@@ -317,6 +321,8 @@ export interface ISessionManager {
  * overrides) can be added without churn at every call site.
  */
 export interface ExecutePromptAutomationInput {
+  /** Reuse this conversation; missing/archived/foreign targets fail without creating a replacement. */
+  sessionId?: string
   workspaceId: string
   workspaceRootPath: string
   prompt: string

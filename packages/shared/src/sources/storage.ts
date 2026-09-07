@@ -13,7 +13,6 @@
  */
 
 import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from 'fs';
-import { homedir } from 'os';
 import { join, basename, dirname } from 'path';
 import { createHash, randomUUID } from 'crypto';
 import type {
@@ -27,7 +26,7 @@ import type {
 import { validateSourceConfig } from '../config/validators.ts';
 import { CONFIG_DIR } from '../config/paths.ts';
 import { debug } from '../utils/debug.ts';
-import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts';
+import { readJsonFileSync } from '../utils/files.ts';
 import { expandPath, toPortablePath } from '../utils/paths.ts';
 import {
   ensureProjectOwnedDirectory,
@@ -58,39 +57,6 @@ export const GLOBAL_AGENT_ROOT_DIR = CONFIG_DIR;
 /** Craft-owned global sources: ~/.craft-agent/sources/ */
 export const GLOBAL_AGENT_SOURCES_DIR = join(GLOBAL_AGENT_ROOT_DIR, 'sources');
 
-/**
- * Shared multi-tool root: ~/.agents/
- * Read for interop; Craft does not seed product defaults here.
- */
-export const SHARED_AGENTS_ROOT_DIR = join(homedir(), '.agents');
-
-/** Shared multi-tool sources: ~/.agents/sources/ */
-export const SHARED_AGENTS_SOURCES_DIR = join(SHARED_AGENTS_ROOT_DIR, 'sources');
-
-/**
- * Craft-owned runtime projection for externally owned source definitions.
- *
- * This directory stores only connection status, never a copy of the source
- * definition. Entries are keyed by source slug and guarded by definition ID
- * (or a content hash when external input omits one), so a removed or replaced
- * shared definition cannot inherit stale state.
- */
-export const SHARED_SOURCE_RUNTIME_STATE_DIR = join(
-  GLOBAL_AGENT_ROOT_DIR,
-  'state',
-  'shared-sources',
-);
-
-interface SharedSourceRuntimeState {
-  version: 1;
-  definitionIdentity: string;
-  isAuthenticated: boolean | null;
-  connectionStatus: SourceConnectionStatus | null;
-  connectionError: string | null;
-  lastTestedAt: number | null;
-  updatedAt: number;
-}
-
 export interface SourceConnectionStateUpdate {
   isAuthenticated?: boolean;
   connectionStatus?: SourceConnectionStatus;
@@ -98,75 +64,8 @@ export interface SourceConnectionStateUpdate {
   lastTestedAt?: number;
 }
 
-export class ReadOnlySourceDefinitionError extends Error {
-  constructor(sourceSlug: string) {
-    super(`Shared source definition is read-only: ${sourceSlug}`);
-    this.name = 'ReadOnlySourceDefinitionError';
-  }
-}
-
-function assertMutableSourceRoot(rootPath: string, sourceSlug: string): void {
-  if (rootPath === SHARED_AGENTS_ROOT_DIR) {
-    throw new ReadOnlySourceDefinitionError(sourceSlug);
-  }
-}
-
-function getSharedSourceRuntimeStatePath(sourceSlug: string): string {
-  return join(SHARED_SOURCE_RUNTIME_STATE_DIR, `${encodeURIComponent(sourceSlug)}.json`);
-}
-
-function getSharedSourceDefinitionIdentity(
-  sourceSlug: string,
-  config: FolderSourceConfig,
-): string {
-  if (typeof config.id === 'string' && config.id.length > 0) {
-    return `id:${config.id}`;
-  }
-
-  const configPath = join(getSourcePath(SHARED_AGENTS_ROOT_DIR, sourceSlug), 'config.json');
-  const digest = createHash('sha256').update(readFileSync(configPath)).digest('hex');
-  return `sha256:${digest}`;
-}
-
-function loadSharedSourceRuntimeState(
-  sourceSlug: string,
-  definitionIdentity: string,
-): SharedSourceRuntimeState | null {
-  const statePath = getSharedSourceRuntimeStatePath(sourceSlug);
-  if (!existsSync(statePath)) return null;
-
-  try {
-    const state = readJsonFileSync<SharedSourceRuntimeState>(statePath);
-    return state.version === 1 && state.definitionIdentity === definitionIdentity ? state : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveSharedSourceRuntimeState(
-  sourceSlug: string,
-  definitionIdentity: string,
-  state: SourceConnectionStateUpdate,
-): void {
-  const next: SharedSourceRuntimeState = {
-    version: 1,
-    definitionIdentity,
-    isAuthenticated: state.isAuthenticated ?? null,
-    connectionStatus: state.connectionStatus ?? null,
-    connectionError: state.connectionError ?? null,
-    lastTestedAt: state.lastTestedAt ?? null,
-    updatedAt: Date.now(),
-  };
-
-  mkdirSync(SHARED_SOURCE_RUNTIME_STATE_DIR, { recursive: true });
-  atomicWriteFileSync(
-    getSharedSourceRuntimeStatePath(sourceSlug),
-    JSON.stringify(next, null, 2),
-  );
-}
-
 function isGlobalSourcesRoot(rootPath: string): boolean {
-  return rootPath === GLOBAL_AGENT_ROOT_DIR || rootPath === SHARED_AGENTS_ROOT_DIR;
+  return rootPath === GLOBAL_AGENT_ROOT_DIR;
 }
 
 function resolveOwnedSourcePath(rootPath: string, targetPath: string): string {
@@ -192,7 +91,6 @@ function ensureOwnedSourceWriteTarget(rootPath: string, targetPath: string): voi
 
 function getSourcesPathForRoot(rootPath: string): string {
   if (rootPath === GLOBAL_AGENT_ROOT_DIR) return GLOBAL_AGENT_SOURCES_DIR;
-  if (rootPath === SHARED_AGENTS_ROOT_DIR) return SHARED_AGENTS_SOURCES_DIR;
   return getWorkspaceSourcesPath(rootPath);
 }
 
@@ -273,7 +171,6 @@ export function getSourcePath(workspaceRootPath: string, sourceSlug: string): st
  * Ensure sources directory exists for a workspace or global agents root.
  */
 export function ensureSourcesDir(workspaceRootPath: string): void {
-  assertMutableSourceRoot(workspaceRootPath, 'sources');
   const dir = getSourcesPathForRoot(workspaceRootPath);
   ensureOwnedSourceDirectory(workspaceRootPath, dir);
 }
@@ -301,19 +198,7 @@ export function loadSourceConfig(
       config.local.path = expandPath(config.local.path);
     }
 
-    if (workspaceRootPath !== SHARED_AGENTS_ROOT_DIR) return config;
-
-    const definitionIdentity = getSharedSourceDefinitionIdentity(sourceSlug, config);
-    const runtimeState = loadSharedSourceRuntimeState(sourceSlug, definitionIdentity);
-    if (!runtimeState) return config;
-
-    return {
-      ...config,
-      isAuthenticated: runtimeState.isAuthenticated ?? undefined,
-      connectionStatus: runtimeState.connectionStatus ?? undefined,
-      connectionError: runtimeState.connectionError ?? undefined,
-      lastTestedAt: runtimeState.lastTestedAt ?? undefined,
-    };
+    return config;
   } catch {
     return null;
   }
@@ -344,11 +229,7 @@ export function markSourceAuthenticated(
 }
 
 /**
- * Persist Craft-owned connection state for a source.
- *
- * Owned definitions keep the existing config.json representation. Shared
- * definitions project the same runtime fields from Craft's private state
- * directory, leaving every file under ~/.agents/sources byte-for-byte intact.
+ * Persist connection state for a Storyflow-owned source.
  */
 export function updateSourceConnectionState(
   workspaceRootPath: string,
@@ -358,19 +239,6 @@ export function updateSourceConnectionState(
   const sourceRootPath = resolveVisibleSourceRoot(workspaceRootPath, sourceSlug);
   const config = loadSourceConfig(sourceRootPath, sourceSlug);
   if (!config) return false;
-
-  if (sourceRootPath === SHARED_AGENTS_ROOT_DIR) {
-    const definitionIdentity = getSharedSourceDefinitionIdentity(sourceSlug, config);
-    saveSharedSourceRuntimeState(sourceSlug, definitionIdentity, {
-      isAuthenticated: update.isAuthenticated ?? config.isAuthenticated,
-      connectionStatus: update.connectionStatus ?? config.connectionStatus,
-      connectionError: Object.prototype.hasOwnProperty.call(update, 'connectionError')
-        ? update.connectionError
-        : config.connectionError,
-      lastTestedAt: update.lastTestedAt ?? config.lastTestedAt,
-    });
-    return true;
-  }
 
   Object.assign(config, update);
   saveSourceConfig(sourceRootPath, config);
@@ -385,8 +253,6 @@ export function saveSourceConfig(
   workspaceRootPath: string,
   config: FolderSourceConfig
 ): void {
-  assertMutableSourceRoot(workspaceRootPath, config.slug);
-
   // Validate config before writing
   const validation = validateSourceConfig(config);
   if (!validation.valid) {
@@ -521,7 +387,6 @@ export function saveSourceGuide(
   sourceSlug: string,
   guide: SourceGuide
 ): void {
-  assertMutableSourceRoot(workspaceRootPath, sourceSlug);
   const dir = getSourcePath(workspaceRootPath, sourceSlug);
   const guidePath = join(dir, 'guide.md');
   ensureOwnedSourceWriteTarget(workspaceRootPath, guidePath);
@@ -555,7 +420,6 @@ export async function downloadSourceIcon(
   sourceSlug: string,
   iconUrl: string
 ): Promise<string | null> {
-  assertMutableSourceRoot(workspaceRootPath, sourceSlug);
   const sourceDir = getSourceWritePath(workspaceRootPath, sourceSlug);
   ensureOwnedSourceDirectory(workspaceRootPath, sourceDir);
   for (const ext of ICON_EXTENSIONS) {
@@ -900,8 +764,6 @@ export async function createSource(
 
 /** Delete only from the already-resolved owning root; callers must not pass a consumer overlay root. */
 export function deleteSource(ownerRootPath: string, sourceSlug: string): void {
-  assertMutableSourceRoot(ownerRootPath, sourceSlug);
-
   const sourceDirs = new Set([
     getSourceWritePath(ownerRootPath, sourceSlug),
     join(getLegacySourcesPathForRoot(ownerRootPath), sourceSlug),

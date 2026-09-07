@@ -4,7 +4,7 @@
 
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ApiOperationPermission } from '../sources/types.ts';
+import type { ApiToolPermissionDefinition, ApiToolPermission } from '../sources/types.ts';
 
 /**
  * HTTP transport config for remote MCP servers
@@ -77,7 +77,7 @@ export interface ApiServerConfig {
   /** Exact Host capability bound to this Source definition. */
   capabilityRef: string;
   instance: McpServer;
-  toolPermissions?: Record<string, ApiOperationPermission>;
+  toolPermissions?: Record<string, ApiToolPermissionDefinition>;
 }
 
 /**
@@ -121,5 +121,5 @@ export interface McpClientPoolLike {
   getProxyToolPermission(
     toolName: string,
     input: Record<string, unknown>
-  ): { method: string; path: string } | undefined;
+  ): ApiToolPermission | undefined;
 }

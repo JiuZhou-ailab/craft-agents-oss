@@ -30,10 +30,9 @@ describe('Electron main process build config', () => {
     expect(readRepoFile('scripts/electron-dev.ts')).toContain(AWS_S3_CLIENT_EXTERNAL);
   });
 
-  test('keeps Baileys optional native image transforms out of WhatsApp worker bundles', () => {
-    for (const entrypoint of ['scripts/build-wa-worker.ts', 'scripts/electron-build-main.ts']) {
-      expect(readRepoFile(entrypoint)).toContain('--external:sharp');
-    }
+  test('delegates WhatsApp bundling to the canonical worker build', () => {
+    expect(readRepoFile('scripts/build-wa-worker.ts')).toContain('--external:sharp');
+    expect(readRepoFile('scripts/electron-build-main.ts')).toContain('"bun", "run", "build:wa-worker"');
   });
 
   test('stages the freshly built Pi runtime before copying Electron resources', () => {

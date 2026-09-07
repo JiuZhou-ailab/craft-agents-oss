@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createSession, deleteSession, listSessions, listSessionsAsync } from '../storage.ts';
+import { createSession, deleteSession, listSessions, listSessionsAsync, loadSession } from '../storage.ts';
 
 let workspaceRoot: string | undefined;
 let otherWorkspaceRoot: string | undefined;
@@ -40,6 +40,15 @@ describe('session storage listing', () => {
     ]);
 
     expect(first.id).not.toBe(second.id);
+  });
+
+  it('persists pin state independently from the automation-facing flag state', async () => {
+    workspaceRoot = mkdtempSync(join(tmpdir(), 'session-pinned-'));
+    const created = await createSession(workspaceRoot, { isPinned: true, isFlagged: false });
+
+    const restored = loadSession(workspaceRoot, created.id);
+    expect(restored?.isPinned).toBe(true);
+    expect(restored?.isFlagged).toBe(false);
   });
 
   it('refuses to delete through a Project sessions-directory symlink', () => {

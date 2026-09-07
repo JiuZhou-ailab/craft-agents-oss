@@ -23,7 +23,8 @@ import { dirname, isAbsolute, relative, resolve } from 'path';
 import { getSessionSafeAllowedToolNames } from '@craft-agent/session-tools-core';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { isBrowserToolNameOrAlias } from './browser-tool-names.ts';
-import { canonicalizeApiPath } from '../sources/api-path.ts';
+import type { ApiToolPermission } from '../sources/types.ts';
+import { isApiEndpointAllowed as matchesApiEndpointRules } from './permissions-config.ts';
 import type { PermissionsContext, MergedPermissionsConfig } from './permissions-config.ts';
 import {
   validateBashCommand,
@@ -1646,23 +1647,8 @@ function isReadOnlyMcpToolWithConfig(toolName: string, config: ToolCheckConfig):
  * Check if an API call is allowed using the given config
  * Checks fine-grained endpoint rules (method + path pattern)
  */
-function isApiCallAllowedWithConfig(method: string, path: string | undefined, config: ToolCheckConfig): boolean {
-  const upperMethod = method.toUpperCase();
-
-  // GET is always allowed
-  if (upperMethod === 'GET') return true;
-
-  // Check fine-grained endpoint rules (if path is available)
-  if (path && config.allowedApiEndpoints) {
-    const canonicalPath = canonicalizeApiPath(path);
-    for (const rule of config.allowedApiEndpoints) {
-      if (rule.method === upperMethod && rule.pathPattern.test(canonicalPath)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+function isApiCallAllowedWithConfig(method: string, path: string | undefined, config: ToolCheckConfig, sourceSlug?: string): boolean {
+  return matchesApiEndpointRules(method, path, config, sourceSlug);
 }
 
 /**
@@ -1677,7 +1663,8 @@ function isApiCallAllowedWithConfig(method: string, path: string | undefined, co
 export function isApiEndpointAllowed(
   method: string,
   path: string | undefined,
-  permissionsContext?: PermissionsContext
+  permissionsContext?: PermissionsContext,
+  sourceSlug?: string,
 ): boolean {
   let config: ToolCheckConfig;
 
@@ -1689,7 +1676,7 @@ export function isApiEndpointAllowed(
     config = SAFE_MODE_CONFIG;
   }
 
-  return isApiCallAllowedWithConfig(method, path, config);
+  return isApiCallAllowedWithConfig(method, path, config, sourceSlug);
 }
 
 /**
@@ -1735,7 +1722,7 @@ export function shouldAllowToolInMode(
     plansFolderPath?: string;
     dataFolderPath?: string;
     permissionsContext?: PermissionsContext;
-    apiOperation?: { method: string; path: string };
+    apiOperation?: ApiToolPermission;
   }
 ): ToolCheckResult {
   // Get config: merged custom if context provided, otherwise defaults
@@ -1764,8 +1751,8 @@ export function shouldAllowToolInMode(
   // Declarative API tools are named by Source config, so their host-owned
   // HTTP semantics must win over every name-based allowlist below.
   if (options?.apiOperation) {
-    const { method, path } = options.apiOperation;
-    if (isApiCallAllowedWithConfig(method, path, config)) {
+    const { method, path, sourceSlug } = options.apiOperation;
+    if (isApiCallAllowedWithConfig(method, path, config, sourceSlug)) {
       return { allowed: true };
     }
     return {

@@ -55,6 +55,7 @@ export class PromptHandler implements AutomationHandler {
     // Group prompt actions by matcher for per-matcher history
     const matcherPrompts: Array<{
       matcherId: string | undefined;
+      sessionId: string | undefined;
       automationName: string;
       telegramTopic: string | undefined;
       prompts: Array<{ prompt: PromptAction; labels?: string[]; permissionMode?: PermissionMode }>;
@@ -73,6 +74,7 @@ export class PromptHandler implements AutomationHandler {
         const telegramTopic = matcher.telegramTopic?.trim();
         matcherPrompts.push({
           matcherId: matcher.id,
+          sessionId: matcher.sessionId,
           automationName: deriveAutomationName(event, matcher),
           telegramTopic: telegramTopic && telegramTopic.length > 0 ? telegramTopic : undefined,
           prompts,
@@ -91,7 +93,7 @@ export class PromptHandler implements AutomationHandler {
     // Process prompts per matcher
     const pendingPrompts: PendingPrompt[] = [];
 
-    for (const { matcherId, automationName, telegramTopic, prompts } of matcherPrompts) {
+    for (const { matcherId, sessionId, automationName, telegramTopic, prompts } of matcherPrompts) {
       // Topic name accepts env-var expansion so users can route by event payload
       // (e.g. telegramTopic: "Label: $LABEL"). Empty after expansion → drop it.
       const expandedTopic = telegramTopic ? expandEnvVars(telegramTopic, env).trim() : undefined;
@@ -108,7 +110,7 @@ export class PromptHandler implements AutomationHandler {
         const expandedLabels = labels?.map(label => expandEnvVars(label, env));
 
         pendingPrompts.push({
-          sessionId: this.options.sessionId,
+          sessionId: sessionId ?? this.options.sessionId,
           matcherId,
           automationName,
           prompt: expandedPrompt,

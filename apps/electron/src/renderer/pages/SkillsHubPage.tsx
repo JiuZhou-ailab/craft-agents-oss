@@ -285,9 +285,10 @@ export default function SkillsHubPage() {
   }, [t, upgradingSlug, workspaceId])
 
   return (
-    <main className="h-full min-h-0 overflow-y-auto bg-background text-foreground">
+    <main className="relative h-full min-h-0 overflow-y-auto bg-background text-foreground">
+      <div aria-hidden="true" className="titlebar-drag-region absolute inset-x-0 top-0 h-8 sm:h-10" />
       <div className="mx-auto w-full max-w-5xl px-6 py-8 sm:px-8 sm:py-10">
-        <header className="flex flex-wrap items-start justify-between gap-4">
+        <header className="titlebar-drag-region flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight">
               {t('skillsHub.title', '技能')}
@@ -296,7 +297,7 @@ export default function SkillsHubPage() {
               {t('skillsHub.description', '为你的创作工作流安装和管理 Skills')}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="titlebar-no-drag flex shrink-0 items-center gap-2">
             {workspace ? (
               <AddSkillPopover
                 workspace={workspace}
@@ -616,7 +617,7 @@ export default function SkillsHubPage() {
         onOpenUrl={openMarketSkillUrl}
         onOpenManagedAccount={() => {
           closeMarketSkill()
-          navigate(routes.view.settings('app'))
+          navigate(routes.view.settings('profile'))
         }}
         onOpenInstalled={(skill) => {
           closeMarketSkill()
@@ -625,7 +626,7 @@ export default function SkillsHubPage() {
         onOpenRequiredSource={(dependency) => {
           closeMarketSkill()
           if (dependency.access === 'managed') {
-            navigate(routes.view.settings('app'))
+            navigate(routes.view.settings('profile'))
             return
           }
           if (dependency.source) {
@@ -712,7 +713,7 @@ function MarketSkillDetailDialog({
       <DialogContent
         size="xl"
         className={cn(
-          'max-h-[82vh] gap-0 overflow-hidden p-0',
+          'max-h-[82vh] w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-[960px]',
           showContent ? 'grid-rows-[auto_minmax(0,1fr)_auto]' : 'grid-rows-[auto_auto]',
         )}
       >

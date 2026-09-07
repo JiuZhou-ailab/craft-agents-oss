@@ -53,6 +53,14 @@ const playgroundValue: AppShellContextType = {
   onRenameSession: logCall('onRenameSession'),
   onFlagSession: logCall('onFlagSession'),
   onUnflagSession: logCall('onUnflagSession'),
+  onPinSession: async (...args: unknown[]) => {
+    logCall('onPinSession')(...args)
+    return true
+  },
+  onUnpinSession: async (...args: unknown[]) => {
+    logCall('onUnpinSession')(...args)
+    return true
+  },
   onArchiveSession: logCall('onArchiveSession'),
   onUnarchiveSession: logCall('onUnarchiveSession'),
   onMarkSessionRead: logCall('onMarkSessionRead'),

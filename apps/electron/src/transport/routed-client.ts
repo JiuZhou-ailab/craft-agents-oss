@@ -5,6 +5,7 @@
  * server) and workspaceClient (whichever server owns the active workspace).
  *
  * - LOCAL_ONLY channels always route to localClient
+ * - Explicit session owners route without changing the active workspace; standalone Automation requests target localClient; their changes are observed on both hosts
  * - Everything else routes to workspaceClient
  * - On workspace switch, workspaceClient is swapped and REMOTE_ELIGIBLE
  *   listeners are re-subscribed transparently (make-before-break)
@@ -12,7 +13,7 @@
 
 import type { RpcClient, WsRpcClient, TransportConnectionState } from '@craft-agent/server-core/transport'
 import type { RemoteServerConfig } from '@craft-agent/core/types'
-import { isLocalOnly, RPC_CHANNELS } from '@craft-agent/shared/protocol'
+import { isLocalOnly, RPC_CHANNELS, FREE_CONVERSATION_WORKSPACE_ID } from '@craft-agent/shared/protocol'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,7 +93,21 @@ export class RoutedClient implements RpcClient {
   // -------------------------------------------------------------------------
 
   async invoke(channel: string, ...args: any[]): Promise<any> {
-    const isLocal = isLocalOnly(channel)
+    // Global session surfaces carry the entity owner explicitly. Never infer it
+    // from the focused window or an earlier list response.
+    const owner = channel === RPC_CHANNELS.sessions.LIST_BY_WORKSPACE ? args[0]
+      : channel === RPC_CHANNELS.sessions.COMMAND ? args[2]
+      : channel === RPC_CHANNELS.sessions.DELETE ? args[1]
+      : undefined
+    if (owner !== undefined) {
+      const scopedArgs = channel === RPC_CHANNELS.sessions.COMMAND ? args.slice(0, 2)
+        : channel === RPC_CHANNELS.sessions.DELETE ? args.slice(0, 1) : args
+      return this.invokeForSessionOwner(owner, channel, scopedArgs)
+    }
+
+    const standaloneAutomation = channel.startsWith('automations:')
+      && (args[0] === FREE_CONVERSATION_WORKSPACE_ID || args[0]?.workspaceId === FREE_CONVERSATION_WORKSPACE_ID)
+    const isLocal = isLocalOnly(channel) || standaloneAutomation
     const target = isLocal ? this.localClient : this.workspaceClient
 
     // Translate local workspace IDs → remote workspace IDs for remote-routed calls.
@@ -121,6 +136,30 @@ export class RoutedClient implements RpcClient {
     return result
   }
 
+  private async invokeForSessionOwner(owner: string, channel: string, args: any[]): Promise<any> {
+    if (typeof owner !== 'string' || !owner) throw new Error('Session workspace is required')
+    const workspace = await this.localClient.invoke(RPC_CHANNELS.window.RESOLVE_RUNTIME_WORKSPACE, owner)
+    if (!workspace) throw new Error(`Workspace not found: ${owner}`)
+    const remote = workspace.remoteServer as RemoteServerConfig | undefined
+    const activeRemote = remote && this.workspaceIdMapping?.localId === owner
+      && this.workspaceClient !== this.localClient
+    if (remote && !activeRemote && !this.clientFactory) throw new Error('Remote workspace transport is unavailable')
+    const target = !remote ? this.localClient : activeRemote ? this.workspaceClient : this.clientFactory!(remote)
+    const temporary = target !== this.localClient && target !== this.workspaceClient
+    try {
+      if (temporary) target.connect()
+      const result = await target.invoke(channel,
+        ...(channel === RPC_CHANNELS.sessions.LIST_BY_WORKSPACE ? [remote?.remoteWorkspaceId ?? owner] : args))
+      // Remote catalog IDs belong to that host. Rail actions need the local
+      // workspace identity which also identifies its connection/credentials.
+      return channel === RPC_CHANNELS.sessions.LIST_BY_WORKSPACE
+        ? result.map((session: Record<string, unknown>) => ({ ...session, workspaceId: owner }))
+        : result
+    } finally {
+      if (temporary) target.destroy()
+    }
+  }
+
   on(channel: string, callback: (...args: any[]) => void): () => void {
     if (isLocalOnly(channel)) {
       return this.localClient.on(channel, callback)
@@ -128,6 +167,12 @@ export class RoutedClient implements RpcClient {
 
     // REMOTE_ELIGIBLE — subscribe on workspaceClient and track for re-subscription
     const unsub = this.workspaceClient.on(channel, callback)
+    // Standalone task changes remain local even while a remote Project is active.
+    const unsubLocal = channel === RPC_CHANNELS.automations.CHANGED
+      ? this.localClient.on(channel, (...args) => {
+          if (this.workspaceClient !== this.localClient) callback(...args)
+        })
+      : undefined
 
     let set = this.remoteListeners.get(channel)
     if (!set) {
@@ -139,6 +184,7 @@ export class RoutedClient implements RpcClient {
 
     return () => {
       entry.unsub()
+      unsubLocal?.()
       set!.delete(entry)
       if (set!.size === 0) this.remoteListeners.delete(channel)
     }

@@ -1,8 +1,11 @@
+// input: Project or standalone runtime IDs, automation actions, and matcher mutations
+// output: Scoped automation configuration, manual execution, and history RPCs
+// pos: Host automation boundary preserving Project grants and conversation bindings
+
 import { readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
-import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
-import { isFreeConversationWorkspaceId } from '@craft-agent/shared/workspaces'
+import { isFreeConversationWorkspaceId, resolveRuntimeWorkspaceById } from '@craft-agent/shared/workspaces'
 import { appendAutomationHistoryEntry } from '@craft-agent/shared/automations/history-store'
 import { AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER } from '@craft-agent/shared/automations/constants'
 import type { RpcServer } from '@craft-agent/server-core/transport'
@@ -12,7 +15,7 @@ import type { HandlerDeps } from '../handler-deps'
 const HISTORY_FILE = 'automations-history.jsonl'
 interface HistoryEntry { id: string; ts: number; ok: boolean; sessionId?: string; prompt?: string; error?: string; webhook?: { method: string; url: string; statusCode: number; durationMs: number; attempts?: number; error?: string; responseBody?: string } }
 
-function requireAutomationExecutionGrant(workspace: NonNullable<ReturnType<typeof getWorkspaceByNameOrId>>): void {
+function requireAutomationExecutionGrant(workspace: NonNullable<ReturnType<typeof resolveRuntimeWorkspaceById>>): void {
   if (!isFreeConversationWorkspaceId(workspace.id) && workspace.automationsEnabled !== true) {
     throw new Error('Project automations are disabled by Host settings')
   }
@@ -101,7 +104,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
   // Get automations config for a workspace (read-only, resolves path server-side)
   server.handle(RPC_CHANNELS.automations.GET, async (_ctx, workspaceId: string) => {
     log.info(`AUTOMATIONS_GET: Loading automations for workspace: ${workspaceId}`)
-    if (!getWorkspaceByNameOrId(workspaceId)) {
+    if (!resolveRuntimeWorkspaceById(workspaceId)) {
       log.error(`AUTOMATIONS_GET: Workspace not found: ${workspaceId}`)
       return null
     }
@@ -130,7 +133,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
   })
 
   server.handle(RPC_CHANNELS.automations.TEST, async (_ctx, payload: import('@craft-agent/shared/protocol').TestAutomationPayload) => {
-    const workspace = getWorkspaceByNameOrId(payload.workspaceId)
+    const workspace = resolveRuntimeWorkspaceById(payload.workspaceId)
     if (!workspace) throw new Error('Workspace not found')
     requireAutomationExecutionGrant(workspace)
 
@@ -183,6 +186,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
           workspaceId: payload.workspaceId,
           workspaceRootPath: workspace.rootPath,
           prompt: action.prompt,
+          sessionId: payload.sessionId,
           labels: payload.labels,
           permissionMode: payload.permissionMode,
           mentions: references.mentions,

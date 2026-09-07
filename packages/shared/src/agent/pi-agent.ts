@@ -270,6 +270,11 @@ export class PiAgent extends PiAgentToolHost {
   // Permission Handling
   // ============================================================
 
+  /** True only while Pi is still waiting for this tool approval. */
+  hasPendingPermission(requestId: string): boolean {
+    return this.pendingPermissions.has(requestId);
+  }
+
   /**
    * Respond to a pending permission request.
    * Permission checking now happens in the main process, so this resolves locally.

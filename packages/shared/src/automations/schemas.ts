@@ -1,3 +1,7 @@
+// input: Untrusted automation configuration including optional conversation bindings
+// output: Validated matcher and action schemas with legacy defaults
+// pos: Automation configuration validation boundary
+
 /**
  * Automations Schema Definitions
  *
@@ -138,6 +142,7 @@ export const AutomationConditionSchema: z.ZodType = z.lazy(() =>
 // ============================================================================
 
 export const AutomationMatcherSchema = z.object({
+  sessionId: z.string().min(1).regex(/^[A-Za-z0-9_-]+$/).optional(),
   id: z.string().optional(),
   name: z.string().optional(),
   matcher: z.string().optional(),

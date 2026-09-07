@@ -1,5 +1,5 @@
-// input: Workspace catalog, scoped session metadata, update status, shell callbacks, current profile, and window chrome inset
-// output: Compact hierarchical sidebar with workspace navigation, updates, help, and profile actions
+// input: Workspace catalog, scoped session metadata, session actions, update status, profile, and window chrome inset
+// output: Peer pinned/free/project sections with scoped conversation actions and runtime status
 // pos: Global navigation surface; every project subtree is fetched and selected through its own runtime domain (ADR 0006)
 
 import * as React from 'react'
@@ -41,8 +41,11 @@ import { FeedbackDialog } from './FeedbackDialog'
 import {
   ProjectFolderRow,
   RecentConversationRow,
+  ActivityRailSessionList,
   type ActivityRailSessionActions,
 } from './ActivityRailRows'
+import { useActivityRailSessionOrder } from './use-activity-rail-session-order'
+import { setSessionPinnedInMetas } from './activity-rail-session-order'
 import {
   extractSessionMeta,
   sessionMetaMapAtom,
@@ -144,9 +147,12 @@ export function resolveActivityWorkspaceSessionMetas(
   cachedMetas: readonly SessionMeta[] | undefined,
   runtimeMetas: readonly SessionMeta[],
   runtimeMetadataReady = true,
+  remoteWorkspaceId?: string,
 ): readonly SessionMeta[] {
   return runtimeWorkspaceId === workspaceId && runtimeMetadataReady
-    ? runtimeMetas.filter(meta => meta.workspaceId === workspaceId)
+    ? runtimeMetas
+      .filter(meta => meta.workspaceId === workspaceId || (remoteWorkspaceId && meta.workspaceId === remoteWorkspaceId))
+      .map(meta => meta.workspaceId === workspaceId ? meta : { ...meta, workspaceId })
     : cachedMetas ?? []
 }
 
@@ -191,6 +197,7 @@ export function ActivityRail({
   const sessionIdsWithPendingPrompt = useAtomValue(sessionIdsWithPendingPromptAtom)
   const [freeSessionMetas, setFreeSessionMetas] = useAtom(activityFreeSessionMetasAtom)
   const [unreadByWorkspace, setUnreadByWorkspace] = useAtom(activityUnreadByWorkspaceAtom)
+  const [fixedExpanded, setFixedExpanded] = React.useState(true)
   const [recentExpanded, setRecentExpanded] = React.useState(() => (
     storage.get(storage.KEYS.activityRecentExpanded, true)
   ))
@@ -206,7 +213,7 @@ export function ActivityRail({
   const [loadingProjectIds, setLoadingProjectIds] = React.useState<Set<string>>(() => new Set())
   const [feedbackOpen, setFeedbackOpen] = React.useState(false)
   const [renameTarget, setRenameTarget] = React.useState<
-    { kind: 'project' | 'session'; id: string; name: string } | null
+    { kind: 'project' | 'session'; id: string; name: string; workspaceId?: string } | null
   >(null)
   const [renameValue, setRenameValue] = React.useState('')
   const [uncontrolledWidth, setUncontrolledWidth] = React.useState(() => (
@@ -329,6 +336,53 @@ export function ActivityRail({
     }
   }, [setProjectSessionMetas])
 
+  const updateCachedPinnedState = React.useCallback((sessionId: string, isPinned: boolean, workspaceId: string) => {
+    setFreeSessionMetas(previous => previous && workspaceId === FREE_CONVERSATION_WORKSPACE_ID
+      ? setSessionPinnedInMetas(previous, sessionId, isPinned)
+      : previous)
+    setProjectSessionMetas((previous) => Object.fromEntries(
+      Object.entries(previous).map(([ownerId, metas]) => [
+        ownerId,
+        ownerId === workspaceId ? setSessionPinnedInMetas(metas, sessionId, isPinned) : metas,
+      ]),
+    ))
+  }, [setFreeSessionMetas, setProjectSessionMetas])
+  const railSessionActions = React.useMemo<ActivityRailSessionActions | undefined>(() => {
+    if (!sessionActions) return undefined
+    const refreshOwner = (workspaceId: string) => workspaceId === FREE_CONVERSATION_WORKSPACE_ID
+      ? refreshFreeSessionMetas() : refreshProjectSessionMetas(workspaceId)
+    return {
+      ...sessionActions,
+      onArchive: async (sessionId, workspaceId) => {
+        await sessionActions.onArchive(sessionId, workspaceId)
+        await refreshOwner(workspaceId)
+      },
+      onDelete: async (sessionId, workspaceId) => {
+        await sessionActions.onDelete(sessionId, workspaceId)
+        await refreshOwner(workspaceId)
+      },
+      onRename: async (sessionId, name, workspaceId) => {
+        await sessionActions.onRename(sessionId, name, workspaceId)
+        await refreshOwner(workspaceId)
+      },
+      onPin: sessionActions.onPin
+        ? async (sessionId, workspaceId) => {
+          const updated = await sessionActions.onPin?.(sessionId, workspaceId) ?? false
+          if (updated) updateCachedPinnedState(sessionId, true, workspaceId)
+          return updated
+        }
+        : undefined,
+      onUnpin: sessionActions.onUnpin
+        ? async (sessionId, workspaceId) => {
+          const updated = await sessionActions.onUnpin?.(sessionId, workspaceId) ?? false
+          if (updated) updateCachedPinnedState(sessionId, false, workspaceId)
+          return updated
+        }
+        : undefined,
+    }
+  }, [sessionActions, updateCachedPinnedState, refreshFreeSessionMetas, refreshProjectSessionMetas])
+  const { createDragHandlers, orderWorkspaceSessions } = useActivityRailSessionOrder(railSessionActions)
+
   const toggleProjectExpanded = React.useCallback((workspaceId: string) => {
     setExpandedProjectIds((prev) => {
       const next = new Set(prev)
@@ -388,7 +442,7 @@ export function ActivityRail({
         refreshTimer = null
         void refreshFreeSessionMetas()
         void refreshActiveWorkspaceIds()
-        for (const workspaceId of expandedProjectIds) {
+        for (const workspaceId of new Set([...expandedProjectIds, ...Object.keys(projectSessionMetas)])) {
           void refreshProjectSessionMetas(workspaceId)
         }
       }, 180)
@@ -398,10 +452,10 @@ export function ActivityRail({
       if (refreshTimer) clearTimeout(refreshTimer)
       unsubscribe()
     }
-  }, [expandedProjectIds, refreshActiveWorkspaceIds, refreshFreeSessionMetas, refreshProjectSessionMetas])
+  }, [expandedProjectIds, projectSessionMetas, refreshActiveWorkspaceIds, refreshFreeSessionMetas, refreshProjectSessionMetas])
 
   const sessionMetas = React.useMemo(() => {
-    return [...resolveActivityWorkspaceSessionMetas(
+    const metas = [...resolveActivityWorkspaceSessionMetas(
       FREE_CONVERSATION_WORKSPACE_ID,
       runtimeWorkspaceId,
       freeSessionMetas ?? undefined,
@@ -409,13 +463,10 @@ export function ActivityRail({
       runtimeMetadataReady,
     )]
       .filter(meta => !meta.hidden && meta.isArchived !== true && hasSessionHistoryContent(meta))
-      .sort((left, right) => (right.lastMessageAt ?? right.createdAt ?? 0) - (left.lastMessageAt ?? left.createdAt ?? 0))
-  }, [freeSessionMetas, localRuntimeSessionMetas, runtimeMetadataReady, runtimeWorkspaceId])
+    return orderWorkspaceSessions(FREE_CONVERSATION_WORKSPACE_ID, metas)
+  }, [freeSessionMetas, localRuntimeSessionMetas, orderWorkspaceSessions, runtimeMetadataReady, runtimeWorkspaceId])
 
-  const recentSessions = showAllRecent
-    ? sessionMetas
-    : sessionMetas.slice(0, RECENT_SESSION_LIMIT)
-  const hasMoreRecentSessions = sessionMetas.length > RECENT_SESSION_LIMIT
+  const freeSessionDragHandlers = createDragHandlers(FREE_CONVERSATION_WORKSPACE_ID, sessionMetas)
   // Aggregated over every session, not just the visible slice: a collapsed or
   // truncated group must still reveal that something inside needs a human.
   const recentNeedsAttention = React.useMemo(
@@ -439,6 +490,24 @@ export function ActivityRail({
       }),
     [workspaces],
   )
+  React.useEffect(() => {
+    for (const workspace of projectWorkspaces) {
+      if (workspace.rootAvailable !== false) void refreshProjectSessionMetas(workspace.id)
+    }
+  }, [projectWorkspaces, refreshProjectSessionMetas])
+
+  // One complete ordered collection drives both projections and drag ownership.
+  const orderedProjectSessions = Object.fromEntries(projectWorkspaces.map(workspace => [
+    workspace.id,
+    orderWorkspaceSessions(workspace.id, [...resolveActivityWorkspaceSessionMetas(
+      workspace.id, runtimeWorkspaceId, projectSessionMetas[workspace.id], localRuntimeSessionMetas, runtimeMetadataReady, workspace.remoteServer?.remoteWorkspaceId,
+    )].filter(meta => !meta.hidden && !meta.isArchived && hasSessionHistoryContent(meta))),
+  ]))
+  const fixedSessions = [
+    ...sessionMetas.filter(meta => meta.isPinned),
+    ...projectWorkspaces.flatMap(workspace => orderedProjectSessions[workspace.id]!.filter(meta => meta.isPinned)),
+  ]
+  const regularFreeSessions = sessionMetas.filter(meta => !meta.isPinned)
   const archivedWorkspaces = React.useMemo(
     () => workspaces
       .filter(workspace => (
@@ -564,10 +633,23 @@ export function ActivityRail({
           className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-0.5"
           data-testid="activity-sidebar-scroll"
         >
-          <section aria-label="自由对话">
+          {fixedSessions.length > 0 ? (
+            <section aria-label="固定">
+              <SidebarSectionHeader label="固定" count={fixedSessions.length} expanded={fixedExpanded} onToggle={() => setFixedExpanded(!fixedExpanded)} />
+              {fixedExpanded ? <div className="space-y-0.5 pb-3" data-testid="activity-fixed-sessions" data-session-group="fixed">
+                {fixedSessions.map(meta => (
+                  <RecentConversationRow key={`${meta.workspaceId}:${meta.id}`} meta={meta} active={runtimeWorkspaceId === meta.workspaceId && (selectedSessionId === meta.id || selectedProjectSessionId === meta.id)}
+                    dragHandlers={createDragHandlers(meta.workspaceId ?? FREE_CONVERSATION_WORKSPACE_ID, meta.workspaceId === FREE_CONVERSATION_WORKSPACE_ID ? sessionMetas : orderedProjectSessions[meta.workspaceId] ?? [])}
+                    disabled={!onSelectSession} onSelect={() => onSelectSession?.(meta.id, meta.workspaceId)} sessionActions={railSessionActions}
+                    onRename={() => { setRenameTarget({ kind: 'session', id: meta.id, workspaceId: meta.workspaceId, name: getSessionTitle(meta) }); setRenameValue(getSessionTitle(meta)) }} />
+                ))}
+              </div> : null}
+            </section>
+          ) : null}
+          <section aria-label="自由">
             <SidebarSectionHeader
-              label="自由对话"
-              count={sessionMetas.length}
+              label="自由"
+              count={regularFreeSessions.length}
               expanded={recentExpanded}
               needsAttention={recentNeedsAttention}
               onToggle={() => updateRecentExpanded(!recentExpanded)}
@@ -588,31 +670,22 @@ export function ActivityRail({
                 className="space-y-0.5 pb-3"
                 data-testid="activity-recent-sessions"
               >
-                {recentSessions.length > 0 ? recentSessions.map(meta => (
-                  <RecentConversationRow
-                    key={meta.id}
-                    meta={meta}
-                    active={selectedSessionId === meta.id}
-                    disabled={!onSelectSession}
-                    onSelect={() => onSelectSession?.(meta.id, meta.workspaceId)}
-                    sessionActions={sessionActions}
-                    onRename={() => {
-                      setRenameTarget({ kind: 'session', id: meta.id, name: getSessionTitle(meta) })
-                      setRenameValue(getSessionTitle(meta))
-                    }}
-                  />
-                )) : (
-                  <div className="px-3 py-3 text-xs text-muted-foreground/60">暂无自由对话</div>
-                )}
-                {hasMoreRecentSessions ? (
-                  <button
-                    type="button"
-                    className="mt-1 w-full rounded-[7px] px-3 py-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:bg-foreground/[0.045] hover:text-foreground"
-                    onClick={() => setShowAllRecent(value => !value)}
-                  >
-                    {showAllRecent ? '收起对话' : `显示全部 ${sessionMetas.length} 个自由对话`}
-                  </button>
-                ) : null}
+                <ActivityRailSessionList
+                  sessions={regularFreeSessions}
+                  activeSessionId={runtimeWorkspaceId === FREE_CONVERSATION_WORKSPACE_ID ? selectedSessionId : null}
+                  disabled={!onSelectSession}
+                  onSelectSession={meta => onSelectSession?.(meta.id, meta.workspaceId)}
+                  sessionActions={railSessionActions}
+                  onRenameSession={(meta) => {
+                    setRenameTarget({ kind: 'session', id: meta.id, workspaceId: meta.workspaceId, name: getSessionTitle(meta) })
+                    setRenameValue(getSessionTitle(meta))
+                  }}
+                  dragHandlers={freeSessionDragHandlers}
+                  regularLimit={RECENT_SESSION_LIMIT}
+                  showAll={showAllRecent}
+                  onShowAllChange={setShowAllRecent}
+                  emptyLabel="暂无自由对话"
+                />
               </div>
             ) : null}
           </section>
@@ -632,6 +705,7 @@ export function ActivityRail({
                     {visibleProjectWorkspaces.map((workspace) => {
                       const expanded = expandedProjectIds.has(workspace.id)
                       const rootAvailable = workspace.rootAvailable !== false
+                      const workspaceSessions = orderedProjectSessions[workspace.id]!
                       return (
                         <ProjectFolderRow
                           key={workspace.id}
@@ -643,26 +717,19 @@ export function ActivityRail({
                           expandable={Boolean(onSelectSession && rootAvailable)}
                           expanded={expanded}
                           onToggleExpanded={() => toggleProjectExpanded(workspace.id)}
-                          sessions={[...resolveActivityWorkspaceSessionMetas(
-                            workspace.id,
-                            runtimeWorkspaceId,
-                            projectSessionMetas[workspace.id],
-                            localRuntimeSessionMetas,
-                            runtimeMetadataReady,
-                          )]
-                            .filter(meta => !meta.hidden && meta.isArchived !== true && hasSessionHistoryContent(meta))
-                            .sort((left, right) => (right.lastMessageAt ?? right.createdAt ?? 0) - (left.lastMessageAt ?? left.createdAt ?? 0))}
+                          sessions={workspaceSessions.filter(meta => !meta.isPinned)}
                           loadingSessions={loadingProjectIds.has(workspace.id)}
-                          activeSessionId={selectedWorkspaceId === workspace.id ? selectedProjectSessionId : null}
+                          activeSessionId={runtimeWorkspaceId === workspace.id && selectedWorkspaceId === workspace.id ? selectedProjectSessionId : null}
                           onSelectSession={onSelectSession && rootAvailable
                             ? (sessionId) => { void onSelectSession(sessionId, workspace.id) }
                             : undefined}
                           onCreateConversation={onCreateConversationInProject && rootAvailable
                             ? () => onCreateConversationInProject(workspace.id)
                             : undefined}
-                          sessionActions={sessionActions}
+                          sessionActions={railSessionActions}
+                          sessionDragHandlers={createDragHandlers(workspace.id, workspaceSessions)}
                           onRenameSession={(meta) => {
-                            setRenameTarget({ kind: 'session', id: meta.id, name: getSessionTitle(meta) })
+                            setRenameTarget({ kind: 'session', id: meta.id, workspaceId: meta.workspaceId, name: getSessionTitle(meta) })
                             setRenameValue(getSessionTitle(meta))
                           }}
                           onOpenInNewWindow={onOpenProjectInNewWindow && rootAvailable
@@ -701,7 +768,8 @@ export function ActivityRail({
             {archivedWorkspaces.length > 0 ? (
               <>
                 <SidebarSectionHeader
-                  label={`已归档 ${archivedWorkspaces.length}`}
+                  label="归档"
+                  count={archivedWorkspaces.length}
                   expanded={archivedExpanded}
                   onToggle={() => setArchivedExpanded(value => !value)}
                 />
@@ -929,18 +997,7 @@ export function ActivityRail({
               if (renameTarget.kind === 'project') {
                 void onRenameProject?.(renameTarget.id, nextName)
               } else {
-                setFreeSessionMetas((metas) => metas?.map((meta) => (
-                  meta.id === renameTarget.id ? { ...meta, name: nextName } : meta
-                )) ?? null)
-                setProjectSessionMetas((byWorkspace) => Object.fromEntries(
-                  Object.entries(byWorkspace).map(([workspaceId, metas]) => [
-                    workspaceId,
-                    metas.map((meta) => (
-                      meta.id === renameTarget.id ? { ...meta, name: nextName } : meta
-                    )),
-                  ]),
-                ))
-                sessionActions?.onRename(renameTarget.id, nextName)
+                void railSessionActions?.onRename(renameTarget.id, nextName, renameTarget.workspaceId!)
               }
             }
             setRenameTarget(null)

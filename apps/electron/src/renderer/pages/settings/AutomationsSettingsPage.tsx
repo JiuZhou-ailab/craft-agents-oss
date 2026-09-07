@@ -16,9 +16,8 @@ import { AutomationInfoPage } from '@/components/automations/AutomationInfoPage'
 import { AutomationsListPanel } from '@/components/automations/AutomationsListPanel'
 import type { ExecutionEntry } from '@/components/automations/types'
 import { SettingsCard, SettingsCardContent, SettingsRow, SettingsSection } from '@/components/settings'
-import { automationsAtom } from '@/atoms/automations'
-import { windowWorkspaceIdAtom, windowWorkspacesAtom, workspacePanelFieldsAtomFamily } from '@/atoms/sessions'
-import { useAutomationActions } from '@/hooks/useAutomations'
+import { windowWorkspaceIdAtom, windowWorkspacesAtom } from '@/atoms/sessions'
+import { useAutomations } from '@/hooks/useAutomations'
 import { routes } from '@/lib/navigate'
 import { cn } from '@/lib/utils'
 import { getDocUrl } from '@craft-agent/shared/docs/doc-links'
@@ -26,10 +25,9 @@ import { getDocUrl } from '@craft-agent/shared/docs/doc-links'
 export default function AutomationsSettingsPage() {
   const { t } = useTranslation()
   const activeWorkspaceId = useAtomValue(windowWorkspaceIdAtom)
-  const workspace = useAtomValue(workspacePanelFieldsAtomFamily(activeWorkspaceId ?? null))
   const workspaces = useAtomValue(windowWorkspacesAtom)
-  const automations = useAtomValue(automationsAtom)
   const {
+    automations, automationWorkspace: workspace,
     automationTestResults,
     automationPendingDelete,
     getAutomationHistory,
@@ -41,7 +39,7 @@ export default function AutomationsSettingsPage() {
     confirmDeleteAutomation,
     pendingDeleteAutomation,
     setAutomationPendingDelete,
-  } = useAutomationActions(activeWorkspaceId, automations)
+  } = useAutomations(activeWorkspaceId)
   const [selectedAutomationId, setSelectedAutomationId] = React.useState<string | null>(null)
   const [executions, setExecutions] = React.useState<ExecutionEntry[]>([])
   const [executionsLoading, setExecutionsLoading] = React.useState(false)
@@ -157,6 +155,7 @@ export default function AutomationsSettingsPage() {
                             onDuplicate={() => handleDuplicateAutomation(selectedAutomation.id)}
                             onDelete={() => handleDeleteAutomation(selectedAutomation.id)}
                             onReplay={handleReplayAutomation}
+                            workspaceId={workspace.id}
                             workspaceRootPath={workspace.rootPath}
                             className="h-full"
                           />

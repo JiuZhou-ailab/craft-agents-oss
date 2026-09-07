@@ -3,6 +3,7 @@ import { FREE_CONVERSATION_WORKSPACE_ID, type Session, type TransportConnectionS
 import {
   deriveSessionMessagesLoadState,
   formatSessionLoadFailure,
+  shouldApplyCreatedSessionSnapshot,
   shouldAutoCreateBaseSession,
   shouldTreatSessionLoadFailureAsTransportFallback,
 } from '../session-load'
@@ -109,17 +110,47 @@ describe('deriveSessionMessagesLoadState', () => {
   })
 })
 
+describe('shouldApplyCreatedSessionSnapshot', () => {
+  it('rejects an empty creation snapshot after the live session already received a user message', () => {
+    expect(shouldApplyCreatedSessionSnapshot(
+      createSession({
+        messages: [{ id: 'user-1', role: 'user', content: 'hello', timestamp: 2 }],
+        messageCount: 1,
+      }),
+      createSession({ messages: [], messageCount: 0, lastMessageAt: 1 }),
+    )).toBe(false)
+  })
+
+  it('accepts the initial creation snapshot and snapshots that are not older', () => {
+    const snapshot = createSession({ messages: [], messageCount: 0 })
+    expect(shouldApplyCreatedSessionSnapshot(null, snapshot)).toBe(true)
+    expect(shouldApplyCreatedSessionSnapshot(
+      createSession({ messages: [], messageCount: 0 }),
+      createSession({
+        messages: [{ id: 'user-1', role: 'user', content: 'hello', timestamp: 2 }],
+        messageCount: 1,
+      }),
+    )).toBe(true)
+  })
+})
+
 describe('shouldAutoCreateBaseSession', () => {
   it('keeps Free Conversation immediately usable', () => {
     expect(shouldAutoCreateBaseSession(FREE_CONVERSATION_WORKSPACE_ID, [])).toBe(true)
   })
 
-  it('allows Projects to exist without a Session', () => {
-    expect(shouldAutoCreateBaseSession('project-1', [])).toBe(false)
+  it('opens a blank Session when entering a Project without conversations', () => {
+    expect(shouldAutoCreateBaseSession('project-1', [])).toBe(true)
+  })
+
+  it('does not create a Session without an active workspace', () => {
+    expect(shouldAutoCreateBaseSession(null, [])).toBe(false)
+    expect(shouldAutoCreateBaseSession('', [])).toBe(false)
   })
 
   it('does not duplicate an existing renderable Session', () => {
     expect(shouldAutoCreateBaseSession(FREE_CONVERSATION_WORKSPACE_ID, [{ hidden: false, isArchived: false }])).toBe(false)
+    expect(shouldAutoCreateBaseSession('project-1', [{ hidden: false, isArchived: false }])).toBe(false)
   })
 })
 

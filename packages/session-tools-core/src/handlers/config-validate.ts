@@ -17,7 +17,6 @@ import {
   validateJsonFileHasFields,
   mergeResults,
 } from '../validation.ts';
-import { getSourceConfigPath } from '../source-helpers.ts';
 
 export interface ConfigValidateArgs {
   target: 'config' | 'sources' | 'statuses' | 'preferences' | 'permissions' | 'automations' | 'tool-icons' | 'all';
@@ -93,12 +92,13 @@ export async function handleConfigValidate(
 
     case 'sources': {
       if (sourceSlug) {
-        const sourcePath = getSourceConfigPath(ctx.workspacePath, sourceSlug);
-        const result = validateJsonFileHasFields(sourcePath, ['slug', 'name', 'type']);
+        const sourcePath = ctx.resolveSourcePath(sourceSlug);
+        if (!sourcePath) return errorResponse(`Source '${sourceSlug}' not found.`);
+        const result = validateJsonFileHasFields(join(sourcePath, 'config.json'), ['slug', 'name', 'type']);
         return successResponse(formatValidationResult(result));
       } else {
         // Validate all sources
-        const sourcesDir = join(ctx.workspacePath, 'sources');
+        const sourcesDir = ctx.sourcesPath;
         if (!ctx.fs.exists(sourcesDir)) {
           return successResponse('✓ No sources directory (no sources to validate)');
         }

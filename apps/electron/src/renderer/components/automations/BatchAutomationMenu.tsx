@@ -11,27 +11,23 @@
 
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAtomValue } from 'jotai'
 import { Power, PowerOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMenuComponents } from '@/components/ui/menu-context'
 import { automationSelection } from '@/hooks/useEntitySelection'
-import { automationsAtom } from '@/atoms/automations'
-import { windowWorkspaceIdAtom } from '@/atoms/sessions'
+import type { AutomationListItem } from './types'
 
 const {
   useSelection: useAutomationSelection,
   useSelectedIds: useAutomationSelectedIds,
 } = automationSelection
 
-export function BatchAutomationMenu() {
+export function BatchAutomationMenu({ automations, activeWorkspaceId }: { automations: AutomationListItem[]; activeWorkspaceId?: string | null }) {
   const { t } = useTranslation()
   const { MenuItem, Separator } = useMenuComponents()
 
   const selectedIds = useAutomationSelectedIds()
   const { clearMultiSelect } = useAutomationSelection()
-  const automations = useAtomValue(automationsAtom)
-  const activeWorkspaceId = useAtomValue(windowWorkspaceIdAtom)
 
   // Resolve selected automations metadata
   const selectedAutomations = useMemo(() => {

@@ -493,6 +493,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
         messages: [],
         isProcessing: loadingSessionMeta.isProcessing || false,
         isFlagged: loadingSessionMeta.isFlagged,
+        isPinned: loadingSessionMeta.isPinned,
         workingDirectory: loadingSessionMeta.workingDirectory,
         enabledSourceSlugs: loadingSessionMeta.enabledSourceSlugs,
       }

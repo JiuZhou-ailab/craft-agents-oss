@@ -20,7 +20,7 @@ let mockShouldAllowToolInMode = mock(
 );
 
 let mockIsApiEndpointAllowed = mock(
-  (_method: string, _path: string | undefined, _ctx: any) => false
+  (method: string, _path: string | undefined, _ctx: any, _sourceSlug?: string) => method.toUpperCase() === 'GET'
 );
 
 let mockIsReadOnlyBashCommandWithConfig = mock(
@@ -35,7 +35,7 @@ let mockEffectivePermissionMode: 'safe' | 'ask' | 'allow-all' = 'safe';
 // Paths resolve from THIS file's location (core/__tests__/)
 mock.module('../../mode-manager.ts', () => ({
   shouldAllowToolInMode: (a: any, b: any, c: any, d?: any) => mockShouldAllowToolInMode(a, b, c, d),
-  isApiEndpointAllowed: (a: any, b: any, c?: any) => mockIsApiEndpointAllowed(a, b, c),
+  isApiEndpointAllowed: (a: any, b: any, c?: any, d?: string) => mockIsApiEndpointAllowed(a, b, c, d),
   isReadOnlyBashCommandWithConfig: (a: any, b: any) => mockIsReadOnlyBashCommandWithConfig(a, b),
   extractBashWriteTarget: (a: any) => mockExtractBashWriteTarget(a),
   looksLikePotentialWrite: (a: any) => mockLooksLikePotentialWrite(a),
@@ -149,6 +149,7 @@ function createInput(overrides?: Partial<PreToolUseInput>): PreToolUseInput {
     permissionMode: 'allow-all',
     workspaceRootPath: '/test/workspace',
     activeSourceSlugs: [],
+    activeSources: [],
     allSourceSlugs: [],
     hasSourceActivation: true,
     permissionManager: createMockPermissionManager(),
@@ -166,7 +167,7 @@ describe('runPreToolUseChecks', () => {
     mockShouldAllowToolInMode.mockReset();
     mockShouldAllowToolInMode.mockImplementation(() => ({ allowed: true, reason: '' }));
     mockIsApiEndpointAllowed.mockReset();
-    mockIsApiEndpointAllowed.mockImplementation(() => false);
+    mockIsApiEndpointAllowed.mockImplementation((method) => method.toUpperCase() === 'GET');
     mockIsReadOnlyBashCommandWithConfig.mockReset();
     mockIsReadOnlyBashCommandWithConfig.mockImplementation(() => false);
     mockExtractBashWriteTarget.mockReset();
@@ -246,7 +247,7 @@ describe('runPreToolUseChecks', () => {
   });
 
   it('passes host-owned declarative API semantics into the permission-mode gate', () => {
-    const apiOperation = { method: 'DELETE', path: '/v1/jobs/42' };
+    const apiOperation = { sourceSlug: 'jobs', method: 'DELETE', path: '/v1/jobs/42' };
 
     runPreToolUseChecks(createInput({
       toolName: 'mcp__jobs__list_jobs',
@@ -274,10 +275,10 @@ describe('runPreToolUseChecks', () => {
       manager,
       context,
       undefined,
-      { method: 'DELETE', path: '/v1/jobs/42' },
+      { sourceSlug: 'jobs', method: 'DELETE', path: '/v1/jobs/42' },
     )).toMatchObject({
       promptType: 'api_mutation',
-      command: 'DELETE /v1/jobs/42',
+      command: 'mcp__jobs__list_jobs: DELETE /v1/jobs/42',
     });
     expect(shouldPromptInAskMode(
       'mcp__jobs__delete_job',
@@ -285,7 +286,7 @@ describe('runPreToolUseChecks', () => {
       manager,
       context,
       undefined,
-      { method: 'GET', path: '/v1/jobs/42' },
+      { sourceSlug: 'jobs', method: 'GET', path: '/v1/jobs/42' },
     )).toBeNull();
   });
 
@@ -332,6 +333,11 @@ describe('runPreToolUseChecks', () => {
         dataFolderPath: '/test/data',
         workspaceRootPath: '/test/workspace',
         activeSourceSlugs: ['linear'],
+        activeSources: [{
+          slug: 'linear',
+          ownerRootPath: '/host/config',
+          grantAuthority: 'host',
+        }],
       }));
 
       expect(mockShouldAllowToolInMode).toHaveBeenCalledWith(
@@ -341,9 +347,15 @@ describe('runPreToolUseChecks', () => {
         {
           plansFolderPath: '/test/plans',
           dataFolderPath: '/test/data',
+          apiOperation: undefined,
           permissionsContext: {
             workspaceRootPath: '/test/workspace',
-            activeSourceSlugs: ['linear'],
+            activeSources: [{
+              slug: 'linear',
+              ownerRootPath: '/host/config',
+              grantAuthority: 'host',
+            }],
+            allowProjectGrants: undefined,
           },
         }
       );
@@ -1040,7 +1052,7 @@ describe('shouldPromptInAskMode', () => {
     pm = createMockPermissionManager();
     mockShouldAllowToolInMode.mockReset();
     mockIsApiEndpointAllowed.mockReset();
-    mockIsApiEndpointAllowed.mockImplementation(() => false);
+    mockIsApiEndpointAllowed.mockImplementation((method) => method.toUpperCase() === 'GET');
     mockIsReadOnlyBashCommandWithConfig.mockReset();
     mockIsReadOnlyBashCommandWithConfig.mockImplementation(() => false);
     mockDetectConfigFileType.mockReset();

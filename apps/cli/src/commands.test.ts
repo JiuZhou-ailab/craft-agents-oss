@@ -9,6 +9,20 @@ import { parseArgs, resolveApiKey, shouldSetupLlmConnection } from './index.ts'
 // ---------------------------------------------------------------------------
 
 describe('parseArgs', () => {
+  it('preserves dash-prefixed message arguments without interpreting short-option clusters', () => {
+    for (const message of ['-ABC', '- hello', '-世界', '-- literal']) {
+      const args = parseArgs(['bun', 'index.ts', 'send', 'session-1', message])
+      expect(args.command).toBe('send')
+      expect(args.rest).toEqual(['session-1', message])
+      expect(args.verbose).toBe(false)
+    }
+    const args = parseArgs(['bun', 'index.ts', '--url=ws://localhost:1234', '-v', 'run', '--', '--help'])
+    expect(args.url).toBe('ws://localhost:1234')
+    expect(args.verbose).toBe(true)
+    expect(args.command).toBe('run')
+    expect(args.rest).toEqual(['--help'])
+  })
+
   it('parses --url, --token, --workspace', () => {
     const args = parseArgs([
       'bun', 'index.ts',

@@ -10,7 +10,7 @@
  *
  * File structure:
  * ~/.craft-agent/sources/{sourceSlug}/
- * ~/.craft-agent/workspaces/{workspaceId}/sources/{sourceSlug}/
+ * <projectRoot>/.craft-agent/sources/{sourceSlug}/
  *   ├── config.json   - Source settings
  *   └── guide.md      - Usage guidelines + cached data (in YAML frontmatter)
  */
@@ -61,6 +61,16 @@ export interface ApiSourceOperation {
 
 /** HTTP semantics retained by the host for permission checks. */
 export type ApiOperationPermission = Pick<ApiSourceOperation, 'method' | 'path' | 'parameters'>;
+
+/** Host registration declares whether HTTP semantics are fixed or supplied by a flexible request. */
+export type ApiToolPermissionDefinition = ApiOperationPermission | { kind: 'flexible' };
+
+/** Resolved HTTP request bound to the pool's authoritative Source identity. */
+export interface ApiToolPermission {
+  sourceSlug: string;
+  method: string;
+  path: string;
+}
 
 /**
  * Google service types for OAuth scope selection
@@ -535,13 +545,11 @@ export interface SourceGuide {
 /**
  * Filesystem owner of a loaded source definition.
  *
- * Runtime state and credentials are Craft-owned even when the definition is
- * loaded from the shared multi-tool directory.
+ * Runtime state and credentials are owned by Storyflow's global or project root.
  */
 export type SourceDefinitionOrigin =
   | 'workspace'
   | 'craft-global'
-  | 'shared-global'
   | 'builtin';
 
 /**
@@ -568,7 +576,7 @@ export interface LoadedSource {
 
   /**
    * Filesystem owner of this source definition.
-   * Shared-global definitions are externally owned and must remain read-only.
+   * Definitions are owned by a project, Storyflow global storage, or built-ins.
    */
   origin: SourceDefinitionOrigin;
 

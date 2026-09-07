@@ -91,6 +91,8 @@ export interface ManagedSession {
   agent: AgentInstance | null;
   messages: Message[];
   isProcessing: boolean;
+  /** Source files changed while the active turn held the Pi runtime lease. */
+  pendingSourceReload?: boolean;
   pendingConversationRewind?: {
     token: string;
     boundary: ConversationRewindBoundary;
@@ -104,6 +106,7 @@ export interface ManagedSession {
   processingGeneration: number;
   name?: string;
   isFlagged: boolean;
+  isPinned: boolean;
   isArchived?: boolean;
   archivedAt?: number;
   permissionMode?: PermissionMode;
@@ -238,6 +241,7 @@ export function createManagedSessionState(
     streamingText: '',
     processingGeneration: 0,
     isFlagged: (raw.isFlagged ?? false) as boolean,
+    isPinned: (raw.isPinned ?? false) as boolean,
     messageQueue: [],
     backgroundShellCommands: new Map(),
     backgroundTaskOutputs: new Map(),

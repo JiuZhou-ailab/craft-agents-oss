@@ -1,5 +1,5 @@
 // input: Bundled, workspace, and Source permission JSON files.
-// output: Validated merged permission rules, ownership-safe persistence, and canonical endpoint decisions.
+// output: Source-scoped merged permission rules, ownership-safe persistence, and canonical endpoint decisions.
 // pos: Persistent configuration and Project filesystem trust authority for Product Host permission checks.
 
 /**
@@ -9,8 +9,9 @@
  * Users can create permissions.json files to extend the default rules.
  *
  * File locations:
- * - Workspace: ~/.craft-agent/workspaces/{slug}/permissions.json
- * - Per-source: ~/.craft-agent/workspaces/{slug}/sources/{sourceSlug}/permissions.json
+ * - Project: <projectRoot>/permissions.json
+ * - Project Source: <projectRoot>/.craft-agent/sources/{sourceSlug}/permissions.json
+ * - Global Source: ~/.craft-agent/sources/{sourceSlug}/permissions.json
  *
  * Rules are additive - custom configs extend the defaults (more permissive).
  */
@@ -23,7 +24,7 @@ import { safeJsonParse } from '../utils/files.ts';
 import { canonicalizeApiPath } from '../sources/api-path.ts';
 import { CONFIG_DIR } from '../config/paths.ts';
 import { getBundledAssetsDir } from '../utils/paths.ts';
-import { getSourcePath, SHARED_AGENTS_ROOT_DIR } from '../sources/storage.ts';
+import { getSourcePath } from '../sources/storage.ts';
 import { isValidPermissionsFile } from '../config/validators.ts';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { ensureProjectOwnedDirectory, resolveProjectOwnedPath } from '../workspaces/paths.ts';
@@ -280,10 +281,26 @@ export interface MergedPermissionsConfig {
  */
 export interface PermissionsContext {
   workspaceRootPath: string;
-  /** Active source slugs for source-specific rules */
+  /**
+   * Owner-resolved active Sources. Source grants are loaded from their owner,
+   * never inferred from the consuming workspace.
+   */
+  activeSources?: ActiveSourcePermissionRef[];
+  /**
+   * Legacy consumer-root Source lookup. New runtime callers must use
+   * activeSources so global and Project Source ownership cannot be conflated.
+   */
   activeSourceSlugs?: string[];
   /** Host-owned consent to apply permission expansions stored in this Project. */
   allowProjectGrants?: boolean;
+}
+
+/** Minimal Source identity required by the permission boundary. */
+export interface ActiveSourcePermissionRef {
+  slug: string;
+  ownerRootPath: string;
+  /** Authority that authored the Source's permission expansion. */
+  grantAuthority: 'host' | 'project';
 }
 
 // ============================================================
@@ -440,7 +457,7 @@ export function validatePermissionsConfig(config: PermissionsConfigFile): string
 // ============================================================
 
 function isGlobalPermissionsRoot(rootPath: string): boolean {
-  return rootPath === CONFIG_DIR || rootPath === SHARED_AGENTS_ROOT_DIR;
+  return rootPath === CONFIG_DIR;
 }
 
 function resolveExistingPermissionsPath(rootPath: string, filePath: string): string | null {
@@ -595,18 +612,21 @@ export function saveSourcePermissions(workspaceRootPath: string, sourceSlug: str
  */
 export function isApiEndpointAllowed(
   method: string,
-  path: string,
-  config: MergedPermissionsConfig
+  path: string | undefined,
+  config: { allowedApiEndpoints?: CompiledApiEndpointRule[] },
+  sourceSlug?: string,
 ): boolean {
   const upperMethod = method.toUpperCase();
 
   // GET is always allowed
   if (upperMethod === 'GET') return true;
+  if (!path) return false;
 
   // Check fine-grained endpoint rules
   const canonicalPath = canonicalizeApiPath(path);
-  for (const rule of config.allowedApiEndpoints) {
-    if (rule.method === upperMethod && rule.pathPattern.test(canonicalPath)) {
+  for (const rule of config.allowedApiEndpoints ?? []) {
+    if ((rule.sourceSlug === undefined || rule.sourceSlug === sourceSlug)
+      && rule.method === upperMethod && rule.pathPattern.test(canonicalPath)) {
       return true;
     }
   }
@@ -693,13 +713,17 @@ class PermissionsConfigCache {
   invalidateSource(workspaceRootPath: string, sourceSlug: string): void {
     debug(`[Permissions] Invalidating source config: ${workspaceRootPath}/${sourceSlug}`);
     this.sourceConfigs.delete(`${workspaceRootPath}::${sourceSlug}`);
-    // Source changes are rare; clearing this workspace avoids coupling invalidation
-    // to the cache-key representation of Host trust.
-    for (const key of this.mergedConfigs.keys()) {
-      if (key.startsWith(`${workspaceRootPath}::`)) this.mergedConfigs.delete(key);
-    }
+    // A Source owner can feed many consumer workspaces. Source changes are rare,
+    // so clear merged projections rather than reverse-indexing every consumer.
+    this.mergedConfigs.clear();
   }
 
+  /** Invalidate Source-derived rules across consumers of a changed global tree. */
+  invalidateAllSources(): void {
+    debug('[Permissions] Invalidating all source configs');
+    this.sourceConfigs.clear();
+    this.mergedConfigs.clear();
+  }
 
   /**
    * Get merged config for a context (workspace + active sources)
@@ -751,15 +775,21 @@ class PermissionsConfigCache {
       if (wsConfig) {
         this.applyCustomConfig(merged, wsConfig);
       }
+    }
 
-      // Source-level customizations are also Project-owned permission grants.
-      if (context.activeSourceSlugs) {
-        for (const sourceSlug of context.activeSourceSlugs) {
-          const srcConfig = this.getSourceConfig(context.workspaceRootPath, sourceSlug);
-          if (srcConfig) {
-            this.applySourceConfig(merged, srcConfig, sourceSlug);
-          }
-        }
+    if (context.activeSources) {
+      for (const source of context.activeSources) {
+        if (source.grantAuthority === 'project' && !context.allowProjectGrants) continue;
+
+        const srcConfig = this.getSourceConfig(source.ownerRootPath, source.slug);
+        if (srcConfig) this.applySourceConfig(merged, srcConfig, source.slug);
+      }
+    } else if (context.allowProjectGrants && context.activeSourceSlugs) {
+      // Compatibility for callers that have not yet crossed the owner-resolved
+      // boundary. These grants remain Project-gated and consumer-root scoped.
+      for (const sourceSlug of context.activeSourceSlugs) {
+        const srcConfig = this.getSourceConfig(context.workspaceRootPath, sourceSlug);
+        if (srcConfig) this.applySourceConfig(merged, srcConfig, sourceSlug);
       }
     }
 
@@ -932,11 +962,12 @@ class PermissionsConfigCache {
       }
     }
 
-    // API endpoints - apply normally (API tools are already source-scoped as api_<slug>)
+    // A Source's endpoint grant must retain its identity after merging.
     for (const rule of custom.allowedApiEndpoints) {
       const pathRegex = validateRegex(rule.path);
       if (pathRegex) {
         merged.allowedApiEndpoints.push({
+          sourceSlug,
           method: rule.method,
           pathPattern: pathRegex,
         });
@@ -955,8 +986,15 @@ class PermissionsConfigCache {
   }
 
   private buildCacheKey(context: PermissionsContext): string {
-    const sources = [...(context.activeSourceSlugs ?? [])].sort().join(',');
-    return `${context.workspaceRootPath}::${context.allowProjectGrants ? 'granted' : 'host-only'}::${sources}`;
+    const sources = context.activeSources
+      ? [...context.activeSources]
+        .sort((a, b) => {
+          const slugOrder = a.slug.localeCompare(b.slug);
+          return slugOrder || a.ownerRootPath.localeCompare(b.ownerRootPath);
+        })
+        .map(source => [source.slug, source.ownerRootPath, source.grantAuthority])
+      : [...(context.activeSourceSlugs ?? [])].sort();
+    return `${context.workspaceRootPath}::${context.allowProjectGrants ? 'granted' : 'host-only'}::${JSON.stringify(sources)}`;
   }
 
   /**

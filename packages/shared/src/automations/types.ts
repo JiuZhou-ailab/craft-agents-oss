@@ -1,3 +1,7 @@
+// input: Scheduler and event automation domain requirements
+// output: Matcher, action, and pending prompt contracts including stable conversation targets
+// pos: Shared automation execution contract
+
 /**
  * Automation System Type Definitions
  *
@@ -149,6 +153,8 @@ export type AutomationCondition = TimeCondition | StateCondition | LogicalCondit
 // ============================================================================
 
 export interface AutomationMatcher {
+  /** Existing conversation to reuse for prompt runs; omitted preserves legacy per-run sessions. */
+  sessionId?: string;
   /** Short 6-character hex ID for stable identification across config changes. */
   id?: string;
   /** Optional display name. If omitted, derived from the first action. */

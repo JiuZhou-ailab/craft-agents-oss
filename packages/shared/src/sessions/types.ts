@@ -33,7 +33,7 @@ export const SESSION_PERSISTENT_FIELDS = [
   // Timestamps
   'createdAt', 'lastUsedAt', 'lastMessageAt',
   // Display
-  'name', 'isFlagged', 'sessionStatus', 'labels', 'hidden',
+  'name', 'isFlagged', 'isPinned', 'sessionStatus', 'labels', 'hidden',
   // Read tracking
   'lastReadMessageId', 'hasUnread',
   // Config
@@ -137,6 +137,8 @@ export interface SessionConfig {
   lastMessageAt?: number;
   /** Whether this session is flagged */
   isFlagged?: boolean;
+  /** Whether this session is fixed in navigation. */
+  isPinned?: boolean;
   /** Permission mode for this session ('safe', 'ask', 'allow-all') */
   permissionMode?: PermissionMode;
   /** Previous permission mode (used to preserve modeTransition context across restarts) */
@@ -261,6 +263,8 @@ export interface SessionHeader {
   lastMessageAt?: number;
   /** Whether this session is flagged */
   isFlagged?: boolean;
+  /** Whether this session is fixed in navigation. */
+  isPinned?: boolean;
   /** Permission mode for this session ('safe', 'ask', 'allow-all') */
   permissionMode?: PermissionMode;
   /** Previous permission mode (used to preserve modeTransition context across restarts) */
@@ -363,6 +367,8 @@ export interface SessionMetadata {
   legacyAgentRuntime?: LegacyAgentRuntime;
   /** Whether this session is flagged */
   isFlagged?: boolean;
+  /** Whether this session is fixed in navigation. */
+  isPinned?: boolean;
   /** User-controlled session status */
   sessionStatus?: SessionStatus;
   /** Labels applied to this session (bare IDs or "id::value" entries) */

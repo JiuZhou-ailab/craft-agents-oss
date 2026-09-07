@@ -2,12 +2,12 @@
  * EditPopover
  *
  * input: Edit context keys, workspace paths, and compact user instructions
- * output: Popover-driven focused editing sessions with scoped file targets
+ * output: Inline edits or internal create-and-send navigation with preserved failure drafts
  * pos: Shared UI entry point for lightweight config/resource edits
  *
  * A popover with title, subtitle, and multiline textarea for editing settings.
  * Supports two modes:
- * - Legacy: Opens a new focused window with a chat session
+ * - Legacy: Creates and sends in a visible conversation through internal navigation
  * - Inline: Executes mini agent inline within the popover using compact ChatDisplay
  */
 
@@ -16,6 +16,9 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue } from 'jotai'
 import i18n from 'i18next'
+import { toast } from 'sonner'
+import { useNavigationActions } from '@/contexts/NavigationContext'
+import { routes } from '@/lib/navigate'
 import { GripHorizontal } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react' // motion used for backdrop only
 import { Popover, PopoverTrigger, PopoverContent } from './popover'
@@ -93,6 +96,7 @@ export type EditContextKey =
   | 'edit-views'
   | 'edit-tool-icons'
   | 'automation-config'
+  | 'scheduled-task'
 
 /**
  * Full edit configuration including context for agent and example for UI.
@@ -119,6 +123,8 @@ export interface EditConfig {
   systemPromptPreset?: 'default' | 'mini'
   /** When true, executes inline within the popover instead of opening a new window */
   inlineExecution?: boolean
+  /** Pin the visible session created for this edit flow. */
+  pinSession?: boolean
 }
 
 /**
@@ -544,13 +550,37 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     inlineExecution: true,        // Execute inline in popover
   }),
 
+  'scheduled-task': (location) => ({
+    context: {
+      label: 'Scheduled Task',
+      filePath: `${location}/automations.json`,
+      context:
+        'Create a scheduled task without requiring a project. ' +
+        'Read the existing automations.json and preserve other tasks. ' +
+        'Use { version: 2, automations: { SchedulerTick: [{ id, name, sessionId, cron, timezone, actions: [{ type: "prompt", prompt }] }] } }. ' +
+        'Bind sessionId to THIS conversation using sessionId from <session_state>, or get_session_info with no arguments. ' +
+        'All scheduled runs must reuse this conversation and its current model and permissions. ' +
+        'Use a 5-field cron expression and the user timezone. Ask only if the task or timing is ambiguous. ' +
+        'Validate the configuration, then confirm the schedule and task. Do not run the task immediately.',
+    },
+    example: 'Every day at 9am, summarize the latest news',
+    displayLabelKey: 'automations.createScheduledTask',
+    overridePlaceholderKey: 'automations.scheduledCreatePlaceholder',
+    exampleKey: 'automations.scheduledCreateExample',
+    model: 'default',
+    systemPromptPreset: 'default',
+    inlineExecution: false,
+    pinSession: true,
+  }),
+
   'automation-config': (location) => ({
     context: {
       label: 'Automation Configuration',
       filePath: `${location}/automations.json`,
       context:
         'The user is editing automations.json which configures automations. ' +
-        'Structure: { version: 2, automations: { EventName: [{ name?, matcher?, cron?, timezone?, permissionMode?, labels?, actions: [...] }] } }. ' +
+        'Structure: { version: 2, automations: { EventName: [{ name?, sessionId?, matcher?, cron?, timezone?, permissionMode?, labels?, actions: [...] }] } }. ' +
+        'Preserve sessionId when editing: it binds prompt runs to an existing conversation. ' +
         'Each event maps to an array of matcher entries. Each matcher has an actions array ({ type: "prompt", prompt }). ' +
         'Read ~/.craft-agent/docs/automations.md for full format reference. ' +
         'After editing, confirm clearly what changed.',
@@ -560,7 +590,8 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     exampleKey: 'editPopover.example.automationConfig',
     model: 'default',
     systemPromptPreset: 'mini',
-    inlineExecution: true,
+    inlineExecution: false, // Keep long-running automation edits visible and switchable in the session list
+    pinSession: true,
   }),
 }
 
@@ -660,6 +691,8 @@ export interface EditPopoverProps {
    * opening a new window. Best for quick config edits with mini agents.
    */
   inlineExecution?: boolean
+  /** Pin the visible session created by legacy navigation. */
+  pinSession?: boolean
 }
 
 type EditPopoverContentProps = Omit<
@@ -778,8 +811,12 @@ function EditPopoverContent({
   setOpen,
   defaultValue = '',
   inlineExecution = false,
+  pinSession = false,
 }: EditPopoverContentProps) {
   const { t } = useTranslation()
+  const { navigate } = useNavigationActions()
+  const submitInFlight = useRef(false)
+  const [draft, setDraft] = useState(defaultValue)
   const { onOpenFile, onOpenUrl } = usePlatform()
   const workspaceId = useAtomValue(windowWorkspaceIdAtom)
   const workspace = useAtomValue(workspacePanelFieldsAtomFamily(workspaceId ?? null))
@@ -1016,24 +1053,34 @@ function EditPopoverContent({
     }
   }, [context, conversationWorkspaceId, displayLabel, inlineSessionId, workspaceId, model, systemPromptPreset, permissionMode, workingDirectory, onCreateSession, onSendMessage])
 
-  // Legacy mode: navigates to chat in the same window
-  const handleLegacySendMessage = useCallback((message: string) => {
+  // UI actions stay inside the renderer. External protocol links deliberately
+  // cannot create/send conversations and may resolve to a different app instance.
+  const handleLegacySendMessage = useCallback(async (message: string) => {
+    if (submitInFlight.current) return
+    submitInFlight.current = true
     const { prompt, badges } = buildEditPrompt(context, message, displayLabel)
-    const encodedInput = encodeURIComponent(prompt)
-    const encodedBadges = encodeURIComponent(JSON.stringify(badges))
-
-    const workdirParam = workingDirectory ? `&workdir=${encodeURIComponent(workingDirectory)}` : ''
-    const modelParam = model ? `&model=${encodeURIComponent(model)}` : ''
-    const systemPromptParam = systemPromptPreset ? `&systemPrompt=${encodeURIComponent(systemPromptPreset)}` : ''
-    const actionPath = conversationWorkspaceId
-      ? `workspace/${encodeURIComponent(conversationWorkspaceId)}/action/new-session`
-      : 'action/new-session'
-    const windowParam = conversationWorkspaceId ? '&window=focused' : ''
-    const url = `craftagents://${actionPath}?input=${encodedInput}&send=true&mode=${permissionMode}&badges=${encodedBadges}${workdirParam}${modelParam}${systemPromptParam}${windowParam}`
-
-    window.electronAPI.openUrl(url)
-    setOpen(false)
-  }, [context, conversationWorkspaceId, displayLabel, workingDirectory, model, systemPromptPreset, permissionMode, setOpen])
+    try {
+      await navigate(routes.action.newSession({
+        workspaceId: conversationWorkspaceId,
+        input: prompt,
+        send: true,
+        mode: permissionMode,
+        workdir: workingDirectory,
+        model,
+        systemPrompt: systemPromptPreset,
+        pinned: pinSession ? 'true' : undefined,
+        badges: JSON.stringify(badges),
+      }))
+      setOpen(false)
+    } catch (error) {
+      setDraft(message)
+      toast.error(t('editPopover.submitFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      submitInFlight.current = false
+    }
+  }, [context, conversationWorkspaceId, displayLabel, workingDirectory, model, systemPromptPreset, permissionMode, pinSession, navigate, setOpen, t])
 
   const handleSecondaryAction = useCallback(async () => {
     if (!secondaryAction) return
@@ -1119,6 +1166,8 @@ function EditPopoverContent({
               onRespondToCredential={onRespondToCredential}
               compactMode={true}
               placeholder={placeholder}
+              inputValue={inlineExecution ? undefined : draft}
+              onInputChange={inlineExecution ? undefined : setDraft}
             />
           </div>
         </div>

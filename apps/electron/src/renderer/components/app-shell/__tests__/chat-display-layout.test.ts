@@ -106,6 +106,6 @@ describe('ChatDisplay scroll layout', () => {
     expect(chatDisplaySource).toContain('window.clearInterval')
     expect(chatDisplaySource).toContain('tipsPaused || shouldReduceMotion')
     expect(chatDisplaySource).toContain("key={session?.id ?? 'new-session'}")
-    expect(chatDisplaySource).toContain('mx-auto mt-6 w-fit max-w-[520px]')
+    expect(chatDisplaySource).toContain('mx-auto mt-5 min-h-[72px] max-w-[520px]')
   })
 })

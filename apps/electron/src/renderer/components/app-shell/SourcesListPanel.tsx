@@ -1,11 +1,12 @@
 // input: Workspace sources, current source filter, and user drag-drop events
 // output: Navigable source list with empty state, menus, and dropped local source creation
-// pos: Sidebar panel for browsing and adding reusable data/tool sources
+// pos: Source management list with page header, drag-drop, and reusable source operations
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Compass, DatabaseZap, FolderOpen } from 'lucide-react'
+import { Compass, DatabaseZap, FolderOpen, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { deriveConnectionStatus } from '@/components/ui/source-status-indicator'
 import { EntityPanel } from '@/components/ui/entity-panel'
@@ -51,6 +52,7 @@ export interface SourcesListPanelProps {
   onDeleteSource: (sourceSlug: string) => void
   onSourceClick: (source: LoadedSource) => void
   onDiscoverMcp?: () => void
+  onFilterChange?: (type?: SourceFilter['sourceType']) => void
   selectedSourceSlug?: string | null
   localMcpEnabled?: boolean
   className?: string
@@ -66,6 +68,7 @@ export function SourcesListPanel({
   onDeleteSource,
   onSourceClick,
   onDiscoverMcp,
+  onFilterChange,
   selectedSourceSlug,
   localMcpEnabled = true,
   className,
@@ -176,17 +179,31 @@ export function SourcesListPanel({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {sourceFilter?.sourceType === 'mcp' && onDiscoverMcp ? (
-          <div className="shrink-0 border-b border-border/60 px-3 py-2">
-            <button
-              type="button"
-              onClick={onDiscoverMcp}
-              className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-foreground/85 outline-none transition-colors hover:bg-foreground/[0.05] focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <Compass className="size-3.5" aria-hidden="true" />
-              {t('mcpHub.discoverAction')}
-            </button>
+        <header className="titlebar-drag-region mb-4 flex shrink-0 flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight">{t('sidebar.sources')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t('sourcesList.emptyDescription')}</p>
           </div>
+          <div className="titlebar-no-drag flex flex-wrap items-center gap-2">
+            {onDiscoverMcp ? <Button size="sm" variant="outline" onClick={onDiscoverMcp}><Compass className="size-3.5" />{t('mcpHub.discoverAction')}</Button> : null}
+            {workspaceRootPath ? (
+              <EditPopover
+                trigger={<Button size="sm" variant="outline" data-tutorial="add-source-button"><Plus className="size-3.5" />{t('sourcesList.addSource')}</Button>}
+                {...getEditConfig(sourceFilter?.kind === 'type' ? `add-source-${sourceFilter.sourceType}` as EditContextKey : 'add-source', workspaceRootPath)}
+              />
+            ) : null}
+          </div>
+        </header>
+        {onFilterChange ? (
+          <nav className="mb-3 flex shrink-0 gap-1" aria-label={t('sidebar.sources')}>
+            {([undefined, 'mcp', 'api', 'local'] as const).map(type => (
+              <Button key={type ?? 'all'} size="sm" variant="ghost" aria-pressed={sourceFilter?.sourceType === type}
+                className={sourceFilter?.sourceType === type ? 'bg-foreground/[0.05]' : 'text-muted-foreground'}
+                onClick={() => onFilterChange(type)}>
+                {type ? t(SOURCE_TYPE_FILTER_LABEL_KEYS[type]) : t('sourcesList.filterAll')}
+              </Button>
+            ))}
+          </nav>
         ) : null}
         <EntityPanel<LoadedSource>
           items={filteredSources}
@@ -211,18 +228,6 @@ export function SourcesListPanel({
                     <FolderOpen className="h-3.5 w-3.5" />
                     {t('sourcesList.chooseLocalFolder')}
                   </button>
-                  <EditPopover
-                    align="center"
-                    trigger={
-                      <button className="inline-flex items-center h-7 px-3 text-xs font-medium rounded-[8px] bg-background shadow-minimal hover:bg-foreground/[0.03] transition-colors">
-                        {t('sourcesList.addSource')}
-                      </button>
-                    }
-                    {...getEditConfig(
-                      sourceFilter?.kind === 'type' ? `add-source-${sourceFilter.sourceType}` as EditContextKey : 'add-source',
-                      workspaceRootPath
-                    )}
-                  />
                 </>
               )}
             </EntityListEmptyScreen>
@@ -243,11 +248,6 @@ export function SourcesListPanel({
                       {t(statusConfig.labelKey)}
                     </EntityListBadge>
                   )}
-                  {source.origin === 'shared-global' && (
-                    <EntityListBadge colorClass="bg-foreground/10 text-foreground/60">
-                      {t('sourcesList.sharedReadOnly')}
-                    </EntityListBadge>
-                  )}
                   {subtitle && <span className="truncate">{subtitle}</span>}
                 </>
               ),
@@ -257,9 +257,7 @@ export function SourcesListPanel({
                   sourceName={source.config.name}
                   onOpenInNewWindow={() => window.electronAPI.openUrl(`craftagents://sources/source/${source.config.slug}?window=focused`)}
                   onShowInFinder={() => window.electronAPI.showInFolder(source.folderPath)}
-                  onDelete={source.origin === 'shared-global'
-                    ? undefined
-                    : () => onDeleteSource(source.config.slug)}
+                  onDelete={() => onDeleteSource(source.config.slug)}
                   onSendToWorkspace={hasOtherWorkspaces && source.origin === 'workspace' ? () => {
                     setSendResourceSlug(source.config.slug)
                     setSendResourceLabel(source.config.name)

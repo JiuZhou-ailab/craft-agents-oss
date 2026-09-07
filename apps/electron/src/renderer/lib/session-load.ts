@@ -1,9 +1,15 @@
-import { FREE_CONVERSATION_WORKSPACE_ID, type Session, type TransportConnectionState } from '../../shared/types'
+// input: Workspace identity, session transcript snapshots, metadata load flags, and transport state
+// output: Initial composer creation policy, safe hydration decisions, and renderer message-loading state
+// pos: Renderer boundary against stale transcript and transport fallback projections
+
+import type { Session, TransportConnectionState } from '../../shared/types'
 
 interface MessageLoadMeta {
   messageCount?: number
   lastFinalMessageId?: string
 }
+
+type SessionTranscriptSnapshot = Pick<Session, 'messages' | 'messageCount'>
 
 export interface SessionMessagesLoadStateInput {
   session: Pick<Session, 'messages' | 'messageCount' | 'lastFinalMessageId'> | null | undefined
@@ -27,8 +33,24 @@ export function shouldAutoCreateBaseSession(
   workspaceId: string | null | undefined,
   sessions: readonly Pick<Session, 'hidden' | 'isArchived'>[],
 ): boolean {
-  return workspaceId === FREE_CONVERSATION_WORKSPACE_ID
+  return !!workspaceId
     && !sessions.some(session => !session.hidden && !session.isArchived)
+}
+
+/**
+ * A session_created hydration request can race the first user_message event.
+ * Never let the older empty snapshot replace a transcript that has already
+ * advanced in the renderer.
+ */
+export function shouldApplyCreatedSessionSnapshot(
+  current: SessionTranscriptSnapshot | null | undefined,
+  incoming: SessionTranscriptSnapshot,
+): boolean {
+  if (!current) return true
+
+  const currentCount = Math.max(current.messageCount ?? 0, current.messages.length)
+  const incomingCount = Math.max(incoming.messageCount ?? 0, incoming.messages.length)
+  return incomingCount >= currentCount
 }
 
 /**

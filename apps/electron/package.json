@@ -40,7 +40,6 @@
     "@craft-agent/server-core": "workspace:*",
     "@craft-agent/shared": "workspace:*",
     "@craft-agent/ui": "workspace:*",
-    "@paper-design/shaders-react": "^0.0.69",
     "@pierre/diffs": "^1.0.4",
     "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-dialog": "^1.1.15",

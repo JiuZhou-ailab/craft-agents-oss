@@ -18,13 +18,14 @@ import type {
 } from '@earendil-works/pi-coding-agent';
 import type { AssistantMessage, AssistantMessageEvent } from '@earendil-works/pi-ai';
 import { isContextOverflow } from '@earendil-works/pi-ai';
-import { BaseEventAdapter } from '../base-event-adapter.ts';
+import { parseReadCommand, type ReadCommandInfo } from '../read-patterns.ts';
 import { PI_TOOL_NAME_MAP } from './constants.ts';
 import {
   isPiSubagentDetails,
   parsePiSubagentUsage,
 } from './subagent-contract.ts';
 import { parseError } from '../../errors.ts';
+import { createLogger } from '../../../utils/debug.ts';
 
 /**
  * Pi SDK auto-compaction race signature — the AbortController crash described
@@ -60,7 +61,14 @@ type PiEvent = PiAgentEvent | AgentSessionEvent | { type: 'entry_appended' };
  * - auto_retry_end → ignored (message_end owns final failure projection)
  * - queue_update / entry_appended → ignored (no current UI consumer)
  */
-export class PiEventAdapter extends BaseEventAdapter {
+export class PiEventAdapter {
+  private readonly log = createLogger('pi-event');
+  private turnIndex = 0;
+  private currentTurnId: string | null = null;
+  private commandOutput = new Map<string, string>();
+  private readCommands = new Map<string, ReadCommandInfo>();
+  private blockReasons = new Map<string, string>();
+
   // Track tool names from execution_start for proper tool_result correlation
   private toolNames: Map<string, string> = new Map();
 
@@ -95,8 +103,114 @@ export class PiEventAdapter extends BaseEventAdapter {
   // If Pi settles without recovery or an explicit compaction failure, surface it once.
   private pendingOverflowError: string | null = null;
 
-  constructor() {
-    super('pi-event');
+  startTurn(turnId?: string): void {
+    this.turnIndex++;
+    this.commandOutput.clear();
+    this.readCommands.clear();
+    this.blockReasons.clear();
+    this.currentTurnId = turnId || null;
+    this.onTurnStart();
+  }
+
+  setBlockReason(id: string, reason: string): void {
+    this.log.warn('Block reason recorded', { id, reason });
+    this.blockReasons.set(id, reason);
+  }
+
+  accumulateOutput(id: string, delta: string): void {
+    const current = this.commandOutput.get(id) || '';
+    this.commandOutput.set(id, current + delta);
+  }
+
+  private consumeBlockReason(...keys: string[]): string | undefined {
+    for (const key of keys) {
+      const reason = this.blockReasons.get(key);
+      if (reason !== undefined) {
+        this.blockReasons.delete(key);
+        return reason;
+      }
+    }
+    return undefined;
+  }
+
+  private classifyReadCommand(id: string, command: string): ReadCommandInfo | null {
+    const readInfo = parseReadCommand(command);
+    if (readInfo) this.readCommands.set(id, readInfo);
+    return readInfo;
+  }
+
+  private consumeReadCommand(id: string): ReadCommandInfo | undefined {
+    const info = this.readCommands.get(id);
+    if (info) this.readCommands.delete(id);
+    return info;
+  }
+
+  private consumeOutput(id: string): string | undefined {
+    const output = this.commandOutput.get(id);
+    if (output !== undefined) this.commandOutput.delete(id);
+    return output;
+  }
+
+  private createToolStart(
+    id: string,
+    toolName: string,
+    input: Record<string, unknown>,
+    intent?: string,
+    displayName?: string,
+    parentToolUseId?: string,
+  ): ProductAgentEvent {
+    return {
+      type: 'tool_start',
+      toolName,
+      toolUseId: id,
+      input,
+      intent,
+      displayName,
+      turnId: this.currentTurnId || undefined,
+      parentToolUseId,
+    };
+  }
+
+  private createToolResult(
+    id: string,
+    toolName: string,
+    result: string,
+    isError: boolean,
+    parentToolUseId?: string,
+  ): ProductAgentEvent {
+    return {
+      type: 'tool_result',
+      toolUseId: id,
+      toolName,
+      result,
+      isError,
+      turnId: this.currentTurnId || undefined,
+      parentToolUseId,
+    };
+  }
+
+  private createReadToolStart(
+    id: string,
+    readInfo: ReadCommandInfo,
+    intent?: string,
+    displayName?: string,
+    parentToolUseId?: string,
+  ): ProductAgentEvent {
+    return this.createToolStart(
+      id,
+      'Read',
+      {
+        file_path: readInfo.filePath,
+        offset: readInfo.startLine,
+        limit: readInfo.endLine
+          ? readInfo.endLine - (readInfo.startLine || 1) + 1
+          : undefined,
+        _command: readInfo.originalCommand,
+      },
+      intent,
+      displayName ?? 'Read File',
+      parentToolUseId,
+    );
   }
 
   /**
@@ -157,7 +271,7 @@ export class PiEventAdapter extends BaseEventAdapter {
     this.turnUsage.modelCalls += usage.modelCalls ?? 0;
   }
 
-  protected onTurnStart(): void {
+  private onTurnStart(): void {
     this.toolNames.clear();
     this.hasEmittedFinalText = false;
     this.subTurnCounter = 0;

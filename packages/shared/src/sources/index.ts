@@ -56,10 +56,6 @@ export {
   // Directory utilities
   GLOBAL_AGENT_ROOT_DIR,
   GLOBAL_AGENT_SOURCES_DIR,
-  SHARED_AGENTS_ROOT_DIR,
-  SHARED_AGENTS_SOURCES_DIR,
-  SHARED_SOURCE_RUNTIME_STATE_DIR,
-  ReadOnlySourceDefinitionError,
   assertSafeSourceSlug,
   ensureSourcesDir,
   getSourcePath,
@@ -144,7 +140,7 @@ export type {
   McpRegistryServerResponse,
   McpRegistryStatus,
 } from './marketplace.ts';
-export { materializeApiOperationRequest } from './api-path.ts';
+export { canonicalizeApiPath, materializeApiOperationRequest } from './api-path.ts';
 
 // Token Refresh Manager (handles OAuth token refresh with rate limiting)
 export {

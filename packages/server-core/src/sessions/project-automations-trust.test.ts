@@ -68,7 +68,7 @@ function automationExecutionProbe(automationsEnabled: boolean): {
   directError?: string
   testError?: string
   replayError?: string
-  options?: { permissionMode?: string; enabledSourceSlugs?: string[] }
+  options?: { permissionMode?: string; enabledSourceSlugs?: string[]; isPinned?: boolean }
 } {
   const parent = mkdtempSync(join(tmpdir(), 'storyflow-automation-execution-'))
   const configDir = join(parent, 'host')
@@ -371,6 +371,7 @@ describe('Project Automations trust', () => {
     expect(probe.directError).toBeUndefined()
     expect(probe.options?.permissionMode).toBe('ask')
     expect(probe.options?.enabledSourceSlugs).toEqual(['allowed'])
+    expect(probe.options?.isPinned).toBe(true)
   })
 
   it('drains an accepted prompt outside the Project lock and rechecks the Host grant', () => {

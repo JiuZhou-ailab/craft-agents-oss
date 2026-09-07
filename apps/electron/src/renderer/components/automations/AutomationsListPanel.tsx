@@ -12,7 +12,7 @@
 import * as React from 'react'
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Webhook } from 'lucide-react'
+import { CalendarClock, Webhook } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@craft-agent/ui'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { EntityListEmptyScreen } from '@/components/ui/entity-list-empty'
@@ -62,6 +62,7 @@ interface AutomationItemProps {
   onTest: () => void
   onDuplicate: () => void
   onSendToWorkspace?: () => void
+  batchMenu: React.ReactNode
 }
 
 function AutomationItem({
@@ -78,6 +79,7 @@ function AutomationItem({
   onTest,
   onDuplicate,
   onSendToWorkspace,
+  batchMenu,
 }: AutomationItemProps) {
   const { t } = useTranslation()
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -152,7 +154,7 @@ function AutomationItem({
           onSendToWorkspace={onSendToWorkspace}
         />
       }
-      contextMenuContent={isMultiSelectActive && isInMultiSelect ? <BatchAutomationMenu /> : undefined}
+      contextMenuContent={isMultiSelectActive && isInMultiSelect ? batchMenu : undefined}
     />
   )
 }
@@ -233,11 +235,12 @@ export function AutomationsListPanel({
   }, [filteredAutomations, selectRange])
 
   // Empty state
-  if (automations.length === 0) {
+  if (filteredAutomations.length === 0 && !isSearchMode) {
+    const EmptyIcon = automationFilter?.kind === 'scheduled' ? CalendarClock : Webhook
     return (
       <div className={cn('flex flex-col flex-1 min-h-0', className)}>
         <EntityListEmptyScreen
-          icon={<Webhook />}
+          icon={<EmptyIcon />}
           title={t('automations.noAutomationsConfigured')}
           description={t('automations.emptyDescription')}
           docKey="automations"
@@ -250,7 +253,8 @@ export function AutomationsListPanel({
                   {t('automations.addAutomation')}
                 </button>
               }
-              {...getEditConfig('automation-config', workspaceRootPath)}
+              {...getEditConfig(automationFilter?.kind === 'scheduled' ? 'scheduled-task' : 'automation-config', workspaceRootPath)}
+              conversationWorkspaceId={activeWorkspaceId ?? undefined}
             />
           )}
         </EntityListEmptyScreen>
@@ -297,6 +301,7 @@ export function AutomationsListPanel({
                 <AutomationItem
                   key={automation.id}
                   automation={automation}
+                  batchMenu={<BatchAutomationMenu automations={automations} activeWorkspaceId={activeWorkspaceId} />}
                   isSelected={selectedAutomationId === automation.id}
                   isInMultiSelect={isMultiSelectActive && isInSelection(automation.id)}
                   isMultiSelectActive={isMultiSelectActive}

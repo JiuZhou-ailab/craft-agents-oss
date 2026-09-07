@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next'
 import {
   resolveChatOpeningPrompt,
+  type ChatOpeningCommandAction,
   type ChatOpeningCommand,
 } from '@/components/app-shell/chat-opening'
 
@@ -62,22 +63,24 @@ export function WorkspaceEmptyState({
                 {t(section.labelKey)}
               </div>
               <div className="flex flex-col gap-2">
-                {section.actions.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    data-workspace-action={action.command}
-                    onClick={() => runCommand(action.command)}
-                    className="min-h-[52px] rounded-[7px] border border-border/60 bg-background px-3 py-2 text-left shadow-minimal transition-colors hover:border-foreground/20 hover:bg-foreground/[0.03] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <span className="block text-[13px] font-medium text-foreground/85">
-                      {t(action.labelKey)}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {t(action.descriptionKey)}
-                    </span>
-                  </button>
-                ))}
+                {section.actions
+                  .filter((action): action is ChatOpeningCommandAction => action.kind === 'command')
+                  .map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      data-workspace-action={action.command}
+                      onClick={() => runCommand(action.command)}
+                      className="min-h-[44px] rounded-[7px] border border-border/60 bg-background px-3 py-1.5 text-left shadow-minimal transition-[background-color,border-color,transform] hover:border-foreground/20 hover:bg-foreground/[0.03] active:translate-y-px focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <span className="block text-[13px] font-medium text-foreground/85">
+                        {t(action.labelKey)}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {t(action.descriptionKey)}
+                      </span>
+                    </button>
+                  ))}
               </div>
             </section>
           ))}

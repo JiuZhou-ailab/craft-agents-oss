@@ -197,6 +197,7 @@ export function flattenConditions(conditions: AutomationConditionUI[]): { label:
 // ============================================================================
 
 export interface AutomationListItem {
+  sessionId?: string
   /** Stable 6-char hex ID from automations.json, with fallback to event+index for legacy configs */
   id: string
   /** The event this automation listens to */
@@ -376,6 +377,7 @@ type RawAction =
   | { type: 'webhook'; url: string; method?: string; headers?: Record<string, string>; bodyFormat?: 'json' | 'form' | 'raw'; body?: unknown; captureResponse?: boolean; auth?: WebhookAction['auth'] }
 
 interface AutomationsConfigMatcher {
+  sessionId?: string
   id?: string
   name?: string
   matcher?: string
@@ -411,7 +413,7 @@ function deriveAutomationName(event: string, matcher: AutomationsConfigMatcher):
 /** Derive a summary line from the matcher/cron/event */
 function deriveAutomationSummary(event: string, matcher: AutomationsConfigMatcher): string {
   if (matcher.cron) {
-    const runs = computeNextRuns(matcher.cron, 1)
+    const runs = computeNextRuns(matcher.cron, 1, matcher.timezone)
     if (runs.length > 0) {
       const next = runs[0]!
       const tz = matcher.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -468,6 +470,7 @@ export function parseAutomationsConfig(json: unknown): AutomationListItem[] {
         id: matcher.id ?? `${eventName}-${index}`,
         event,
         matcherIndex: matcherIdx,
+        sessionId: matcher.sessionId,
         name: deriveAutomationName(eventName, matcher),
         summary: deriveAutomationSummary(eventName, matcher),
         enabled: matcher.enabled !== false,

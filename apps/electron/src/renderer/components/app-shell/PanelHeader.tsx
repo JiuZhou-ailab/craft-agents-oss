@@ -1,5 +1,5 @@
-// input: Panel title metadata, title alignment, optional title menus, leading controls, and right-side actions
-// output: Accessible centered or leading panel header chrome shared by app shell panels
+// input: Panel title metadata, title alignment, optional title menus, shell inset, leading controls, and right-side actions
+// output: Accessible screen-stable centered or leading header chrome shared by app shell panels
 // pos: Common header layout primitive for renderer panels
 
 /**
@@ -36,7 +36,7 @@ import { useState } from 'react'
 import { motion } from 'motion/react'
 import { MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useCompensateForStoplight } from '@/context/StoplightContext'
+import { useStoplightCompensation } from '@/context/StoplightContext'
 import { PANEL_SPRING } from './panel-constants'
 import {
   DropdownMenu,
@@ -95,8 +95,10 @@ export function PanelHeader({
   // Use context as fallback when prop is not explicitly set.
   // Skip stoplight compensation when leadingAction is present — the back button
   // occupies the space where traffic lights would be.
-  const contextCompensate = useCompensateForStoplight()
-  const shouldCompensate = leadingAction ? false : (compensateForStoplight ?? contextCompensate)
+  const stoplightCompensation = useStoplightCompensation()
+  const shouldCompensate = leadingAction
+    ? false
+    : (compensateForStoplight ?? stoplightCompensation.enabled)
 
   // Controlled dropdown state keeps the trigger styling in sync with Radix.
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -188,7 +190,7 @@ export function PanelHeader({
       initial={false}
       animate={{
         paddingLeft: shouldCompensate
-          ? `var(--panel-header-leading-inset, ${STOPLIGHT_PADDING}px)`
+          ? (stoplightCompensation.leadingInset ?? STOPLIGHT_PADDING)
           : basePadding,
       }}
       transition={PANEL_SPRING}

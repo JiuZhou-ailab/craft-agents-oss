@@ -13,7 +13,7 @@
  * - ~/.craft-agent/preferences.json - User preferences
  * - ~/.craft-agent/theme.json - App-level theme overrides
  * - ~/.craft-agent/themes/*.json - Preset theme files (app-level)
- * - ~/.craft-agent/sources/{slug}/config.json, guide.md, icon.* - Craft global sources
+ * - ~/.craft-agent/sources/{slug}/config.json, guide.md, permissions.json, icon.* - Craft global sources
  * - ~/.pi/agent/skills, ~/.agents/skills, ~/.craft-agent/skills - Pi user Skills
  * - ~/.craft-agent/workspaces/{slug}/ - Workspace directory (recursive)
  *   - .pi/skills and .agents/skills - Pi project Skills
@@ -489,16 +489,7 @@ export class ConfigWatcher {
       const watcher = watch(sourcesDir, { recursive: true }, (_eventType, filename) => {
         if (!filename) return;
 
-        const normalizedPath = filename.replace(/\\/g, '/');
-        const parts = normalizedPath.split('/');
-        const file = parts[1];
-
-        if (
-          parts.length === 1
-          || file === 'config.json'
-          || file === 'guide.md'
-          || (file && /^icon\.(svg|png|jpg|jpeg)$/i.test(file))
-        ) {
+        if (ConfigWatcher.shouldRefreshGlobalSourcePath(filename)) {
           ConfigWatcher.debounceGlobal('global-sources', () => {
             ConfigWatcher.forEachGlobalSubscriber(w => w.handleGlobalSourcesChange());
           });
@@ -510,6 +501,17 @@ export class ConfigWatcher {
     } catch (error) {
       debug('[ConfigWatcher] Error watching global sources directory:', label, error);
     }
+  }
+
+  private static shouldRefreshGlobalSourcePath(filename: string): boolean {
+    const normalizedPath = filename.replace(/\\/g, '/');
+    const parts = normalizedPath.split('/');
+    const file = parts[1];
+    return parts.length === 1
+      || file === 'config.json'
+      || file === 'guide.md'
+      || file === 'permissions.json'
+      || (!!file && /^icon\.(svg|png|jpg|jpeg)$/i.test(file));
   }
 
   private static watchGlobalSourcesDirOnce(): void {
@@ -626,6 +628,7 @@ export class ConfigWatcher {
    */
   private handleGlobalSourcesChange(): void {
     debug('[ConfigWatcher] Global sources changed');
+    permissionsConfigCache.invalidateAllSources();
     const allSources = loadWorkspaceSources(this.workspaceDir);
     this.callbacks.onSourcesListChange?.(allSources);
   }

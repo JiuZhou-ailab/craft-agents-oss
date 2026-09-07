@@ -39,6 +39,7 @@ function formatDuration(ms: number): string {
 // ============================================================================
 
 export interface AutomationEventTimelineProps {
+  workspaceId?: string
   entries: ExecutionEntry[]
   className?: string
   onReplay?: (automationId: string, event: string) => void
@@ -87,7 +88,7 @@ function CopyButton({ details }: { details: import('./types').WebhookDetails }) 
   )
 }
 
-export function AutomationEventTimeline({ entries, className, onReplay }: AutomationEventTimelineProps) {
+export function AutomationEventTimeline({ entries, workspaceId, className, onReplay }: AutomationEventTimelineProps) {
   const { t } = useTranslation()
   const { navigateToSession } = useNavigationActions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -145,7 +146,9 @@ export function AutomationEventTimeline({ entries, className, onReplay }: Automa
               {entry.sessionId && (
                 <button
                   className="shrink-0 text-[11px] text-accent hover:underline cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); navigateToSession(entry.sessionId!) }}
+                  onClick={(e) => { e.stopPropagation(); if (workspaceId) {
+                    void window.electronAPI.openUrl(`craftagents://workspace/${encodeURIComponent(workspaceId)}/allSessions/session/${encodeURIComponent(entry.sessionId!)}?window=focused`)
+                  } else { navigateToSession(entry.sessionId!) } }}
                 >
                   {t('automations.openSession')}
                 </button>

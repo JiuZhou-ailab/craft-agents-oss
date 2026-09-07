@@ -34,6 +34,7 @@ export const KEYS = {
   collapsedSessionGroups: 'collapsed-session-groups', // Collapsed group keys in session list
   activityRecentExpanded: 'activity-recent-expanded',
   activityProjectsExpanded: 'activity-projects-expanded',
+  activitySessionOrder: 'activity-session-order',
 
   // Focus mode
   focusModeEnabled: 'focus-mode-enabled',

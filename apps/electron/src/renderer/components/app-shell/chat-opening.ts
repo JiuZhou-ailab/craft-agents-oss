@@ -1,5 +1,5 @@
 // input: Workspace identity and real project content state for an empty chat session
-// output: Folder-first opening copy plus real workspace commands
+// output: Unified opening copy, rotating tips, prompt starters, and real workspace commands
 // pos: Product contract for the main chat empty state
 
 export type ChatOpeningCommand = 'import-files' | 'create-file' | 'open-skills'
@@ -15,10 +15,15 @@ export interface ChatOpeningCommandAction extends ChatOpeningActionBase {
   command: ChatOpeningCommand
 }
 
-export type ChatOpeningAction = ChatOpeningCommandAction
+export interface ChatOpeningPromptAction extends ChatOpeningActionBase {
+  kind: 'prompt'
+  promptKey: string
+}
+
+export type ChatOpeningAction = ChatOpeningCommandAction | ChatOpeningPromptAction
 
 export interface ChatOpeningSection {
-  id: 'project'
+  id: 'project' | 'tools'
   labelKey: string
   actions: ChatOpeningAction[]
 }
@@ -52,8 +57,22 @@ function commandAction(
   }
 }
 
-const GENERAL_ACTIONS: ChatOpeningAction[] = []
-const GENERAL_TIP_KEYS = [
+function promptAction(id: string): ChatOpeningPromptAction {
+  const keyPrefix = `chatOpening.${id}`
+  return {
+    id,
+    kind: 'prompt',
+    labelKey: `${keyPrefix}.label`,
+    descriptionKey: `${keyPrefix}.desc`,
+    promptKey: `${keyPrefix}.prompt`,
+  }
+}
+
+const GENERAL_ACTIONS: ChatOpeningAction[] = [
+  promptAction('tools.skill'),
+  promptAction('tools.tutorial'),
+]
+const SHARED_TIP_KEYS = [
   'chatInput.placeholder.mention',
   'chatInput.placeholder.shiftTab',
   'chatInput.placeholder.labels',
@@ -111,11 +130,11 @@ export function resolveChatOpeningPrompt({
         ? 'chatOpening.project.readyHint'
         : 'chatOpening.project.emptyHint'
       : 'chatOpening.hint',
-    tipKeys: isProject ? [] : GENERAL_TIP_KEYS,
+    tipKeys: SHARED_TIP_KEYS,
     sections: actions.length > 0
       ? [{
-          id: 'project',
-          labelKey: 'chatOpening.section.project',
+          id: isProject ? 'project' : 'tools',
+          labelKey: isProject ? 'chatOpening.section.project' : 'chatOpening.section.tools',
           actions,
         }]
       : [],

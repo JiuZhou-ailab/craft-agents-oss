@@ -32,7 +32,6 @@ interface CtxOverrides {
   getManagedApiAccessToken?: SessionToolContext['getManagedApiAccessToken'];
   testApiSource?: SessionToolContext['testApiSource'];
   isIconUrl?: SessionToolContext['isIconUrl'];
-  isSourceDefinitionReadOnly?: SessionToolContext['isSourceDefinitionReadOnly'];
   isSourceExecutionAllowed?: SessionToolContext['isSourceExecutionAllowed'];
 }
 
@@ -70,6 +69,10 @@ function createCtx(workspacePath: string, overrides: CtxOverrides = {}): Session
       if (!existsSync(configPath)) return null;
       return JSON.parse(readFileSync(configPath, 'utf-8')) as SourceConfig;
     },
+    resolveSourcePath: (slug: string) => {
+      const sourcePath = join(workspacePath, 'sources', slug);
+      return existsSync(sourcePath) ? sourcePath : null;
+    },
     saveSourceConfig: (source: SourceConfig) => {
       saved.last = source;
       const configPath = join(workspacePath, 'sources', source.slug, 'config.json');
@@ -83,7 +86,6 @@ function createCtx(workspacePath: string, overrides: CtxOverrides = {}): Session
     getManagedApiAccessToken: overrides.getManagedApiAccessToken,
     testApiSource: overrides.testApiSource,
     isIconUrl: overrides.isIconUrl,
-    isSourceDefinitionReadOnly: overrides.isSourceDefinitionReadOnly,
     isSourceExecutionAllowed: overrides.isSourceExecutionAllowed ?? (() => true),
     activateSourceInSession: overrides.activateSourceInSession,
   } as unknown as SessionToolContext;
@@ -280,31 +282,6 @@ describe('source_test auto-enable', () => {
     ) as SourceConfig;
     // saveSourceConfig still runs (metadata update), but enabled flag must remain false.
     expect(persisted.enabled).toBe(false);
-  });
-
-  it('does not enable or activate an externally owned disabled definition', async () => {
-    writeSource(tempDir, 'shared-kb', { enabled: false });
-
-    let activated = false;
-    const ctx = createCtx(tempDir, {
-      validateStdioMcpConnection: stubMcpOk(),
-      isSourceDefinitionReadOnly: () => true,
-      activateSourceInSession: async () => {
-        activated = true;
-        return { ok: true };
-      },
-    });
-
-    const result = await handleSourceTest(ctx, { sourceSlug: 'shared-kb' });
-    const text = result.content[0]?.text ?? '';
-    const persisted = JSON.parse(
-      readFileSync(join(tempDir, 'sources', 'shared-kb', 'config.json'), 'utf-8')
-    ) as SourceConfig;
-
-    expect(activated).toBe(false);
-    expect(persisted.enabled).toBe(false);
-    expect(text).toContain('shared definition unchanged');
-    expect(text).toContain('remains disabled because its shared definition is read-only');
   });
 
   it('validation errors skip auto-enable entirely (even when autoEnable is default)', async () => {

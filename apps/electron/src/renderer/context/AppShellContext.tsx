@@ -15,6 +15,7 @@ import { createContext, useContext, useCallback } from 'react'
 import { useAtomValue } from 'jotai'
 import type { ChatDisplayHandle } from '@/components/app-shell/ChatDisplay'
 import type { ChatOpeningCommand } from '@/components/app-shell/chat-opening'
+import type { SessionSendResult } from '@/contexts/session-creation-transaction'
 import type { MentionFileReference } from '@/components/ui/mention-menu'
 import type {
   Session,
@@ -94,18 +95,20 @@ export interface AppShellContextType {
 
   // Session callbacks
   onCreateSession: (workspaceId: string, options?: import('../../shared/types').CreateSessionOptions) => Promise<Session>
-  onSendMessage: (sessionId: string, message: string, attachments?: FileAttachment[], skillSlugs?: string[], badges?: import('@craft-agent/core').ContentBadge[], options?: Pick<SendMessageOptions, 'oneTimeContext' | 'workspaceFreshnessContext' | 'hideUserMessage'> & { forceQueuedUserMessage?: boolean }) => boolean | void | Promise<boolean | void>
-  onRenameSession: (sessionId: string, name: string) => void
+  onSendMessage: (sessionId: string, message: string, attachments?: FileAttachment[], skillSlugs?: string[], badges?: import('@craft-agent/core').ContentBadge[], options?: Pick<SendMessageOptions, 'oneTimeContext' | 'workspaceFreshnessContext' | 'hideUserMessage'> & { forceQueuedUserMessage?: boolean }) => SessionSendResult | void | Promise<SessionSendResult | void>
+  onRenameSession: (sessionId: string, name: string, workspaceId?: string) => void
   onFlagSession: (sessionId: string) => void
   onUnflagSession: (sessionId: string) => void
-  onArchiveSession: (sessionId: string) => void
+  onPinSession: (sessionId: string, workspaceId?: string) => Promise<boolean>
+  onUnpinSession: (sessionId: string, workspaceId?: string) => Promise<boolean>
+  onArchiveSession: (sessionId: string, workspaceId?: string) => void
   onUnarchiveSession: (sessionId: string) => void
   onMarkSessionRead: (sessionId: string) => void
   onMarkSessionUnread: (sessionId: string) => void
   /** Track which session user is viewing (for unread state machine) */
   onSetActiveViewingSession: (sessionId: string) => void
   onSessionStatusChange: (sessionId: string, state: SessionStatus) => void
-  onDeleteSession: (sessionId: string, skipConfirmation?: boolean) => Promise<boolean>
+  onDeleteSession: (sessionId: string, skipConfirmation?: boolean, workspaceId?: string) => Promise<boolean>
 
   // Permission handling
   onRespondToPermission?: (

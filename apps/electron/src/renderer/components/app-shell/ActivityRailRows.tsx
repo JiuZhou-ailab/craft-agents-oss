@@ -1,6 +1,6 @@
-// input: Session/workspace metadata, project disclosure state, runtime indicators, and row callbacks
-// output: Compact free-conversation and project-tree rows with low-noise visual and accessible runtime status
-// pos: Visual row primitives for ActivityRail; owns row-level hover, loading, status, and context actions
+// input: Ordered session/workspace metadata, project disclosure state, runtime indicators, and row callbacks
+// output: Draggable session groups with quick pin/archive actions and compact project rows with runtime status
+// pos: Visual primitives for ActivityRail; owns row grouping, interaction affordances, and context actions
 
 import * as React from 'react'
 import {
@@ -13,6 +13,8 @@ import {
   Loader2,
   MoreHorizontal,
   Pencil,
+  Pin,
+  PinOff,
   ShieldAlert,
   SquarePen,
   Trash2,
@@ -41,13 +43,24 @@ import { formatRelativeTimestamp } from '@/lib/display-format'
 import { getSessionTitle } from '@/utils/session'
 import { deriveSessionRuntimeStatus } from '@craft-agent/shared/statuses/runtime'
 import type { Workspace } from '../../../shared/types'
+import { partitionSessionMetas } from './activity-rail-session-order'
 
 const PROJECT_SESSION_LIMIT = 5
 
 export interface ActivityRailSessionActions {
-  onRename: (sessionId: string, name: string) => void
-  onArchive: (sessionId: string) => void
-  onDelete: (sessionId: string) => void
+  onRename: (sessionId: string, name: string, workspaceId: string) => void | Promise<void>
+  onArchive: (sessionId: string, workspaceId: string) => void | Promise<void>
+  onDelete: (sessionId: string, workspaceId: string) => void | Promise<void>
+  onPin?: (sessionId: string, workspaceId: string) => Promise<boolean>
+  onUnpin?: (sessionId: string, workspaceId: string) => Promise<boolean>
+}
+
+export interface ActivityRailSessionDragHandlers {
+  draggingSessionId: string | null
+  onDragStart: (event: React.DragEvent<HTMLElement>, meta: SessionMeta) => void
+  onDragEnd: () => void
+  onDropOnSession: (event: React.DragEvent<HTMLElement>, target: SessionMeta) => void
+  onDropOnGroup: (event: React.DragEvent<HTMLElement>, fixed: boolean) => void
 }
 
 export function RecentConversationRow({
@@ -58,6 +71,7 @@ export function RecentConversationRow({
   sessionActions,
   onRename,
   nested = false,
+  dragHandlers,
 }: {
   meta: SessionMeta
   active: boolean
@@ -66,6 +80,7 @@ export function RecentConversationRow({
   sessionActions?: ActivityRailSessionActions
   onRename: () => void
   nested?: boolean
+  dragHandlers?: ActivityRailSessionDragHandlers
 }) {
   const hasPendingPrompt = useAtomValue(hasPendingPromptAtomFamily(meta.id))
   const runtimeStatus = deriveSessionRuntimeStatus({
@@ -101,8 +116,10 @@ export function RecentConversationRow({
   const row = (
     <div
       data-session-id={meta.id}
+      data-session-fixed={meta.isPinned ? 'true' : 'false'}
       className={cn(
-        'flex w-full min-w-0 items-center rounded-[6px] hover:bg-foreground/[0.045]',
+        'group/session-row flex w-full min-w-0 items-center rounded-[6px] hover:bg-foreground/[0.045]',
+        dragHandlers?.draggingSessionId === meta.id && 'opacity-45',
         active && 'bg-foreground/[0.07] text-foreground',
       )}
     >
@@ -111,9 +128,16 @@ export function RecentConversationRow({
         aria-label={getSessionTitle(meta)}
         aria-current={active ? 'page' : undefined}
         disabled={disabled}
+        draggable={!disabled && Boolean(dragHandlers)}
+        data-session-drag-handle={dragHandlers ? 'true' : undefined}
+        onDragStart={dragHandlers ? event => dragHandlers.onDragStart(event, meta) : undefined}
+        onDragOver={dragHandlers ? event => event.preventDefault() : undefined}
+        onDrop={dragHandlers ? event => dragHandlers.onDropOnSession(event, meta) : undefined}
+        onDragEnd={dragHandlers?.onDragEnd}
         className={cn(
           'flex min-w-0 flex-1 items-center gap-1.5 rounded-[6px] text-left outline-none',
           'focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-default disabled:opacity-60',
+          dragHandlers && !disabled && 'cursor-grab active:cursor-grabbing',
           nested ? 'py-1.5 pl-[30px] pr-2' : 'px-2 py-1.5',
         )}
         onClick={onSelect}
@@ -126,9 +150,37 @@ export function RecentConversationRow({
           <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">{statusIndicator}</span>
         ) : null}
         {!nested ? (
-          <span className="shrink-0 text-[11px] text-muted-foreground/70">{formatRelativeTimestamp(meta.lastMessageAt, '')}</span>
+          <span className={cn('shrink-0 text-[11px] leading-4 text-muted-foreground/70', sessionActions && 'group-hover/session-row:hidden group-focus-within/session-row:hidden')}>{formatRelativeTimestamp(meta.lastMessageAt, '')}</span>
         ) : null}
       </button>
+      {sessionActions ? (
+        <div className="hidden shrink-0 items-center gap-0.5 pr-1 group-hover/session-row:flex group-focus-within/session-row:flex">
+          {(meta.isPinned ? sessionActions.onUnpin : sessionActions.onPin) ? (
+            <button
+              type="button"
+              data-session-action="pin"
+              title={meta.isPinned ? '取消固定' : '固定会话'}
+              aria-label={meta.isPinned ? '取消固定' : '固定会话'}
+              disabled={disabled}
+              className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+              onClick={() => { void (meta.isPinned ? sessionActions.onUnpin : sessionActions.onPin)?.(meta.id, meta.workspaceId) }}
+            >
+              {meta.isPinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            data-session-action="archive"
+            title="归档聊天"
+            aria-label="归档聊天"
+            disabled={disabled}
+            className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            onClick={() => sessionActions.onArchive(meta.id, meta.workspaceId)}
+          >
+            <Archive className="size-3.5" />
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 
@@ -153,14 +205,25 @@ export function RecentConversationRow({
           <Copy className="h-3.5 w-3.5" />
           复制对话 ID
         </StyledContextMenuItem>
-        <StyledContextMenuItem onSelect={() => sessionActions.onArchive(meta.id)}>
+        {meta.isPinned && sessionActions.onUnpin ? (
+          <StyledContextMenuItem onSelect={() => { void sessionActions.onUnpin?.(meta.id, meta.workspaceId) }}>
+            <PinOff className="h-3.5 w-3.5" />
+            取消固定
+          </StyledContextMenuItem>
+        ) : sessionActions.onPin ? (
+          <StyledContextMenuItem onSelect={() => { void sessionActions.onPin?.(meta.id, meta.workspaceId) }}>
+            <Pin className="h-3.5 w-3.5" />
+            固定会话
+          </StyledContextMenuItem>
+        ) : null}
+        <StyledContextMenuItem onSelect={() => sessionActions.onArchive(meta.id, meta.workspaceId)}>
           <Archive className="h-3.5 w-3.5" />
           归档
         </StyledContextMenuItem>
         <StyledContextMenuSeparator />
         <StyledContextMenuItem
           variant="destructive"
-          onSelect={() => sessionActions.onDelete(meta.id)}
+          onSelect={() => sessionActions.onDelete(meta.id, meta.workspaceId)}
         >
           <Trash2 className="h-3.5 w-3.5" />
           删除
@@ -170,6 +233,116 @@ export function RecentConversationRow({
   ) : row
 
   return rowWithActions
+}
+
+export function ActivityRailSessionList({
+  sessions,
+  activeSessionId,
+  disabled,
+  onSelectSession,
+  sessionActions,
+  onRenameSession,
+  dragHandlers,
+  nested = false,
+  regularLimit = PROJECT_SESSION_LIMIT,
+  showAll: controlledShowAll,
+  onShowAllChange,
+  emptyLabel = '暂无对话',
+}: {
+  sessions: SessionMeta[]
+  activeSessionId: string | null
+  disabled: boolean
+  onSelectSession?: (meta: SessionMeta) => void
+  sessionActions?: ActivityRailSessionActions
+  onRenameSession: (meta: SessionMeta) => void
+  dragHandlers?: ActivityRailSessionDragHandlers
+  nested?: boolean
+  regularLimit?: number
+  showAll?: boolean
+  onShowAllChange?: (showAll: boolean) => void
+  emptyLabel?: string
+}) {
+  const [internalShowAll, setInternalShowAll] = React.useState(false)
+  const showAll = controlledShowAll ?? internalShowAll
+  const setShowAll = onShowAllChange ?? setInternalShowAll
+  const { fixed, regular } = partitionSessionMetas(sessions)
+  const visibleRegular = showAll ? regular : regular.slice(0, regularLimit)
+  const hasMoreRegular = regular.length > regularLimit
+  const showFixedGroup = fixed.length > 0 || Boolean(dragHandlers?.draggingSessionId)
+  const showRegularGroup = regular.length > 0 || Boolean(dragHandlers?.draggingSessionId)
+  const groupLabelClass = nested
+    ? 'py-1 pl-[30px] pr-2'
+    : 'px-2 py-1'
+
+  const renderSession = (meta: SessionMeta) => (
+    <RecentConversationRow
+      key={meta.id}
+      meta={meta}
+      active={activeSessionId === meta.id}
+      disabled={disabled}
+      onSelect={() => onSelectSession?.(meta)}
+      sessionActions={sessionActions}
+      onRename={() => onRenameSession(meta)}
+      dragHandlers={dragHandlers}
+      nested={nested}
+    />
+  )
+
+  if (sessions.length === 0) {
+    return (
+      <div className={cn(
+        'py-1.5 text-[11px] text-muted-foreground/60',
+        nested ? 'pl-[30px] pr-2' : 'px-3 py-3 text-xs',
+      )}>
+        {emptyLabel}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {showFixedGroup ? (
+        <div
+          data-session-group="fixed"
+          onDragOver={dragHandlers ? event => event.preventDefault() : undefined}
+          onDrop={dragHandlers ? event => dragHandlers.onDropOnGroup(event, true) : undefined}
+        >
+          <div className={cn('flex items-center gap-1 text-[10px] font-medium text-muted-foreground/65', groupLabelClass)}>
+            <Pin className="size-3" />
+            <span>固定会话</span>
+          </div>
+          {fixed.map(renderSession)}
+        </div>
+      ) : null}
+      {showRegularGroup ? (
+        <div
+          data-session-group="regular"
+          onDragOver={dragHandlers ? event => event.preventDefault() : undefined}
+          onDrop={dragHandlers ? event => dragHandlers.onDropOnGroup(event, false) : undefined}
+        >
+          {showFixedGroup ? (
+            <div className={cn('text-[10px] font-medium text-muted-foreground/65', groupLabelClass)}>普通会话</div>
+          ) : null}
+          {visibleRegular.map(renderSession)}
+        </div>
+      ) : null}
+      {hasMoreRegular ? (
+        <button
+          type="button"
+          aria-expanded={showAll}
+          className={cn(
+            'w-full rounded-[6px] py-1.5 pr-2 text-left text-[11px] text-muted-foreground/65 outline-none transition-colors hover:bg-foreground/[0.045] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring',
+            nested ? 'pl-[30px]' : 'pl-2',
+          )}
+          onClick={() => setShowAll(!showAll)}
+        >
+          {showAll
+            ? (nested ? '收起显示' : '收起对话')
+            : (nested ? `展开显示 ${regular.length} 个普通会话` : `显示全部 ${regular.length} 个普通会话`)}
+        </button>
+      ) : null}
+    </>
+  )
 }
 
 export function ProjectFolderRow({
@@ -188,6 +361,7 @@ export function ProjectFolderRow({
   onSelectSession,
   onCreateConversation,
   sessionActions,
+  sessionDragHandlers,
   onRenameSession,
   onOpenInNewWindow,
   onRelink,
@@ -211,6 +385,7 @@ export function ProjectFolderRow({
   onSelectSession?: (sessionId: string) => void
   onCreateConversation?: () => void | Promise<void>
   sessionActions?: ActivityRailSessionActions
+  sessionDragHandlers?: ActivityRailSessionDragHandlers
   onRenameSession?: (meta: SessionMeta) => void
   onOpenInNewWindow?: () => void
   onRelink?: () => void
@@ -220,9 +395,6 @@ export function ProjectFolderRow({
   onRemove?: () => void
 }) {
   const { t } = useTranslation()
-  const [showAllSessions, setShowAllSessions] = React.useState(false)
-  const visibleSessions = showAllSessions ? sessions : sessions?.slice(0, PROJECT_SESSION_LIMIT)
-  const hasMoreSessions = (sessions?.length ?? 0) > PROJECT_SESSION_LIMIT
 
   return (
     <div>
@@ -333,33 +505,17 @@ export function ProjectFolderRow({
         <div className="mt-0.5 space-y-0.5" data-testid="activity-project-conversations">
           {loadingSessions && !sessions ? (
             <div className="sr-only" role="status">正在加载对话…</div>
-          ) : visibleSessions && visibleSessions.length > 0 ? (
-            <>
-              {visibleSessions.map((meta) => (
-                <RecentConversationRow
-                  key={meta.id}
-                  meta={meta}
-                  active={activeSessionId === meta.id}
-                  disabled={!onSelectSession}
-                  onSelect={() => onSelectSession?.(meta.id)}
-                  sessionActions={sessionActions}
-                  onRename={() => onRenameSession?.(meta)}
-                  nested
-                />
-              ))}
-              {hasMoreSessions ? (
-                <button
-                  type="button"
-                  aria-expanded={showAllSessions}
-                  className="w-full rounded-[6px] py-1.5 pl-[30px] pr-2 text-left text-[11px] text-muted-foreground/65 outline-none transition-colors hover:bg-foreground/[0.045] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
-                  onClick={() => setShowAllSessions(value => !value)}
-                >
-                  {showAllSessions ? '收起显示' : '展开显示'}
-                </button>
-              ) : null}
-            </>
           ) : (
-            <div className="py-1.5 pl-[30px] pr-2 text-[11px] text-muted-foreground/60">暂无对话</div>
+            <ActivityRailSessionList
+              sessions={sessions ?? []}
+              activeSessionId={activeSessionId}
+              disabled={!onSelectSession}
+              onSelectSession={meta => onSelectSession?.(meta.id)}
+              sessionActions={sessionActions}
+              onRenameSession={meta => onRenameSession?.(meta)}
+              dragHandlers={sessionDragHandlers}
+              nested
+            />
           )}
         </div>
       ) : null}
