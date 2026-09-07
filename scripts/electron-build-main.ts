@@ -12,6 +12,7 @@ import { existsSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
 import { validateDesktopAuthBuildEnv } from "./build/desktop-auth-build-config";
 import { buildPiAgentServerBinary } from "./build/pi-agent-server";
+import { waitForFileStable } from "./build/common";
 import { loadEnvFiles } from "./env-loader";
 
 const ROOT_DIR = join(import.meta.dir, "..");
@@ -68,35 +69,6 @@ function getBuildDefines(): string[] {
     const value = process.env[varName] || "";
     return `--define:process.env.${varName}="${value}"`;
   });
-}
-
-// Wait for file to stabilize (no size changes)
-async function waitForFileStable(filePath: string, timeoutMs = 10000): Promise<boolean> {
-  const startTime = Date.now();
-  let lastSize = -1;
-  let stableCount = 0;
-
-  while (Date.now() - startTime < timeoutMs) {
-    if (!existsSync(filePath)) {
-      await Bun.sleep(100);
-      continue;
-    }
-
-    const stats = statSync(filePath);
-    if (stats.size === lastSize) {
-      stableCount++;
-      if (stableCount >= 3) {
-        return true;
-      }
-    } else {
-      stableCount = 0;
-      lastSize = stats.size;
-    }
-
-    await Bun.sleep(100);
-  }
-
-  return false;
 }
 
 // Verify a JavaScript file is syntactically valid

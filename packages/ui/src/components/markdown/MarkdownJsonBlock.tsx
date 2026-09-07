@@ -14,64 +14,10 @@
 
 import * as React from 'react'
 import JsonView from '@uiw/react-json-view'
-import { vscodeTheme } from '@uiw/react-json-view/vscode'
-import { githubLightTheme } from '@uiw/react-json-view/githubLight'
+import { deepParseJson, craftAgentDarkTheme, craftAgentLightTheme } from '../../lib/json-view'
 import { Copy, Check } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { CodeBlock } from './CodeBlock'
-
-// ── Themes (same as JSONPreviewOverlay) ────────────────────────────────────
-// Transparent background so the container's bg-muted/30 shows through,
-// and CSS variable font so it matches the app's monospace font.
-
-const craftAgentDarkTheme = {
-  ...vscodeTheme,
-  '--w-rjv-font-family': 'var(--font-mono, ui-monospace, monospace)',
-  '--w-rjv-background-color': 'transparent',
-}
-
-const craftAgentLightTheme = {
-  ...githubLightTheme,
-  '--w-rjv-font-family': 'var(--font-mono, ui-monospace, monospace)',
-  '--w-rjv-background-color': 'transparent',
-}
-
-// ── Deep parse helper (same as JSONPreviewOverlay) ─────────────────────────
-// Recursively parse stringified JSON within JSON values so nested objects
-// like {"result": "{\"nested\": \"value\"}"} display as expandable nodes.
-
-function deepParseJson(value: unknown): unknown {
-  if (value === null || value === undefined) return value
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if (
-      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-      (trimmed.startsWith('[') && trimmed.endsWith(']'))
-    ) {
-      try {
-        return deepParseJson(JSON.parse(trimmed))
-      } catch {
-        return value
-      }
-    }
-    return value
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(deepParseJson)
-  }
-
-  if (typeof value === 'object') {
-    const result: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(value)) {
-      result[key] = deepParseJson(val)
-    }
-    return result
-  }
-
-  return value
-}
 
 // ── Error boundary ────────────────────────────────────────────────────────
 

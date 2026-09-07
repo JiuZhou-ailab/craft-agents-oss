@@ -3,8 +3,7 @@
 // pos: Canonical detail surface for a single chat tool invocation
 import { useMemo } from 'react'
 import JsonView from '@uiw/react-json-view'
-import { vscodeTheme } from '@uiw/react-json-view/vscode'
-import { githubLightTheme } from '@uiw/react-json-view/githubLight'
+import { deepParseJson, craftAgentDarkTheme, craftAgentLightTheme } from '../../lib/json-view'
 import { Layers, Check, Copy } from 'lucide-react'
 import { PreviewOverlay } from './PreviewOverlay'
 import { ContentFrame } from './ContentFrame'
@@ -24,40 +23,6 @@ export interface ActivityCardsOverlayProps {
   theme?: 'light' | 'dark'
   onOpenUrl?: (url: string) => void
   onOpenFile?: (path: string) => void
-}
-
-const craftAgentDarkTheme = {
-  ...vscodeTheme,
-  '--w-rjv-font-family': 'var(--font-mono, ui-monospace, monospace)',
-  '--w-rjv-background-color': 'transparent',
-}
-
-const craftAgentLightTheme = {
-  ...githubLightTheme,
-  '--w-rjv-font-family': 'var(--font-mono, ui-monospace, monospace)',
-  '--w-rjv-background-color': 'transparent',
-}
-
-function deepParseJson(value: unknown): unknown {
-  if (value === null || value === undefined) return value
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-      try {
-        return deepParseJson(JSON.parse(trimmed))
-      } catch {
-        return value
-      }
-    }
-    return value
-  }
-  if (Array.isArray(value)) return value.map(deepParseJson)
-  if (typeof value === 'object') {
-    const result: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(value)) result[k] = deepParseJson(v)
-    return result
-  }
-  return value
 }
 
 export function ActivityCardsOverlay({

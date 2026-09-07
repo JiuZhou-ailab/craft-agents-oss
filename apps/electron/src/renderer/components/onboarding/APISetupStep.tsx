@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { Check, CreditCard, Key, Cpu } from "lucide-react"
 import { StepFormLayout, BackButton, ContinueButton } from "./primitives"
-import type { LlmAuthType, LlmProviderType } from "@craft-agent/shared/config/llm-connections"
+import type { LlmProviderType } from "@craft-agent/shared/config/llm-connections"
 
 /** Provider segment for the segmented control */
 export type ProviderSegment = 'anthropic' | 'pi'
@@ -36,27 +36,6 @@ export type ApiSetupMethod =
   | 'pi_api_key'
 
 export type CredentialSetupMethod = ApiSetupMethod
-
-/**
- * Map user-owned credential setup methods to the underlying connection types.
- */
-export function apiSetupMethodToConnectionTypes(method: CredentialSetupMethod): {
-  providerType: LlmProviderType;
-  authType: LlmAuthType;
-} {
-  switch (method) {
-    case 'claude_oauth':
-      return { providerType: 'anthropic', authType: 'oauth' };
-    case 'anthropic_api_key':
-      return { providerType: 'anthropic', authType: 'api_key' };
-    case 'pi_chatgpt_oauth':
-      return { providerType: 'pi', authType: 'oauth' };
-    case 'pi_copilot_oauth':
-      return { providerType: 'pi', authType: 'oauth' };
-    case 'pi_api_key':
-      return { providerType: 'pi', authType: 'api_key' };
-  }
-}
 
 interface ApiSetupOption {
   id: CredentialSetupMethod

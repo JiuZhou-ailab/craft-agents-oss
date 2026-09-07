@@ -8,7 +8,7 @@ import { spawn, type Subprocess } from "bun";
 import { existsSync, rmSync, cpSync, statSync, mkdirSync } from "fs";
 import { join, basename } from "path";
 import * as esbuild from "esbuild";
-import { downloadUv, type Platform, type Arch } from "./build/common";
+import { downloadUv, waitForFileStable, type Platform, type Arch } from "./build/common";
 import { buildPiAgentServerBinary } from "./build/pi-agent-server";
 import { stageSubprocessResources } from "./build/resource-staging";
 import { loadEnvFiles } from "./env-loader";
@@ -412,36 +412,6 @@ async function verifyJsFile(filePath: string): Promise<{ valid: boolean; error?:
   } catch (err) {
     return { valid: false, error: String(err) };
   }
-}
-
-// Wait for file to stabilize (no size changes)
-async function waitForFileStable(filePath: string, timeoutMs = 10000): Promise<boolean> {
-  const startTime = Date.now();
-  let lastSize = -1;
-  let stableCount = 0;
-
-  while (Date.now() - startTime < timeoutMs) {
-    if (!existsSync(filePath)) {
-      await Bun.sleep(100);
-      continue;
-    }
-
-    const stats = statSync(filePath);
-    if (stats.size === lastSize) {
-      stableCount++;
-      // File size unchanged for 3 checks (300ms) - consider it stable
-      if (stableCount >= 3) {
-        return true;
-      }
-    } else {
-      stableCount = 0;
-      lastSize = stats.size;
-    }
-
-    await Bun.sleep(100);
-  }
-
-  return false;
 }
 
 async function main(): Promise<void> {

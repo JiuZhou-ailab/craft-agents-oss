@@ -8,54 +8,9 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import JsonView from '@uiw/react-json-view'
+import { deepParseJson, craftAgentDarkTheme, craftAgentLightTheme } from '../../lib/json-view'
 import { ContentFrame } from './ContentFrame'
 
-/**
- * Recursively parse stringified JSON within JSON values.
- * Handles nested patterns like {"result": "{\"nested\": \"value\"}"}
- * so they display as expandable tree nodes instead of plain strings.
- */
-function deepParseJson(value: unknown): unknown {
-  // Handle null/undefined
-  if (value === null || value === undefined) return value
-
-  // If it's a string, try to parse it as JSON
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    if (
-      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-      (trimmed.startsWith('[') && trimmed.endsWith(']'))
-    ) {
-      try {
-        // Recursively parse the result in case of multiple nesting levels
-        return deepParseJson(JSON.parse(trimmed))
-      } catch {
-        // Not valid JSON, return original string
-        return value
-      }
-    }
-    return value
-  }
-
-  // If it's an array, recursively process each element
-  if (Array.isArray(value)) {
-    return value.map(deepParseJson)
-  }
-
-  // If it's an object, recursively process each property
-  if (typeof value === 'object') {
-    const result: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(value)) {
-      result[key] = deepParseJson(val)
-    }
-    return result
-  }
-
-  // Primitives (number, boolean) - return as-is
-  return value
-}
-import { vscodeTheme } from '@uiw/react-json-view/vscode'
-import { githubLightTheme } from '@uiw/react-json-view/githubLight'
 import { Braces, Copy, Check } from 'lucide-react'
 import { PreviewOverlay } from './PreviewOverlay'
 
@@ -76,22 +31,6 @@ export interface JSONPreviewOverlayProps {
   error?: string
   /** Render inline without dialog (for playground) */
   embedded?: boolean
-}
-
-/**
- * Custom theme that adapts to our app's CSS variables.
- * Falls back to VS Code dark theme colors for JSON-specific styling.
- */
-const craftAgentDarkTheme = {
-  ...vscodeTheme,
-  '--w-rjv-font-family': 'var(--font-mono, ui-monospace, monospace)',
-  '--w-rjv-background-color': 'transparent',
-}
-
-const craftAgentLightTheme = {
-  ...githubLightTheme,
-  '--w-rjv-font-family': 'var(--font-mono, ui-monospace, monospace)',
-  '--w-rjv-background-color': 'transparent',
 }
 
 export function JSONPreviewOverlay({

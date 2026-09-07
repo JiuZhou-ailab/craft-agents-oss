@@ -6,6 +6,7 @@ import { $ } from 'bun';
 import { execSync } from 'child_process';
 import {
   existsSync,
+  statSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -23,6 +24,35 @@ import {
   getPiAgentServerBinaryName,
   getPiAgentServerOutputPath,
 } from './pi-agent-server.ts';
+
+// Wait for file to stabilize (no size changes)
+export async function waitForFileStable(filePath: string, timeoutMs = 10000): Promise<boolean> {
+  const startTime = Date.now();
+  let lastSize = -1;
+  let stableCount = 0;
+
+  while (Date.now() - startTime < timeoutMs) {
+    if (!existsSync(filePath)) {
+      await Bun.sleep(100);
+      continue;
+    }
+
+    const stats = statSync(filePath);
+    if (stats.size === lastSize) {
+      stableCount++;
+      if (stableCount >= 3) {
+        return true;
+      }
+    } else {
+      stableCount = 0;
+      lastSize = stats.size;
+    }
+
+    await Bun.sleep(100);
+  }
+
+  return false;
+}
 
 export type Platform = 'darwin' | 'win32' | 'linux';
 export type Arch = 'x64' | 'arm64';

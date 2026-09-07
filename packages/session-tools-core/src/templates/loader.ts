@@ -1,7 +1,7 @@
 /**
  * Template Loader
  *
- * Discovers and loads HTML templates from source directories.
+ * Loads HTML templates from source directories.
  * Parses self-describing header comments for metadata and validation.
  *
  * Template header format:
@@ -15,7 +15,7 @@
  */
 
 import { join } from 'node:path';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 // ============================================================
 // Types
@@ -130,53 +130,6 @@ export function loadTemplate(sourcePath: string, templateId: string): LoadedTemp
   } catch {
     return null;
   }
-}
-
-/**
- * List all available templates for a source.
- *
- * @param sourcePath - Absolute path to the source directory
- * @returns Array of template metadata (without content, for efficiency)
- */
-export function listTemplates(sourcePath: string): TemplateMeta[] {
-  const templatesDir = join(sourcePath, 'templates');
-
-  if (!existsSync(templatesDir)) {
-    return [];
-  }
-
-  const templates: TemplateMeta[] = [];
-
-  try {
-    const files = readdirSync(templatesDir).filter(f => f.endsWith('.html'));
-
-    for (const file of files) {
-      const filePath = join(templatesDir, file);
-      try {
-        const content = readFileSync(filePath, 'utf-8');
-        const meta = parseTemplateHeader(content);
-        if (meta) {
-          templates.push(meta);
-        } else {
-          // File without header — use filename as ID
-          const id = file.replace(/\.html$/, '');
-          templates.push({
-            id,
-            name: id,
-            description: '',
-            required: [],
-            optional: [],
-          });
-        }
-      } catch {
-        // Skip unreadable files
-      }
-    }
-  } catch {
-    // Templates dir not readable
-  }
-
-  return templates;
 }
 
 // ============================================================

@@ -14,6 +14,7 @@ TypeScript build/dev entrypoints.
 - `environment-contract.test.ts` - regression tests for env-var lifecycle boundaries.
 - `electron-package-size-config.test.ts` - regression tests for Electron package-size inputs.
 - `electron-main-build-config.test.ts` - regression tests for Electron main process bundling constraints.
+- `file-stability.test.ts` - checks shared build-output stabilization and timeout behavior.
 - `linux.ts` - Linux packaging helpers.
 - `macos-release-config.test.ts` - regression tests for signed/notarized macOS release configuration.
 - `macos-keychain-password.test.ts` - verifies the installed signing dependency separates certificate and temporary keychain passwords without accessing a real keychain; see `../../patches/README.md`.
