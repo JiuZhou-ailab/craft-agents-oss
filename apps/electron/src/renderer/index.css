@@ -104,8 +104,8 @@
   --destructive-rgb: 180, 60, 50;           /* RGB for shadow-tinted */
 
   /* === SHADOW OPACITY (light mode = subtle, dark mode = stronger) === */
-  --shadow-border-opacity: 0.07;            /* Border ring opacity */
-  --shadow-blur-opacity: 0.055;             /* Blur/spread shadow opacity */
+  --shadow-border-opacity: 0.04;            /* Border ring opacity */
+  --shadow-blur-opacity: 0.04;              /* Blur/spread shadow opacity */
 
   /* === SHADOW VALUES (reusable across utility classes and component overrides) === */
   /* Default controls stay flat; elevation is reserved for floating surfaces. */
@@ -114,8 +114,9 @@
   --shadow-minimal: var(--shadow-minimal-flat);
 
   --shadow-modal-small:
-    rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.67)) 0 4px 12px -6px,
-    rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0 16px 32px -16px;
+    rgba(0, 0, 0, var(--shadow-blur-opacity)) 0 1px 3px,
+    rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.67)) 0 4px 12px -2px,
+    rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0 12px 24px -4px;
 
   /* === MIX VARIANTS (solid interpolation toward background) === */
   /* Use -2, -3, -5, -10, -20, ..., -90, -95 for solid colors (e.g., separators, Explore mode) */
@@ -150,7 +151,7 @@
   --card-foreground: var(--foreground);
   --popover: var(--background);
   --popover-foreground: var(--foreground);
-  --border: oklch(from var(--foreground) l c h / 0.08);
+  --border: oklch(from var(--foreground) l c h / 0.06);
   --input: oklch(from var(--foreground) l c h / 0.1);
   --ring: oklch(from var(--foreground) l c h / 0.25);
   --ring-width: 1px;
@@ -243,8 +244,8 @@
   --destructive-rgb: 200, 70, 60;            /* RGB for shadow-tinted */
 
   /* === SHADOW OPACITY (stronger in dark mode for visibility) === */
-  --shadow-border-opacity: 0.14;
-  --shadow-blur-opacity: 0.14;
+  --shadow-border-opacity: 0.08;
+  --shadow-blur-opacity: 0.10;
 
   /* === MIX VARIANTS === */
   --foreground-1\.5: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
@@ -277,7 +278,7 @@
   --card-foreground: var(--foreground);
   --popover: var(--background);
   --popover-foreground: var(--foreground);
-  --border: oklch(from var(--foreground) l c h / 0.08);
+  --border: oklch(from var(--foreground) l c h / 0.06);
   --input: oklch(from var(--foreground) l c h / 0.1);
   --ring: oklch(from var(--foreground) l c h / 0.25);
 
@@ -609,7 +610,7 @@ html[data-font="inter"] {
     box-shadow:
       rgba(var(--shadow-color), 0) 0px 0px 0px 0px,
       rgba(var(--shadow-color), 0) 0px 0px 0px 0px,
-      oklch(from rgb(var(--shadow-color)) 0.425 c h / 0.6) 0px 0px 0px 1px,
+      oklch(from rgb(var(--shadow-color)) 0.425 c h / calc(var(--shadow-border-opacity) * 3)) 0px 0px 0px 1px,
       rgba(var(--shadow-color), 0) 0px 1px 1px -0.5px,
       rgba(var(--shadow-color), 0) 0px 3px 3px -1.5px,
       rgba(var(--shadow-color), 0) 0px 6px 6px -3px;
@@ -637,18 +638,47 @@ html[data-font="inter"] {
      UNIFIED POPOVER STYLING
 
      Use this class for all dropdowns, popovers, dialogs, and floating menus
-     to ensure consistent appearance across the app. Matches the vibrancy style:
-     - Semi-transparent dark background with blur
+     to ensure consistent appearance across the app:
+     - Theme-aware background and foreground
      - 8px corner radius
-     - Layered shadow (shadow-modal-small)
-     - No visible border
+     - Short contact shadow plus soft elevation (shadow-modal-small)
+     - Subtle theme-aware border
   ============================================================================= */
   .popover-styled {
     background: var(--background);
     color: var(--foreground);
     border-radius: 8px;
-    border: none;
+    border: 1px solid var(--border);
     box-shadow: var(--shadow-modal-small);
+  }
+
+  /* User text reverses the theme; embedded badges and code retain their own surfaces. */
+  .user-message-bubble {
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  .user-message-bubble .markdown-content a {
+    color: inherit;
+  }
+
+  .user-message-bubble .markdown-content :not(pre) > code {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+
+  .user-message-bubble .bg-background {
+    color: var(--foreground);
+  }
+
+  .user-message-bubble [data-ca-block-type] {
+    background: var(--background);
+    color: var(--foreground);
+    border-radius: 8px;
+  }
+
+  .user-message-bubble [role="status"] {
+    color: inherit;
+    opacity: 0.65;
   }
 }
 

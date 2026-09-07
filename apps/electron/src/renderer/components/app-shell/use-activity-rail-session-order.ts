@@ -6,7 +6,7 @@ import * as React from 'react'
 import type { SessionMeta } from '@/atoms/sessions'
 import * as storage from '@/lib/local-storage'
 import type { ActivityRailSessionDragHandlers } from './ActivityRailRows'
-import { moveSessionIdBefore, normalizeSessionOrder, orderSessionMetas } from './activity-rail-session-order'
+import { moveSessionId, normalizeSessionOrder, orderSessionMetas } from './activity-rail-session-order'
 
 type SessionOrderByWorkspace = Record<string, string[]>
 
@@ -58,7 +58,7 @@ export function useActivityRailSessionOrder(actions?: {
       const firstGroupTarget = orderedMetas.find(meta => (
         meta.id !== draggedId && Boolean(meta.isPinned) === fixed
       ))
-      if (firstGroupTarget) return moveSessionIdBefore(orderedIds, draggedId, firstGroupTarget.id)
+      if (firstGroupTarget) return moveSessionId(orderedIds, draggedId, firstGroupTarget.id)
       const remaining = orderedIds.filter(id => id !== draggedId)
       return fixed ? [draggedId, ...remaining] : [...remaining, draggedId]
     }
@@ -84,12 +84,14 @@ export function useActivityRailSessionOrder(actions?: {
         event.stopPropagation()
         if (!draggedSession || draggedSession.workspaceId !== workspaceId) return
         const draggedId = draggedSession.id
+        const bounds = event.currentTarget.getBoundingClientRect()
+        const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after'
         void (async () => {
           const updated = await updatePinnedState(draggedId, Boolean(target.isPinned))
           if (updated) {
             persistOrder(
               workspaceId,
-              moveSessionIdBefore(orderedMetas.map(meta => meta.id), draggedId, target.id),
+              moveSessionId(orderedMetas.map(meta => meta.id), draggedId, target.id, position),
             )
           }
           setDraggedSession(null)

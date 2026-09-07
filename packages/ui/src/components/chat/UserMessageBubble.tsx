@@ -1,5 +1,5 @@
 // input: User message content, attachments, badges, queued state, and message actions
-// output: Dense right-aligned user message surface shared by Electron and web viewers
+// output: Dense right-aligned user message surface with a host-styleable text bubble
 // pos: Canonical user-turn presentation component for chat transcripts
 
 /**
@@ -187,7 +187,7 @@ function InlineFileBadge({
       onClick={() => isClickable && onFileClick!(badge.filePath!)}
       className={cn(
         "inline-flex items-center gap-1 h-[22px] px-1.5 mx-0.5 rounded-[5px] bg-background shadow-minimal text-[12px] align-middle",
-        isClickable && "hover:bg-foreground/5 transition-colors cursor-pointer"
+        isClickable && "hover:bg-[color-mix(in_srgb,var(--foreground)_5%,var(--background))] transition-colors cursor-pointer"
       )}
       style={{ verticalAlign: 'middle', transform: 'translateY(-1px)' }}
     >
@@ -502,7 +502,7 @@ export function UserMessageBubble({
       <div className="flex w-full flex-col items-end gap-1">
         <div
           className={cn(
-            "max-w-[80%] bg-user-message-bubble rounded-[12px] break-words min-w-0 select-text [&_p]:m-0 [&_p]:leading-5",
+            "user-message-bubble max-w-[80%] bg-user-message-bubble rounded-[12px] break-words min-w-0 select-text [&_p]:m-0 [&_p]:leading-5",
             compactMode ? "px-4 py-2" : "px-5 py-2"
           )}
         >

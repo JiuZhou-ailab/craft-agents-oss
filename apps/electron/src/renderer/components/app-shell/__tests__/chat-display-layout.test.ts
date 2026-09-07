@@ -4,7 +4,8 @@
 
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { resolveActivePromptIndex } from '../PromptTableOfContents'
+import { groupMessagesByTurn } from '@craft-agent/ui/chat/turn-utils'
+import { buildPromptTocItems, resolveActivePromptIndex } from '../PromptTableOfContents'
 
 const chatDisplaySource = readFileSync(new URL('../ChatDisplay.tsx', import.meta.url), 'utf-8')
 const promptTocSource = readFileSync(new URL('../PromptTableOfContents.tsx', import.meta.url), 'utf-8')
@@ -63,18 +64,33 @@ describe('ChatDisplay scroll layout', () => {
     expect(chatDisplaySource).toContain('onRemoveQueuedMessage={handleRemoveQueuedMessage}')
   })
 
-  it('renders a session prompt toc instead of per-message hover cards', () => {
+  it('renders compact session ticks with a full prompt list', () => {
     expect(chatDisplaySource).not.toContain('QueryPreviewPopover')
     expect(chatDisplaySource).not.toContain('getQueryReplyPreview')
     expect(chatDisplaySource).toContain('<PromptTableOfContents')
     expect(chatDisplaySource).toContain('const promptTocItems')
     expect(chatDisplaySource).toContain('scrollToTurnIndex')
-    expect(promptTocSource).toContain('max-h-[50lvh] w-9 overflow-clip')
+    expect(promptTocSource).toContain('max-h-[50lvh] w-6 overflow-y-auto')
     expect(promptTocSource).toContain('data-toc-item-index={index}')
-    expect(promptTocSource).toContain("'h-0.5 w-6 bg-foreground'")
-    expect(promptTocSource).toContain('group-hover/toc-tick:w-[22px]')
-    expect(promptTocSource).toContain('transition-[opacity,transform] duration-150')
-    expect(promptTocSource).toContain('group-hover/prompt-toc:visible')
+    expect(promptTocSource).toContain("'h-0.5 w-4 bg-foreground'")
+    expect(promptTocSource).toContain('group-hover/toc-tick:w-3.5')
+    expect(promptTocSource).toContain('data-testid="prompt-toc-preview"')
+    expect(promptTocSource).toContain('data-toc-list-index={index}')
+  })
+
+  it('lists every prompt in transcript order, including unanswered prompts', () => {
+    const turns = groupMessagesByTurn([
+      { id: 'u1', role: 'user', content: '<edit_request>hidden</edit_request>One', timestamp: 1 },
+      { id: 'a1', role: 'assistant', content: 'First reply', timestamp: 2 },
+      { id: 'u2', role: 'user', content: 'Two', timestamp: 3 },
+      { id: 'u3', role: 'user', content: 'Three', timestamp: 4 },
+      { id: 'a3', role: 'assistant', content: 'Last reply', timestamp: 5 },
+    ])
+    expect(buildPromptTocItems(turns)).toEqual([
+      { id: 'user-u1', label: 'One', turnIndex: 0 },
+      { id: 'user-u2', label: 'Two', turnIndex: 2 },
+      { id: 'user-u3', label: 'Three', turnIndex: 3 },
+    ])
   })
 
   it('selects the prompt nearest the upper viewport reading line', () => {

@@ -198,7 +198,6 @@ function BrowserToolbarApp() {
                 align="end"
                 side="bottom"
                 sideOffset={6}
-                minWidth="min-w-44"
                 className="titlebar-no-drag z-[110] max-h-none overflow-visible"
               >
                 <StyledDropdownMenuItem onSelect={handleHideWindow}>

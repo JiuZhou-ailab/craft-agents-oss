@@ -1,14 +1,30 @@
-// input: Session user-query anchors, transcript viewport, and turn element refs
-// output: Collapsed prompt ticks with a hover/focus query list and scroll navigation
+// input: Session turns, user-query anchors, transcript viewport, and turn element refs
+// output: Compact prompt ticks with a full hover/focus prompt list and scroll navigation
 // pos: Session-local transcript table of contents beside ChatDisplay
 
 import * as React from 'react'
+import type { Turn } from '@craft-agent/ui/chat/turn-utils'
+import { sanitizePreview } from '@/utils/session'
 import { cn } from '@/lib/utils'
 
 export interface PromptTocItem {
   id: string
   label: string
   turnIndex: number
+}
+
+export function buildPromptTocItems(turns: readonly Turn[]): PromptTocItem[] {
+  const items: PromptTocItem[] = []
+  turns.forEach((turn, turnIndex) => {
+    if (turn.type === 'user') {
+      items.push({
+        id: `user-${turn.message.id}`,
+        label: sanitizePreview(turn.message.content) || `Prompt ${items.length + 1}`,
+        turnIndex,
+      })
+    }
+  })
+  return items
 }
 
 export function resolveActivePromptIndex(
@@ -47,7 +63,28 @@ export function PromptTableOfContents({
   onSelect: (turnIndex: number) => void
 }) {
   const [activeIndex, setActiveIndex] = React.useState(0)
+  const [open, setOpen] = React.useState(false)
+  const listRef = React.useRef<HTMLDivElement>(null)
   const activeItemRef = React.useRef<HTMLButtonElement>(null)
+
+  React.useEffect(() => {
+    if (!open) return
+    const list = listRef.current
+    const active = activeItemRef.current
+    if (list && active) {
+      list.scrollTop = active.offsetTop - (list.clientHeight - active.clientHeight) / 2
+    }
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      const focusedItem = document.activeElement?.closest<HTMLElement>('[data-toc-list-index]')
+      if (focusedItem && list?.contains(focusedItem)) {
+        list.closest('nav')?.querySelector<HTMLButtonElement>(`[data-toc-item-index="${focusedItem.dataset.tocListIndex}"]`)?.focus()
+      }
+      setOpen(false)
+    }
+    document.addEventListener('keydown', dismiss)
+    return () => document.removeEventListener('keydown', dismiss)
+  }, [open])
 
   const syncActivePrompt = React.useCallback(() => {
     const viewport = viewportRef.current
@@ -91,19 +128,23 @@ export function PromptTableOfContents({
 
   if (items.length < 2) return null
 
-  const revealActiveItem = () => {
-    activeItemRef.current?.scrollIntoView({ block: 'nearest' })
-  }
-
   return (
     <nav
       aria-label="会话提问目录"
       data-testid="prompt-table-of-contents"
-      className="group/prompt-toc absolute left-2 top-1/2 z-30 w-9 -translate-y-1/2"
-      onMouseEnter={revealActiveItem}
-      onFocusCapture={revealActiveItem}
+      className="absolute left-2 top-1/2 z-30 w-6 -translate-y-1/2"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={event => {
+        if (!event.currentTarget.contains(document.activeElement)) setOpen(false)
+      }}
+      onFocusCapture={() => setOpen(true)}
+      onBlurCapture={event => {
+        if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) {
+          setOpen(false)
+        }
+      }}
     >
-      <div className="max-h-[50lvh] w-9 overflow-clip">
+      <div className="max-h-[50lvh] w-6 overflow-y-auto [scrollbar-width:none]">
         <div className="flex flex-col items-center gap-px py-1">
           {items.map((item, index) => {
             const active = index === activeIndex
@@ -115,10 +156,9 @@ export function PromptTableOfContents({
                 aria-current={active ? 'location' : undefined}
                 data-toc-item-index={index}
                 data-toc-active={active ? '' : undefined}
-                title={item.label}
                 className={cn(
-                  'group/toc-tick flex h-[9px] w-9 shrink-0 items-center justify-center rounded-[3px] outline-none',
-                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+                  'group/toc-tick flex h-[9px] w-6 shrink-0 items-center justify-center rounded-[3px] outline-none',
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 )}
                 onClick={() => {
                   setActiveIndex(index)
@@ -128,10 +168,10 @@ export function PromptTableOfContents({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'rounded-full transition-[width,height,background-color] duration-150',
+                    'rounded-full transition-[width,height,background-color] duration-150 motion-reduce:transition-none',
                     active
-                      ? 'h-0.5 w-6 bg-foreground'
-                      : 'h-px w-[18px] bg-muted-foreground/40 group-hover/toc-tick:w-[22px] group-hover/toc-tick:bg-muted-foreground/75',
+                      ? 'h-0.5 w-4 bg-foreground'
+                      : 'h-px w-2.5 bg-muted-foreground/40 group-hover/toc-tick:w-3.5 group-hover/toc-tick:bg-muted-foreground/75',
                   )}
                 />
               </button>
@@ -139,41 +179,39 @@ export function PromptTableOfContents({
           })}
         </div>
       </div>
-
-      <div
-        className={cn(
-          'pointer-events-none invisible absolute left-9 top-1/2 w-[285px] -translate-x-1 -translate-y-1/2 pl-[5px] opacity-0 transition-[opacity,transform] duration-150',
-          'group-hover/prompt-toc:pointer-events-auto group-hover/prompt-toc:visible group-hover/prompt-toc:translate-x-0 group-hover/prompt-toc:opacity-100',
-          'group-focus-within/prompt-toc:pointer-events-auto group-focus-within/prompt-toc:visible group-focus-within/prompt-toc:translate-x-0 group-focus-within/prompt-toc:opacity-100',
-        )}
-      >
-        <div className="max-h-[30lvh] w-[280px] overflow-y-auto overscroll-contain rounded-[10px] border border-border/60 bg-popover p-1 text-popover-foreground shadow-modal-small">
-          {items.map((item, index) => {
-            const active = index === activeIndex
-            return (
-              <button
-                key={item.id}
-                ref={active ? activeItemRef : undefined}
-                type="button"
-                aria-current={active ? 'location' : undefined}
-                className={cn(
-                  'block w-full truncate rounded-[6px] px-2 py-[3px] text-left text-[12px] leading-4 outline-none',
-                  'focus-visible:ring-1 focus-visible:ring-ring',
-                  active
-                    ? 'bg-foreground/[0.09] text-foreground'
-                    : 'text-foreground/85 hover:bg-foreground/[0.055]',
-                )}
-                onClick={() => {
-                  setActiveIndex(index)
-                  onSelect(item.turnIndex)
-                }}
-              >
-                {item.label || `Prompt ${index + 1}`}
-              </button>
-            )
-          })}
+      {open && (
+        <div className="absolute left-6 top-1/2 w-[288px] max-w-[calc(100vw-64px)] -translate-y-1/2 pl-2">
+          <div
+            ref={listRef}
+            data-testid="prompt-toc-preview"
+            className="popover-styled relative max-h-[50lvh] overflow-y-auto overscroll-contain p-1 animate-in fade-in-0 slide-in-from-left-1 duration-150 motion-reduce:animate-none"
+          >
+            {items.map((item, index) => {
+              const active = index === activeIndex
+              return (
+                <button
+                  key={item.id}
+                  ref={active ? activeItemRef : undefined}
+                  type="button"
+                  data-toc-list-index={index}
+                  aria-current={active ? 'location' : undefined}
+                  title={item.label}
+                  className={cn(
+                    'block w-full truncate rounded-[4px] px-2 py-1.5 text-left text-[13px] leading-5 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
+                    active ? 'bg-foreground/[0.09] text-foreground' : 'text-foreground/85 hover:bg-foreground/[0.055]',
+                  )}
+                  onClick={() => {
+                    setActiveIndex(index)
+                    onSelect(item.turnIndex)
+                  }}
+                >
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </nav>
   )
 }

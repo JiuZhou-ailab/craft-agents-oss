@@ -166,7 +166,7 @@ export function LabelMenuItems({
 
           return (
             <Sub key={label.id}>
-              <SubTrigger className="pr-2">
+              <SubTrigger>
                 <LabelIcon label={label} size="sm" hasChildren />
                 <span className="flex-1">{label.name}</span>
                 {subtreeCount > 0 && (

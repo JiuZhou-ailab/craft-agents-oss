@@ -34,19 +34,21 @@ export function orderSessionMetas(
   })
 }
 
-export function moveSessionIdBefore(
+export function moveSessionId(
   orderedIds: readonly string[],
   draggedId: string,
   targetId: string,
+  position: 'before' | 'after' = 'before',
 ): string[] {
   if (draggedId === targetId) return [...orderedIds]
   const withoutDragged = orderedIds.filter(id => id !== draggedId)
   const targetIndex = withoutDragged.indexOf(targetId)
   if (targetIndex < 0) return [...withoutDragged, draggedId]
+  const insertionIndex = targetIndex + (position === 'after' ? 1 : 0)
   return [
-    ...withoutDragged.slice(0, targetIndex),
+    ...withoutDragged.slice(0, insertionIndex),
     draggedId,
-    ...withoutDragged.slice(targetIndex),
+    ...withoutDragged.slice(insertionIndex),
   ]
 }
 

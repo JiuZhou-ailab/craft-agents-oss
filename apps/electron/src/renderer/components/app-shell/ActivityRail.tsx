@@ -1,5 +1,5 @@
 // input: Workspace catalog, scoped session metadata, session actions, update status, profile, and window chrome inset
-// output: Peer pinned/free/project sections with scoped conversation actions and runtime status
+// output: Peer pinned/free/project sections, scoped conversation actions, runtime status, and homepage-link sharing
 // pos: Global navigation surface; every project subtree is fetched and selected through its own runtime domain (ADR 0006)
 
 import * as React from 'react'
@@ -19,6 +19,7 @@ import {
   Settings,
   ShieldAlert,
   SquarePen,
+  UserPlus,
   UserRound,
   Zap,
 } from 'lucide-react'
@@ -27,6 +28,7 @@ import storyflowLogo from '@/assets/storyflow-logo.png'
 import { atom, useAtom, useAtomValue, useStore } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
@@ -869,11 +871,10 @@ export function ActivityRail({
                   <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
-              <StyledDropdownMenuContent side="top" align="start" sideOffset={6} className="w-[196px]">
+              <StyledDropdownMenuContent side="top" align="start" sideOffset={6}>
                 <StyledDropdownMenuItem
                   disabled={!onOpenSettings}
                   onClick={() => onOpenSettings?.('usage')}
-                  className="text-xs"
                 >
                   <Gauge className="size-4" />
                   {t('settings.app.localUsage.title')}
@@ -881,7 +882,6 @@ export function ActivityRail({
                 <StyledDropdownMenuItem
                   disabled={!onOpenSettings}
                   onClick={() => onOpenSettings?.('app')}
-                  className="text-xs"
                   data-tutorial="activity-settings"
                 >
                   <Settings className="size-4" />
@@ -890,17 +890,30 @@ export function ActivityRail({
                 <StyledDropdownMenuItem
                   disabled={!onOpenSettings}
                   onClick={() => onOpenSettings?.('profile')}
-                  className="text-xs"
                   data-tutorial="activity-profile-settings"
                 >
                   <UserRound className="size-4" />
                   {t('settings.profile.title')}
                 </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  onSelect={async () => {
+                    const url = 'https://story.zjding.com/'
+                    try {
+                      await navigator.clipboard.writeText(url)
+                      toast.success('邀请链接已复制，粘贴发送给好友即可')
+                    } catch {
+                      toast.error('复制失败，请手动复制官网链接', { description: url })
+                    }
+                  }}
+                  data-tutorial="activity-invite-friends"
+                >
+                  <UserPlus className="size-4" />
+                  邀请好友
+                </StyledDropdownMenuItem>
                 {onSignOut ? <StyledDropdownMenuSeparator /> : null}
                 {onSignOut ? (
                   <StyledDropdownMenuItem
                     onClick={() => { void onSignOut() }}
-                    className="text-xs"
                     data-tutorial="activity-sign-out"
                   >
                     <LogOut className="size-4" />
@@ -930,7 +943,7 @@ export function ActivityRail({
                   ) : null}
                 </button>
               </DropdownMenuTrigger>
-              <StyledDropdownMenuContent side="top" align="start" sideOffset={8} className="w-[196px]">
+              <StyledDropdownMenuContent side="top" align="start" sideOffset={8}>
                 <StyledDropdownMenuItem
                   disabled={!onOpenWhatsNew}
                   onClick={onOpenWhatsNew}

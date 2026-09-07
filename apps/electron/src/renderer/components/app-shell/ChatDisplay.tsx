@@ -72,8 +72,7 @@ import {
   type ChatOpeningPrompt,
 } from "./chat-opening"
 import { getErrorMessageBody, handleErrorMessageAction } from "./error-message-actions"
-import { PromptTableOfContents, type PromptTocItem } from "./PromptTableOfContents"
-import { sanitizePreview } from "@/utils/session"
+import { PromptTableOfContents, buildPromptTocItems } from "./PromptTableOfContents"
 
 // ============================================================================
 // CSS Custom Highlight API helper
@@ -784,19 +783,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     }
     return turns
   }, [sessionId, transcriptMessages])
-  const promptTocItems = React.useMemo<PromptTocItem[]>(() => {
-    const items: PromptTocItem[] = []
-    allTurns.forEach((turn, turnIndex) => {
-      if (turn.type !== 'user') return
-      const promptNumber = items.length + 1
-      items.push({
-        id: getTurnKey(turn),
-        label: sanitizePreview(turn.message.content) || `Prompt ${promptNumber}`,
-        turnIndex,
-      })
-    })
-    return items
-  }, [allTurns])
+  const promptTocItems = React.useMemo(() => buildPromptTocItems(allTurns), [allTurns])
   // Ref to track total turn count for scroll handlers
   const totalTurnCountRef = React.useRef(0)
   totalTurnCountRef.current = allTurns.length

@@ -2155,7 +2155,7 @@ export function FreeFormInput({
                 <Plus className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <StyledDropdownMenuContent side="top" align="start" sideOffset={6} className="min-w-40">
+            <StyledDropdownMenuContent side="top" align="start" sideOffset={6}>
               <StyledDropdownMenuItem onSelect={handleAttachClick}>
                 <Paperclip className="h-4 w-4" />
                 <span>{t('chat.attachFiles')}</span>

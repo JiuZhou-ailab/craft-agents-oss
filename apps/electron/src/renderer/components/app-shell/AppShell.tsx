@@ -4343,7 +4343,7 @@ function AppShellContent({
         aria-label={isActivityRailVisible ? '收起侧边栏' : '展开侧边栏'}
         aria-expanded={isActivityRailVisible}
         title={isActivityRailVisible ? '收起侧边栏' : '展开侧边栏'}
-        className="titlebar-no-drag pointer-events-auto flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-[7px] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+        className="titlebar-no-drag pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
         onClick={() => setIsActivityRailVisible((visible) => !visible)}
       >
         <PanelLeftRounded className="h-4 w-4" />
@@ -4354,7 +4354,7 @@ function AppShellContent({
         title="搜索"
         data-tutorial="activity-search"
         className={cn(
-          'titlebar-no-drag pointer-events-auto flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-[7px] text-muted-foreground outline-none transition-colors',
+          'titlebar-no-drag pointer-events-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground outline-none transition-colors',
           'hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring',
           activeActivityRailItem === 'search' && 'bg-foreground/[0.07] text-foreground',
         )}

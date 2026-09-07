@@ -16,7 +16,10 @@ Run `bun run e2e:core`; set `CRAFT_E2E_ELECTRON_BIN` to a packaged app executabl
 ### Sidebar session ownership and drag
 
 Run `VITE_DEV_SERVER_URL=http://localhost:5173 bun e2e/core/session-sidebar.ts` after building main/preload.
-The isolated offline fixture creates named project conversations, checks pinned drag order,
-drags a pinned conversation back into its project, verifies the saved unpin through the owner-scoped API,
-and checks pin-button projection. Cross-server routing and connection cleanup are covered in
+The isolated offline fixture uses native mouse drags to reorder pinned, project, and free conversations in both directions without shifting rows. It checks manual order after reload, drag unpin through the owner-scoped API, pin-button projection, default sidebar cursors, and project ownership in the chat header (absent in free conversations). Cross-server routing and connection cleanup are covered in
 `apps/electron/src/transport/__tests__/routed-client.test.ts`; this Electron check does not connect to remote servers.
+The profile menu check verifies Invite friends copies the official homepage URL and shows success/failure feedback using a controlled clipboard, leaving the system clipboard untouched.
+
+`prompt-navigation.ts` checks compact prompt ticks, the full historical prompt list on hover, click-to-scroll, keyboard focus/Escape, and inverse user-message colors plus JSON, spreadsheet, Mermaid and hovered file-badge contrast in both themes. Run `VITE_DEV_SERVER_URL=http://localhost:5173 bun e2e/core/prompt-navigation.ts`; it uses an isolated local transcript without model calls. Set `CRAFT_E2E_SCREENSHOTS` to an existing directory to save light/dark screenshots.
+
+`menu-appearance.ts` verifies shared operation-menu geometry, surfaces, keyboard highlights, submenus, and Escape in light/dark themes for profile, project, session and context menus. Run `VITE_DEV_SERVER_URL=http://localhost:5173 bun e2e/core/menu-appearance.ts`; optionally set `CRAFT_E2E_SCREENSHOTS` to an existing directory. The fixture is offline and does not publish or invoke menu actions.

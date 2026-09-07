@@ -51,13 +51,6 @@ export interface WorkspaceFileTreeRowContextValue {
 
 export const WorkspaceFileTreeRowContext = React.createContext<WorkspaceFileTreeRowContextValue | null>(null)
 
-const ROOT_MENU_CONTENT_CLASS = 'gap-0 rounded-[12px] p-1'
-const ROOT_MENU_ITEM_CLASS = [
-  'h-7 gap-2 rounded-[6px] px-2 py-0 pr-3 text-[13px]',
-  'hover:bg-foreground/[0.06] focus:bg-foreground/[0.06]',
-  '[&>svg]:h-4 [&>svg]:w-4',
-].join(' ')
-
 function EntryIcon({ entry }: { entry: WorkspaceFileTreeNode }) {
   if (entry.type === 'root' || entry.type === 'directory') return <Folder className="h-3.5 w-3.5" />
 
@@ -113,19 +106,14 @@ function EntryContextMenu({
   const entry = node.data
   const extraActions = context.getMenuActions?.(entry) ?? []
   const canMutate = entry.type !== 'root'
-  const compact = entry.type === 'root'
   if (extraActions.length === 0 && !canMutate) return null
 
   return (
-    <StyledContextMenuContent
-      minWidth={compact ? 'min-w-[10.5rem]' : 'min-w-[10rem]'}
-      className={compact ? ROOT_MENU_CONTENT_CLASS : undefined}
-    >
+    <StyledContextMenuContent>
       {extraActions.map(action => (
         <React.Fragment key={action.id}>
           {action.separatorBefore ? <StyledContextMenuSeparator /> : null}
           <StyledContextMenuItem
-            className={compact ? ROOT_MENU_ITEM_CLASS : undefined}
             variant={action.variant}
             onSelect={action.onSelect}
           >

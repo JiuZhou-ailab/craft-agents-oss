@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { SessionMeta } from '@/atoms/sessions'
 import {
-  moveSessionIdBefore,
+  moveSessionId,
   normalizeSessionOrder,
   orderSessionMetas,
   partitionSessionMetas,
@@ -31,8 +31,11 @@ describe('ActivityRail session order', () => {
       .toEqual(['new', 'newer', 'older'])
   })
 
-  it('moves a dragged session before its drop target without losing other ids', () => {
-    expect(moveSessionIdBefore(['a', 'b', 'c'], 'c', 'a')).toEqual(['c', 'a', 'b'])
+  it('moves a dragged session before or after its drop target without losing other ids', () => {
+    expect(moveSessionId(['a', 'b', 'c'], 'c', 'a')).toEqual(['c', 'a', 'b'])
+    expect(moveSessionId(['a', 'b', 'c'], 'a', 'b', 'after')).toEqual(['b', 'a', 'c'])
+    expect(moveSessionId(['a', 'b', 'c'], 'a', 'c', 'after')).toEqual(['b', 'c', 'a'])
+    expect(moveSessionId(['a', 'b', 'c'], 'b', 'b', 'after')).toEqual(['a', 'b', 'c'])
   })
 
   it('projects fixed sessions separately without duplicating or changing their order', () => {

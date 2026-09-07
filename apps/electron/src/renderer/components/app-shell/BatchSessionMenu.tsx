@@ -157,7 +157,7 @@ export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = 
 
       {/* Status submenu */}
       <Sub>
-        <SubTrigger className="pr-2">
+        <SubTrigger>
           {statusIcon ? (
             <span style={{ color: getStateColor(activeStatusId!, sessionStatuses) ?? 'var(--foreground)' }}>
               {statusIcon}
@@ -180,7 +180,7 @@ export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = 
       {/* Labels submenu */}
       {labels.length > 0 && (
         <Sub>
-          <SubTrigger className="pr-2">
+          <SubTrigger>
             <Tag className="h-3.5 w-3.5" />
             <span className="flex-1">{t("sidebar.labels")}</span>
           </SubTrigger>

@@ -117,6 +117,8 @@ export function RecentConversationRow({
     <div
       data-session-id={meta.id}
       data-session-fixed={meta.isPinned ? 'true' : 'false'}
+      onDragOver={dragHandlers ? event => event.preventDefault() : undefined}
+      onDrop={dragHandlers ? event => dragHandlers.onDropOnSession(event, meta) : undefined}
       className={cn(
         'group/session-row flex w-full min-w-0 items-center rounded-[6px] hover:bg-foreground/[0.045]',
         dragHandlers?.draggingSessionId === meta.id && 'opacity-45',
@@ -131,13 +133,10 @@ export function RecentConversationRow({
         draggable={!disabled && Boolean(dragHandlers)}
         data-session-drag-handle={dragHandlers ? 'true' : undefined}
         onDragStart={dragHandlers ? event => dragHandlers.onDragStart(event, meta) : undefined}
-        onDragOver={dragHandlers ? event => event.preventDefault() : undefined}
-        onDrop={dragHandlers ? event => dragHandlers.onDropOnSession(event, meta) : undefined}
         onDragEnd={dragHandlers?.onDragEnd}
         className={cn(
           'flex min-w-0 flex-1 items-center gap-1.5 rounded-[6px] text-left outline-none',
           'focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-default disabled:opacity-60',
-          dragHandlers && !disabled && 'cursor-grab active:cursor-grabbing',
           nested ? 'py-1.5 pl-[30px] pr-2' : 'px-2 py-1.5',
         )}
         onClick={onSelect}
@@ -268,8 +267,9 @@ export function ActivityRailSessionList({
   const { fixed, regular } = partitionSessionMetas(sessions)
   const visibleRegular = showAll ? regular : regular.slice(0, regularLimit)
   const hasMoreRegular = regular.length > regularLimit
-  const showFixedGroup = fixed.length > 0 || Boolean(dragHandlers?.draggingSessionId)
-  const showRegularGroup = regular.length > 0 || Boolean(dragHandlers?.draggingSessionId)
+  // Keep source geometry stable: inserting group headings during dragstart cancels native drags.
+  const showFixedGroup = fixed.length > 0
+  const showRegularGroup = regular.length > 0
   const groupLabelClass = nested
     ? 'py-1 pl-[30px] pr-2'
     : 'px-2 py-1'

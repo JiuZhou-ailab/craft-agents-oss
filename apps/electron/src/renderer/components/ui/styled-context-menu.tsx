@@ -1,4 +1,5 @@
 import * as React from "react"
+import { MENU_CONTENT_STYLES } from "@craft-agent/ui/styled-dropdown"
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import {
   ContextMenu,
@@ -25,18 +26,17 @@ export { ContextMenu, ContextMenuTrigger }
 // Styled content - matches StyledDropdownMenuContent
 interface StyledContextMenuContentProps
   extends React.ComponentPropsWithoutRef<typeof ContextMenuContent> {
-  /** Minimum width - defaults to min-w-40 */
+  /** Minimum width - defaults to min-w-[180px] */
   minWidth?: string
 }
 
 export const StyledContextMenuContent = React.forwardRef<
   React.ComponentRef<typeof ContextMenuContent>,
   StyledContextMenuContentProps
->(({ className, minWidth = "min-w-40", ...props }, ref) => (
+>(({ className, minWidth, ...props }, ref) => (
   <ContextMenuContent
     ref={ref}
     className={cn(
-      "w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5",
       minWidth,
       className
     )}
@@ -59,8 +59,6 @@ export const StyledContextMenuItem = React.forwardRef<
   <ContextMenuItem
     ref={ref}
     className={cn(
-      "gap-3 pr-4 rounded-[4px] hover:bg-foreground/[0.03] focus:bg-foreground/[0.03]",
-      "[&_svg]:size-auto [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:shrink-0",
       variant === "destructive" && "text-destructive focus:text-destructive hover:text-destructive [&_svg]:!text-destructive",
       className
     )}
@@ -76,7 +74,7 @@ export const StyledContextMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ContextMenuSeparator
     ref={ref}
-    className={cn("bg-foreground/10", className)}
+    className={className}
     {...props}
   />
 ))
@@ -93,8 +91,7 @@ export const StyledContextMenuSubTrigger = React.forwardRef<
   <ContextMenuSubTrigger
     ref={ref}
     className={cn(
-      "gap-3 pr-4 rounded-[4px] hover:bg-foreground/10 focus:bg-foreground/10 data-[state=open]:bg-foreground/10",
-      "[&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:shrink-0",
+      "pr-[8px]",
       className
     )}
     {...props}
@@ -105,20 +102,21 @@ StyledContextMenuSubTrigger.displayName = "StyledContextMenuSubTrigger"
 // Styled sub-menu content - matches StyledDropdownMenuSubContent
 interface StyledContextMenuSubContentProps
   extends React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubContent> {
-  /** Minimum width - defaults to min-w-36 */
+  /** Minimum width - defaults to min-w-[180px] */
   minWidth?: string
 }
 
 export const StyledContextMenuSubContent = React.forwardRef<
   React.ComponentRef<typeof ContextMenuPrimitive.SubContent>,
   StyledContextMenuSubContentProps
->(({ className, minWidth = "min-w-36", sideOffset = -4, ...props }, ref) => (
+>(({ className, minWidth, sideOffset = -4, ...props }, ref) => (
   <ContextMenuPortal>
     <ContextMenuPrimitive.SubContent
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "popover-styled w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5 z-dropdown overflow-hidden p-1",
+        "popover-styled z-dropdown overflow-hidden",
+        MENU_CONTENT_STYLES,
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         minWidth,
         className
