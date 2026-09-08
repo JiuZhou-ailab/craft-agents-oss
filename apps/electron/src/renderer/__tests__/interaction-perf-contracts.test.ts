@@ -193,7 +193,7 @@ describe('interaction perf contracts (ADR-0001 CI proxy)', () => {
     expect(editorPanelSource).not.toContain('key={file.path}')
     // Loading overlay must not unmount the editor (remount = ProseMirror leak surface).
     expect(editorPanelSource).toContain('Keep the editor mounted during loads')
-    expect(editorPanelSource).toContain('editable={!loading}')
+    expect(editorPanelSource).toContain('editable={!loading && editable}')
   })
 
   it('keeps chapter selection local and same-route navigation idempotent', () => {
