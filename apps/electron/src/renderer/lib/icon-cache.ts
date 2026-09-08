@@ -47,6 +47,7 @@ interface SourceConfig {
 
 interface SkillConfig {
   slug: string
+  /** Host catalog discovery result; omitted when no local icon exists. */
   iconPath?: string
   metadata?: { icon?: string }
 }
@@ -249,11 +250,11 @@ export function getSourceIconSync(workspaceId: string, slug: string): string | n
 /**
  * Load a skill icon into the cache.
  *
- * Resolution priority (mirrors loadSourceIcon):
+ * Resolution priority (local paths are resolved by the host Skill catalog):
  * 1. Emoji in metadata.icon → Return emoji marker
  * 2. URL in metadata.icon → Return URL directly
  * 3. Known iconPath → Load from file
- * 4. Auto-discover skills/{slug}/icon.{svg,png} → Load from file
+ * 4. No catalog iconPath → Fallback (the host already discovered local icons)
  *
  * @returns Promise resolving to icon URL, emoji marker, or null
  */
@@ -295,21 +296,9 @@ export async function loadSkillIcon(
     }
   }
 
-  // Priority 4: Auto-discover icon files (when no explicit icon configured)
-  if (!iconValue) {
-    const svgIcon = await loadWorkspaceIcon(workspaceId, `skills/${skill.slug}/icon.svg`)
-    if (svgIcon) {
-      iconCache.set(`skill:${cacheKey}`, svgIcon)
-      return svgIcon
-    }
-
-    const pngIcon = await loadWorkspaceIcon(workspaceId, `skills/${skill.slug}/icon.png`)
-    if (pngIcon) {
-      iconCache.set(`skill:${cacheKey}`, pngIcon)
-      return pngIcon
-    }
-  }
-
+  // The loaded Skill catalog already resolves iconPath. A missing path means
+  // no local icon; probing workspace-relative guesses repeats that work and
+  // cannot discover icons belonging to user/plugin Skills outside the workspace.
   return null
 }
 

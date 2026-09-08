@@ -18,6 +18,7 @@ const root = resolve(import.meta.dirname, '../..')
 const renderer = process.env.VITE_DEV_SERVER_URL ? fileURLToPath(process.env.VITE_DEV_SERVER_URL) : join(root, 'apps/electron/dist/renderer/index.html')
 const report: { cold: unknown[]; warm: unknown[]; failure?: string; [key: string]: unknown } = {
   cold: [], warm: [], baseline: process.env.PERF_BASELINE === '1', at: new Date().toISOString(), fixture,
+  instrumentation: { rpcTrace: process.env.PERF_CATALOG_TRACE === '1', cpuProfile: process.env.PERF_CATALOG_PROFILE === '1' },
   sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   buildSha256: Object.fromEntries([join(root, 'apps/electron/dist/main.cjs'), renderer].map(path => [path, createHash('sha256').update(readFileSync(path)).digest('hex')])),
 }
@@ -57,10 +58,30 @@ try {
     try {
       await waitFor(live, '!!window.electronAPI', 30000, 'preload')
       await evalOn(live, install)
+      const rpcTrace: Array<{ id: string; channel?: string; type: string; at: number; bytes: number; imagePath?: string }> = []
+      const frameMethods = ['Network.webSocketFrameSent', 'Network.webSocketFrameReceived']
+      const captureRpc = (frame: any) => {
+        if (frame.response.opcode !== 1) return
+        const message = JSON.parse(frame.response.payloadData)
+        rpcTrace.push({
+          id: message.id, channel: message.channel, type: message.type,
+          at: frame.timestamp, bytes: Buffer.byteLength(frame.response.payloadData, 'utf8'),
+          // Record only image paths for duplicate-probe diagnosis, never general RPC payloads.
+          ...(message.channel === 'workspace:readImage' ? { imagePath: message.args?.[1] } : {}),
+        })
+      }
+      if (process.env.PERF_CATALOG_TRACE === '1') {
+        for (const method of frameMethods) live.cdp.on(method, captureRpc)
+        await live.cdp.send('Network.enable', {}, live.sid)
+      }
       if (process.env.PERF_CATALOG_PROFILE === '1') { await live.cdp.send('Profiler.enable', {}, live.sid); await live.cdp.send('Profiler.start', {}, live.sid) }
       const legacy = await enterFirstWritingWorkspace(live)
       await waitFor(live, 'window.__catalogTiming.ready !== null', 10000, 'real catalog rows')
-      report.cold.push({ ...await evalOn(live, 'window.__catalogTiming'), legacyWallMs: legacy.catalogReadyAt - legacy.projectClickedAt, startupMarks: legacy.startupMarks, spans: live.perfLines.map(line => line.text).filter(line => /listFiles/.test(line)) })
+      report.cold.push({ ...await evalOn(live, 'window.__catalogTiming'), rpcTrace: [...rpcTrace], legacyWallMs: legacy.catalogReadyAt - legacy.projectClickedAt, startupMarks: legacy.startupMarks, spans: live.perfLines.map(line => line.text).filter(line => /listFiles|switchWorkspace|getSessions/.test(line)) })
+      if (process.env.PERF_CATALOG_TRACE === '1') {
+        for (const method of frameMethods) live.cdp.off(method, captureRpc)
+        await live.cdp.send('Network.disable', {}, live.sid)
+      }
       if (process.env.PERF_CATALOG_PROFILE === '1') writeFileSync('/tmp/storyflow-catalog-profile.json', JSON.stringify(await live.cdp.send('Profiler.stop', {}, live.sid)))
       await evalOn(live, 'window.__stopCatalogTiming()')
       console.log('cold sample', JSON.stringify(report.cold.at(-1)))

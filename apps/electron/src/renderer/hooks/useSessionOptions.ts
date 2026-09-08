@@ -1,3 +1,7 @@
+// input: Session metadata snapshots and session-scoped option updates
+// output: Per-session option state preserving events received during initial loading
+// pos: Renderer session option atom and snapshot boundary
+
 /**
  * Session Options Types
  *
@@ -10,7 +14,7 @@
  * 3. Add UI control in FreeFormInput.tsx (or wherever needed)
  */
 
-import type { PermissionMode } from '../../shared/types'
+import type { PermissionMode, Session } from '../../shared/types'
 import type { ThinkingLevel } from '@craft-agent/shared/agent/thinking-levels'
 import { DEFAULT_THINKING_LEVEL } from '@craft-agent/shared/agent/thinking-levels'
 import { atom } from 'jotai'
@@ -87,4 +91,28 @@ export function updateSessionOptionsMap(
   const next = new Map(options)
   next.set(sessionId, nextOptions)
   return next
+}
+
+
+/** Start from the authoritative list, preserving only newer events from this load. */
+export function initializeSessionOptionsMap(
+  sessions: ReadonlyArray<Pick<Session, 'id' | 'permissionMode' | 'permissionModeVersion' | 'thinkingLevel'>>,
+  beforeLoad: Map<string, SessionOptions>,
+  current: Map<string, SessionOptions>,
+): Map<string, SessionOptions> {
+  const options = new Map<string, SessionOptions>()
+  for (const session of sessions) {
+    const latest = current.get(session.id)
+    // Versions are Host-local. An unchanged option from before this load must
+    // not reject a lower version after a Host restart.
+    const hasNewerEvent = latest?.permissionModeVersion !== beforeLoad.get(session.id)?.permissionModeVersion
+      && (latest?.permissionModeVersion ?? -1) > (session.permissionModeVersion ?? -1)
+    const value: SessionOptions = {
+      permissionMode: hasNewerEvent ? latest!.permissionMode : session.permissionMode ?? defaultSessionOptions.permissionMode,
+      permissionModeVersion: hasNewerEvent ? latest!.permissionModeVersion : session.permissionModeVersion,
+      thinkingLevel: session.thinkingLevel ?? DEFAULT_THINKING_LEVEL,
+    }
+    if (!isDefaultStoredSessionOptions(value)) options.set(session.id, value)
+  }
+  return options
 }

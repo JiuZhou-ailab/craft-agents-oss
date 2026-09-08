@@ -312,3 +312,25 @@ describe('string method null safety', () => {
     }
   })
 })
+
+
+describe('loaded Skill catalog icons', () => {
+  it('does not rediscover icons when the catalog found none', async () => {
+    const { loadSkillIcon, iconCache } = await import('../icon-cache')
+    iconCache.clear()
+    expect(await loadSkillIcon({ slug: 'without-icon' }, 'workspace')).toBeNull()
+    expect(mockReadWorkspaceImage).not.toHaveBeenCalled()
+  })
+
+  it('loads a later catalog-provided icon and preserves emoji and URL precedence', async () => {
+    const { loadSkillIcon, iconCache } = await import('../icon-cache')
+    iconCache.clear()
+    expect(await loadSkillIcon({ slug: 'updated' }, 'workspace')).toBeNull()
+    mockReadWorkspaceImage.mockResolvedValue('data:image/png;base64,a')
+    expect(await loadSkillIcon({ slug: 'updated', iconPath: 'skills/updated/icon.png' }, 'workspace')).toBe('data:image/png;base64,a')
+    expect(mockReadWorkspaceImage).toHaveBeenCalledTimes(1)
+    expect(await loadSkillIcon({ slug: 'emoji', metadata: { icon: '🔧' } }, 'workspace')).toBe('emoji:🔧')
+    expect(await loadSkillIcon({ slug: 'url', metadata: { icon: 'https://example.com/icon.png' } }, 'workspace')).toBe('https://example.com/icon.png')
+    expect(mockReadWorkspaceImage).toHaveBeenCalledTimes(1)
+  })
+})

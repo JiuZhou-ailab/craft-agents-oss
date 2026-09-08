@@ -1,5 +1,5 @@
 // input: Session list requests plus typed rewind success and failure outcomes
-// output: Regression coverage for workspace scoping and serializable rewind results
+// output: Regression coverage for workspace scoping, permission snapshots, and rewind results
 // pos: Guards in-window workspace ownership and the renderer-facing rewind boundary
 
 import { describe, expect, it } from 'bun:test'
@@ -75,10 +75,22 @@ function createSessionsHarness(
     listSessionsByWorkspace,
     rewindSession,
     requestedWorkspaceIds,
+    deps,
   }
 }
 
 describe('sessions get RPC registration', () => {
+  it('returns authoritative permission versions with the scoped list', async () => {
+    const { getSessions, deps } = createSessionsHarness('workspace-new')
+    deps.sessionManager.getSessions = () => [{ id: 's1', workspaceId: 'workspace-new', permissionMode: 'ask' }] as ReturnType<typeof deps.sessionManager.getSessions>
+    deps.sessionManager.getSessionPermissionModeState = (id) => {
+      expect(id).toBe('s1')
+      return { permissionMode: 'safe', modeVersion: 7, changedAt: '', changedBy: 'user' }
+    }
+    const sessions = await getSessions({ clientId: 'client-1', workspaceId: 'workspace-new', webContentsId: 1 })
+    expect(sessions[0]).toMatchObject({ id: 's1', permissionMode: 'safe', permissionModeVersion: 7 })
+  })
+
   it('prefers the current Electron window workspace over a stale context workspace', async () => {
     const { getSessions, requestedWorkspaceIds } = createSessionsHarness('workspace-new')
     const ctx: RequestContext = {

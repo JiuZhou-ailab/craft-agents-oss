@@ -76,6 +76,8 @@ export interface Session {
   isPinned?: boolean
   /** Permission mode for this session ('safe', 'ask', 'allow-all') */
   permissionMode?: PermissionMode
+  /** Host-local version paired with authoritative permissionMode by sessions:get; absent on legacy servers. */
+  permissionModeVersion?: number
   sessionStatus?: SessionStatus
   /** Labels (additive tags, many-per-session — bare IDs or "id::value" entries) */
   labels?: string[]

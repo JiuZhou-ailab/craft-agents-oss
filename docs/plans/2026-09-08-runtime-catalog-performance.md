@@ -83,3 +83,38 @@ macOS / 48GiB，Bun 1.3.14，Electron 39.2.7。每次运行使用完整 fixture�
 最终增量审查无新增代码问题。生命周期与编辑内容风险已修复；冷目录 P50 仍未达标，保持 #36 开放，不宣布 #31 完成。
 
 两轴各 0 个未解决代码发现；Spec 仍有上述性能验收缺口。
+
+
+## #36 后续：冷目录请求消除（基线 f4edcaa6e）
+
+本轮仅优化目录首次打开的已测请求路径，未更改 runtime 常驻或执行并发。新增 RPC trace 先定位：标准 fixture 初始列表加载后发出 300 次 `sessions:getPermissionModeState`；输入框预加载又发出 280 次 `workspace:readImage`。核对 image path 后确认后者来自缺失的 Skill 图标，不是状态图标；最初的“合并相同在途图标读取”试验没有降低请求数或延迟，已撤回。
+
+保留两处改动：
+
+- `sessions:get` 在 Host 内复用已有权限校准函数，将模式及可选版本随列表返回。初始化不再逐会话往返；旧 Host 缺版本时沿用原 RPC。初始列表只保留本次加载期间收到的更新权限事件，不能拿上一 Host 的高版本拒绝新快照。重连校准路径未改。
+- `loadSkillIcon` 复用 Host catalog 的 `iconPath` 判定，删除缺失图标的重复发现；保留已知文件、emoji、URL 与现有读取授权。`SkillAvatar` 本就使用这一目录事实源。没有新增缓存、索引、依赖或并发限额。
+
+诊断证据：`catalog-1788851472810.json`（before trace，取 cold sample 边界前）、`catalog-1788852206492.json`（after trace）；首次权限状态 RPC **300 → 0**，缺失 Skill 图片请求 **280 → 0**。trace/profile 均不用于最终耗时验收。真实 `sessions:get` 仍返回 300 条元数据，目录仍返回 406 个节点，未删数据换速度。
+
+最终耗时使用关闭 trace/profile 的独立 Electron 运行，完整 fixture 为 6000 Session、每 workspace 1000-message 历史、400 章节。基线为 `catalog-1788851440228.json`；最终构建为 `catalog-1788852734316.json`。
+
+| 指标 | 本轮 before | 最终 after | 结果 |
+|---|---:|---:|---|
+| cold，n=20，P50 / P95 | 267.85 / 289.42ms | 192.75 / 209.98ms | P50 改善约 28%，仍高于 100ms |
+| warm，n=30，P50 / P95 | 11.40 / 17.44ms | 9.80 / 18.13ms | 通过 |
+| 原 project-expansion → catalog wall-time 中位数 | 502.5ms | 408.0ms | 仍高于原 100ms 预算 |
+| renderer surface committed 中位数，n=20 | 269.0ms | 211.0ms | 本轮未观测到启动退化 |
+| 首次目录后 GC heap | 34.07MB | 34.49MB | +1.3%，单次 heap 快照 |
+
+前一轮优化后复测也完整保留：`catalog-1788852446493.json`，cold 174.80 / 218.50ms、warm 10.50 / 19.98ms、surface 267.5ms、heap 33.97MB；该构建尚未补最终初始权限事件竞态保护。最终数字取最终构建，不选前一轮更好的 P50。上述数据是本机顺序对照，不代表所有机器；warm P95 的微小波动不能当作可重复退化。
+
+最终以正常预算 gate 执行，因 cold P50 未达标返回退出码 1，JSON 留存 `cold.pass=false`、`warm.pass=true`。目录重试 QA 两轮都通过：首次零文件标签、零章节读取，30 次跨 Project 往返，真实目录读取失败与重复失败，恢复权限后的重试成功，未保存正文及同一 editor DOM 均保留。
+
+剩余等待仍包括会话激活、renderer 提交和目录 RPC；trace 同时显示 ActivityRail 为折叠 Project 发起大量 Session 列表请求。下一步应隔离验证这批后台元数据工作对前台目录的影响，保留跨 Project 置顶会话语义，不直接删除必要条目或下调执行并发。**#36 和 #31 仍未全部验收。**
+
+
+本轮最终交互证据 `interaction-1788852890519-after.json`：首片 n=20，P50 / P95 / max = **6.7 / 7.2 / 10.5ms**；1000-message 历史下，2k / 10k / 30k 长回复期间键入 P95 均为 **1.4ms**。30k 场景验证 IME 与流重叠、历史选择/滚动保持以及最终持久化和显示文本。模型使用本机确定性 SSE，无付费请求。
+
+本轮 Standards / Spec 双轴最终代码复核均无未解决发现。审查发现的初始权限事件覆盖风险已用行为测试修复；批量刷新跨 Host 代际的试验已撤回，重连原实现不变。Spec 的冷打开与 legacy 100ms 预算仍未满足，与代码审查结论分别记录。
+
+本轮 `bun run typecheck:all` 通过；最终根 `bun run test` 完整执行一次，合计 **5759 pass、11 skip、0 fail**。新增公共边界回归覆盖缺失/后来新增 Skill 图标、列表权限快照、本次加载的新权限事件、Host 版本回退及无关 thinking 更新。代码与失效的文件头、perf runbook 已同步，未改变顶层模块边界。

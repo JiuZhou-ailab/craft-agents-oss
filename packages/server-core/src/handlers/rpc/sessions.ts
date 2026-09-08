@@ -1,5 +1,5 @@
 // input: Session RPC requests, session manager state, filesystem session folders, and transport clients
-// output: Registered session lifecycle, message, file tree, notes, and watcher RPC handlers
+// output: Session RPC handlers with authoritative mode versions on scoped list responses
 // pos: Server-side session RPC boundary shared by Electron and server runtimes
 
 import { readFile, writeFile } from 'fs/promises'
@@ -163,7 +163,11 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
     // Scoped failures are surfaced instead of presenting partial history as empty.
     await sessionManager.waitForInit(workspaceId)
     const end = perf.start('rpc.getSessions')
-    const sessions = sessionManager.getSessions(workspaceId ?? undefined)
+    const sessions = sessionManager.getSessions(workspaceId ?? undefined).map(session => {
+      // Reuse authoritative reconciliation without one renderer RPC per Session.
+      const state = sessionManager.getSessionPermissionModeState(session.id)
+      return state ? { ...session, permissionMode: state.permissionMode, permissionModeVersion: state.modeVersion } : session
+    })
     end()
 
     log.debug('[sessions:get] result', {

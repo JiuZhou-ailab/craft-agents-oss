@@ -10,6 +10,7 @@ import {
   sessionOptionsAtom,
   sessionOptionsAtomFamily,
   updateSessionOptionsMap,
+  initializeSessionOptionsMap,
   type SessionOptions,
 } from '../useSessionOptions'
 
@@ -84,5 +85,30 @@ describe('updateSessionOptionsMap', () => {
     expect(store.get(sessionOptionsAtomFamily('s1')).permissionMode).toBe('allow-all')
     expect(store.get(s2OptionsAtom)).toBe(defaultSessionOptions)
     expect(s2Notifications).toBe(0)
+  })
+})
+
+
+describe('initial permission snapshot', () => {
+  const oldOptions: SessionOptions = { ...defaultSessionOptions, permissionMode: 'allow-all', permissionModeVersion: 8 }
+  const before = new Map([['s1', oldOptions]])
+
+  it('accepts a new Host snapshot when no event arrived during the load', () => {
+    const result = initializeSessionOptionsMap([{ id: 's1', permissionMode: 'safe', permissionModeVersion: 1 }], before, before)
+    expect(result.get('s1')?.permissionMode).toBe('safe')
+    expect(result.get('s1')?.permissionModeVersion).toBe(1)
+    const changedThinking = new Map([['s1', { ...oldOptions, thinkingLevel: 'max' as const }]])
+    expect(initializeSessionOptionsMap([{ id: 's1', permissionMode: 'safe', permissionModeVersion: 1 }], before, changedThinking).get('s1')?.permissionModeVersion).toBe(1)
+  })
+
+  it('preserves a newer event received while the snapshot was in flight', () => {
+    const empty = new Map<string, SessionOptions>()
+    const event = new Map([['s1', { ...defaultSessionOptions, permissionMode: 'safe' as const, permissionModeVersion: 2 }]])
+    const result = initializeSessionOptionsMap([{ id: 's1', permissionMode: 'allow-all', permissionModeVersion: 1 }], empty, event)
+    expect(result.get('s1')?.permissionMode).toBe('safe')
+    expect(result.get('s1')?.permissionModeVersion).toBe(2)
+    const newerSnapshot = initializeSessionOptionsMap([{ id: 's1', permissionMode: 'ask', permissionModeVersion: 3 }], empty, event)
+    expect(newerSnapshot.get('s1')?.permissionMode).toBe('ask')
+    expect(newerSnapshot.get('s1')?.permissionModeVersion).toBe(3)
   })
 })

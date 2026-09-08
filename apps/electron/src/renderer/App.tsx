@@ -9,8 +9,8 @@ import type { ThemeOverrides } from '@config/theme'
 import { useSetAtom, useStore, useAtomValue, useAtom } from 'jotai'
 import type { Session, Workspace, SessionEvent, Message, FileAttachment, StoredAttachment, CredentialResponse, SessionStatus, NewChatActionParams, ContentBadge, PermissionModeState, SendMessageOptions, ClientAuthState, SettingsSubpage, WhatsNewManifest } from '../shared/types'
 import type { SessionDraft, DraftAttachmentRef } from '@craft-agent/shared/config'
-import type { SessionOptions, SessionOptionUpdates } from './hooks/useSessionOptions'
-import { defaultSessionOptions, sessionOptionsAtom, updateSessionOptionsMap } from './hooks/useSessionOptions'
+import type { SessionOptionUpdates } from './hooks/useSessionOptions'
+import { defaultSessionOptions, sessionOptionsAtom, updateSessionOptionsMap, initializeSessionOptionsMap } from './hooks/useSessionOptions'
 import {
   FREE_CONVERSATION_WORKSPACE_ID,
   FREE_CONVERSATION_WORKSPACE_SLUG,
@@ -565,6 +565,7 @@ function AppContent() {
     selectionGeneration = workspaceSelectionGenerationRef.current,
   ): Promise<Session[]> => {
     const loadingWorkspaceId = workspaceIdForLoad
+    const optionsBeforeLoad = store.get(sessionOptionsAtom)
     setSessionLoadError(null)
     store.set(sessionMetadataReadyAtom, false)
 
@@ -589,24 +590,13 @@ function AppContent() {
       initializeSessions(loadedSessions)
       store.set(sessionMetadataReadyAtom, true)
 
-      // Initialize unified sessionOptions from session data
-      const optionsMap = new Map<string, SessionOptions>()
-      for (const s of loadedSessions) {
-        const hasNonDefaultMode = s.permissionMode && s.permissionMode !== 'ask'
-        const hasNonDefaultThinking = s.thinkingLevel && s.thinkingLevel !== DEFAULT_THINKING_LEVEL
-        if (hasNonDefaultMode || hasNonDefaultThinking) {
-          optionsMap.set(s.id, {
-            permissionMode: s.permissionMode ?? 'ask',
-            thinkingLevel: s.thinkingLevel ?? DEFAULT_THINKING_LEVEL,
-          })
-        }
-      }
-      setSessionOptions(optionsMap)
+      setSessionOptions(current => initializeSessionOptionsMap(loadedSessions, optionsBeforeLoad, current))
 
       setSessionsLoaded(true)
       lastLoadedSessionsWorkspaceRef.current = loadingWorkspaceId
       void Promise.allSettled(
-        loadedSessions.map((s) => reconcilePermissionModeState(s.id))
+        // Current hosts reconcile in sessions:get. Legacy hosts still need per-session RPCs.
+        loadedSessions.filter(s => s.permissionModeVersion == null).map(s => reconcilePermissionModeState(s.id))
       )
 
       if (initialSessionId && loadingWorkspaceId) {
