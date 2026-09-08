@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { createServer } from 'vite'
 import { execFileSync } from 'node:child_process'
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { launchApp, verifyStandardFixture, evalOn, callOn, waitFor, heapUsed, sleep, type LaunchedApp } from './launch'
@@ -290,7 +290,20 @@ try {
       } else await callOn(live, `function(path) { document.querySelector('[cmdk-item][data-value="file:'+path+'"]').click() }`, [path])
       await sleep(800)
     }
-    await openSearch(); await select()
+    await openSearch()
+    if (index === 1 && !baseline) {
+      const mode = statSync(path).mode & 0o777
+      try {
+        chmodSync(path, 0)
+        await select()
+        assert.equal(await evalOn(live, `document.querySelector('.tiptap-editor--manuscript .ProseMirror')?.getAttribute('contenteditable')`), 'false', 'A document that failed its first read must not be editable')
+        await live.cdp.send('Input.insertText', { text: 'UNREAD_OVERWRITE_GUARD' }, live.sid)
+        await sleep(1000)
+      } finally { chmodSync(path, mode) }
+      assert.equal(readFileSync(path, 'utf8'), file.content)
+      await openSearch()
+    }
+    await select()
     const location = await evalOn(live, `(() => { const s=getSelection(); const mark=document.querySelector('[data-document-search-match]'); const r=mark?.getBoundingClientRect() ?? (s?.rangeCount ? s.getRangeAt(0).getBoundingClientRect() : null); const prefix=mark ? (()=>{const range=document.createRange();range.selectNodeContents(mark.parentElement);range.setEndBefore(mark);return range.toString()})() : undefined; return {sourceOffset:prefix?.length,state:document.querySelector('[data-document-search-state]')?.getAttribute('data-document-search-state'), active:document.activeElement?.outerHTML.slice(0,120), text:mark?.textContent ?? s?.toString(), parent:(mark?.parentElement ?? s?.anchorNode?.parentElement?.closest('p,li'))?.textContent.slice(-100), visible:!!r && r.top>=0 && r.bottom<=innerHeight, tabs:document.querySelectorAll('[data-panel-role="writing-file-tabs"] [role="tab"]').length} })()`)
     navigation.push({ name: file.name, location })
     results.searchNavigation = navigation
@@ -302,6 +315,28 @@ try {
       assert.ok(location.visible, JSON.stringify(location))
       await openSearch(); await select()
       assert.equal(await evalOn(live, `document.querySelectorAll('[data-panel-role="writing-file-tabs"] [role="tab"]').length`), location.tabs)
+      if (index === 0) {
+        // A same-file search reload must not turn a transient read failure into
+        // an empty saved baseline that the next keystroke can overwrite.
+        await openSearch()
+        const mode = statSync(path).mode & 0o777
+        try {
+          chmodSync(path, 0)
+          await select()
+          assert.ok(await evalOn(live, `document.querySelector('.tiptap-editor--manuscript .ProseMirror')?.textContent.includes('Correct')`), 'Failed same-file read must retain the loaded document')
+        } finally { chmodSync(path, mode) }
+        await evalOn(live, `(() => {
+          const editor = document.querySelector('.tiptap-editor--manuscript .ProseMirror'); editor.focus();
+          const range = document.createRange(); range.selectNodeContents(editor); range.collapse(false);
+          getSelection().removeAllRanges(); getSelection().addRange(range);
+        })()`)
+        await live.cdp.send('Input.insertText', { text: ' RELOAD_FAILURE_GUARD' }, live.sid)
+        await sleep(1200)
+        assert.ok(readFileSync(path, 'utf8').includes('Correct') && readFileSync(path, 'utf8').includes('RELOAD_FAILURE_GUARD'), 'Editing after failed reload must preserve the original document')
+        results.searchReloadFailure = { retainedDocument: true, subsequentSavePreservedContent: true }
+        writeFileSync(path, file.content)
+        await openSearch(); await select()
+      }
       // Keep the original RPC hit, mutate its source before selection, and verify a truthful fallback.
       await openSearch()
       writeFileSync(path, 'Inserted paragraph.\n\n' + file.content)

@@ -2483,6 +2483,8 @@ function AppShellContent({
   const [novelSearchTarget, setNovelSearchTarget] = React.useState<(DocumentSearchTarget & { path: string }) | null>(null)
   const [novelDocumentReloadVersion, setNovelDocumentReloadVersion] = React.useState(0)
   const [loadedNovelDocumentPath, setLoadedNovelDocumentPath] = React.useState<string | null>(null)
+  // Buffer ownership survives a same-file refresh while read readiness is pending.
+  const novelDocumentBufferPathRef = React.useRef<string | null>(null)
   const [novelDocumentContent, setNovelDocumentContent] = React.useState('')
   const [savedNovelDocumentContent, setSavedNovelDocumentContent] = React.useState('')
   const [novelDocumentChangeVersion, setNovelDocumentChangeVersion] = React.useState(0)
@@ -2618,6 +2620,7 @@ function AppShellContent({
   React.useEffect(() => {
     setLoadedNovelDocumentPath(null)
     if (!selectedNovelDocumentPath) {
+      novelDocumentBufferPathRef.current = null
       replaceNovelDocumentContent('')
       setNovelDocumentLoading(false)
       setNovelDocumentError(null)
@@ -2639,6 +2642,7 @@ function AppShellContent({
           contentLength: content.length,
         })
         replaceNovelDocumentContent(content)
+        novelDocumentBufferPathRef.current = selectedNovelDocumentPath
         setLoadedNovelDocumentPath(selectedNovelDocumentPath)
         rememberNovelVersionBaseline(selectedNovelDocumentPath, content, 'ensure')
       })
@@ -2649,7 +2653,12 @@ function AppShellContent({
           phase: 'readFile.error',
           durationMs: performance.now() - readStartedAt,
         })
-        replaceNovelDocumentContent('')
+        if (novelDocumentBufferPathRef.current === selectedNovelDocumentPath) {
+          setLoadedNovelDocumentPath(selectedNovelDocumentPath)
+        } else {
+          novelDocumentBufferPathRef.current = null
+          replaceNovelDocumentContent('')
+        }
         setNovelDocumentError(error instanceof Error ? error.message : 'Failed to load document')
       })
       .finally(() => {
@@ -2902,7 +2911,7 @@ function AppShellContent({
   }, [novelVersionDialogOpen, novelWorkspaceRoot, refreshNovelVersions, rememberNovelVersionBaseline])
 
   React.useEffect(() => {
-    if (!selectedNovelDocumentPath || !novelDocumentDirty || novelDocumentLoading) return
+    if (!selectedNovelDocumentPath || !novelDocumentDirty || novelDocumentLoading || loadedNovelDocumentPath !== selectedNovelDocumentPath) return
 
     const pathToSave = selectedNovelDocumentPath
     const versionToSave = novelDocumentChangeVersion
@@ -2953,10 +2962,11 @@ function AppShellContent({
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [getCurrentNovelDocumentContent, markSavedNovelDocumentChangeVersion, maybeCreateNovelAutoVersion, novelDocumentChangeVersion, novelDocumentContent, novelDocumentDirty, novelDocumentLoading, savedNovelDocumentContent, selectedNovelDocumentPath, t])
+  }, [getCurrentNovelDocumentContent, markSavedNovelDocumentChangeVersion, maybeCreateNovelAutoVersion, novelDocumentChangeVersion, novelDocumentContent, novelDocumentDirty, novelDocumentLoading, loadedNovelDocumentPath, savedNovelDocumentContent, selectedNovelDocumentPath, t])
 
   const ensureNovelDocumentSaved = React.useCallback(async (): Promise<boolean> => {
     if (!selectedNovelDocumentPath || !isCurrentNovelDocumentDirty()) return true
+    if (novelDocumentLoading || loadedNovelDocumentPath !== selectedNovelDocumentPath) return false
 
     flushNovelDocumentChangeVersion()
     const contentToSave = getCurrentNovelDocumentContent()
@@ -3003,7 +3013,7 @@ function AppShellContent({
         setNovelDocumentSaving(false)
       }
     }
-  }, [flushNovelDocumentChangeVersion, getCurrentNovelDocumentContent, isCurrentNovelDocumentDirty, markSavedNovelDocumentChangeVersion, maybeCreateNovelAutoVersion, novelDocumentContent, savedNovelDocumentContent, selectedNovelDocumentPath, t])
+  }, [flushNovelDocumentChangeVersion, getCurrentNovelDocumentContent, isCurrentNovelDocumentDirty, markSavedNovelDocumentChangeVersion, maybeCreateNovelAutoVersion, novelDocumentContent, novelDocumentLoading, loadedNovelDocumentPath, savedNovelDocumentContent, selectedNovelDocumentPath, t])
   ensureNovelDocumentSavedRef.current = ensureNovelDocumentSaved
 
   const handleSelectNovelFile = React.useCallback(async (
@@ -4531,6 +4541,7 @@ function AppShellContent({
                   content={novelDocumentContent}
                   searchTarget={novelSearchTarget?.path === loadedNovelDocumentPath && loadedNovelDocumentPath === selectedNovelDocumentPath ? novelSearchTarget : undefined}
                   loading={novelDocumentLoading}
+                  editable={loadedNovelDocumentPath === selectedNovelDocumentPath}
                   saving={novelDocumentSaving}
                   error={novelDocumentError}
                   onDocumentChanged={handleNovelDocumentChanged}

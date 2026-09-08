@@ -1,4 +1,4 @@
-// input: Selected novel workspace file content, review changes, and save/open callbacks
+// input: Selected document content, read readiness, review changes, and save/open callbacks
 // output: Middle-column Markdown document editor or inline review surface
 // pos: Replaces the session-list navigator column for novel writing workspaces
 
@@ -46,6 +46,7 @@ export interface NovelDocumentEditorPanelProps {
   content: string
   searchTarget?: DocumentSearchTarget
   loading: boolean
+  editable?: boolean
   saving: boolean
   error?: string | null
   onChange?: (content: string) => void
@@ -67,6 +68,7 @@ export const NovelDocumentEditorPanel = React.forwardRef<NovelDocumentEditorPane
   content,
   searchTarget,
   loading,
+  editable = true,
   saving,
   error,
   onDocumentChanged,
@@ -174,7 +176,7 @@ export const NovelDocumentEditorPanel = React.forwardRef<NovelDocumentEditorPane
             onSearchLocation={handleSearchLocation}
             onDocumentChanged={onDocumentChanged}
             placeholder={t('writing.emptySection')}
-            editable={!loading}
+            editable={!loading && editable}
             showToolbar
             toolbarAccessory={toolbarAccessory}
             surface="manuscript"
