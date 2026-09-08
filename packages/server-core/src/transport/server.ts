@@ -38,6 +38,7 @@ interface BufferedEvent {
 }
 
 interface ClientConnection {
+  workspaceLifetime: AbortController
   id: string
   ws: WebSocket
   workspaceId: string | null
@@ -518,6 +519,7 @@ export class WsRpcServer implements RpcServer {
               // Atomic state transition: move from disconnected → active
               // AFTER replay is complete so push() can't target this client mid-replay.
               this.disconnectedClients.delete(envelope.reconnectClientId)
+              prevClient.workspaceLifetime = new AbortController()
               this.clients.set(prevClient.id, prevClient)
 
               this.setupClientHandlers(ws, prevClient)
@@ -540,6 +542,7 @@ export class WsRpcServer implements RpcServer {
         // ── Normal fresh connect ──
         const clientId = randomUUID()
         const client: ClientConnection = {
+          workspaceLifetime: new AbortController(),
           id: clientId,
           ws,
           workspaceId: envelope.workspaceId ?? null,
@@ -636,6 +639,7 @@ export class WsRpcServer implements RpcServer {
     }
 
     const ctx: RequestContext = {
+      workspaceSignal: client.workspaceLifetime.signal,
       clientId: client.id,
       workspaceId: client.workspaceId,
       webContentsId: client.webContentsId,
@@ -696,6 +700,7 @@ export class WsRpcServer implements RpcServer {
   private setupClientHandlers(ws: WebSocket, client: ClientConnection): void {
     ws.on('close', () => {
       transportLog.info('Client disconnected', { clientId: client.id })
+      client.workspaceLifetime.abort()
       this.clients.delete(client.id)
 
       // Retain buffer for potential reconnect
@@ -796,7 +801,9 @@ export class WsRpcServer implements RpcServer {
   /** Update a client's workspaceId (called after SWITCH_WORKSPACE so push routing stays correct). */
   updateClientWorkspace(clientId: string, workspaceId: string): void {
     const client = this.clients.get(clientId)
-    if (client) {
+    if (client && client.workspaceId !== workspaceId) {
+      client.workspaceLifetime.abort()
+      client.workspaceLifetime = new AbortController()
       client.workspaceId = workspaceId
     }
   }

@@ -288,3 +288,6 @@ export {
   Icon_Inbox,
   type IconProps,
 } from './components/icons'
+
+export type { DocumentSearchTarget, DocumentSearchLocation } from './components/markdown/document-search'
+export { locateSourceSearch } from './components/markdown/document-search'

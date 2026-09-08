@@ -635,6 +635,7 @@ export interface ElectronAPI {
   // Session content search (full-text search via ripgrep)
   searchSessionContent(workspaceId: string, query: string, searchId?: string): Promise<SessionSearchResult[]>
   searchWorkspace(request: WorkspaceSearchRequest): Promise<WorkspaceSearchResponse>
+  cancelWorkspaceSearch(requestId: string): Promise<void>
 
   // Sources change listener (live updates when sources are added/removed)
   onSourcesChanged(callback: (workspaceId: string, sources: LoadedSource[]) => void): () => void

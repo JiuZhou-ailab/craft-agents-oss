@@ -2,7 +2,8 @@
 // output: Regression coverage for pending-plan transitions and queue-safe session updates
 // pos: Guards read-modify-write persistence at the shared session storage boundary
 
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
+import * as fs from 'node:fs'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -92,6 +93,51 @@ describe('pending plan execution persistence', () => {
     await clearPendingPlanExecution(workspaceRoot, 'session-1')
 
     expect(persistedMetrics).not.toContain('session.persist.write')
+    expect(persistedMetrics).not.toContain('session.loadSession')
+  })
+
+  it('reads only bounded metadata for a 30MiB transcript without a plan', async () => {
+    const session = makeStoredSession(workspaceRoot)
+    session.messages = [{ id: 'large', type: 'assistant', content: 'x'.repeat(30 * 1024 * 1024) }]
+    await saveSession(session)
+    const originalRead = fs.readSync
+    let bytes = 0
+    const read = spyOn(fs, 'readSync').mockImplementation(((...args: Parameters<typeof fs.readSync>) => {
+      const count = originalRead(...args)
+      bytes += count
+      return count
+    }) as typeof fs.readSync)
+    const fullRead = spyOn(fs, 'readFileSync')
+    try {
+      await clearPendingPlanExecution(workspaceRoot, session.id)
+      expect(bytes).toBeLessThanOrEqual(8192)
+      expect(bytes).toBeGreaterThan(0)
+      expect(fullRead).not.toHaveBeenCalled()
+    } finally {
+      read.mockRestore()
+      fullRead.mockRestore()
+    }
+  })
+
+  it('flushes a queued plan before clearing it and preserves queued messages', async () => {
+    const pending = makeStoredSession(workspaceRoot)
+    pending.pendingPlanExecution = { planPath: '/tmp/plan.md', draftInputSnapshot: 'draft', awaitingCompaction: true }
+    pending.messages = [{ id: 'queued', type: 'user', content: 'durable' }]
+    sessionPersistenceQueue.enqueue(pending)
+    await clearPendingPlanExecution(workspaceRoot, pending.id)
+    expect(loadSession(workspaceRoot, pending.id)?.pendingPlanExecution).toBeUndefined()
+    expect(loadSession(workspaceRoot, pending.id)?.messages[0]?.content).toBe('durable')
+  })
+
+  it('falls back for headers exceeding the bounded read', async () => {
+    const pending = makeStoredSession(workspaceRoot)
+    pending.name = 'x'.repeat(9000)
+    pending.pendingPlanExecution = { planPath: '/tmp/plan.md', draftInputSnapshot: 'draft', awaitingCompaction: true }
+    await saveSession(pending)
+    await clearPendingPlanExecution(workspaceRoot, pending.id)
+    const stored = loadSession(workspaceRoot, pending.id)
+    expect(stored?.pendingPlanExecution).toBeUndefined()
+    expect(stored?.name).toBe(pending.name)
   })
 
   it('applies metadata to the latest queued session snapshot', async () => {

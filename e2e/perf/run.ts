@@ -229,6 +229,11 @@ async function openNonNovelProject(live: LaunchedApp): Promise<string | null> {
 
 /** Open the deterministic 400-chapter writing fixture from ActivityRail. */
 async function openWritingProject(live: LaunchedApp): Promise<string | null> {
+  // The sidebar initially shows eight projects; the standard fixture has twenty.
+  await evalOn(live, `Array.from(document.querySelectorAll('section[aria-label="项目目录"] button'))
+    .find(button => /^显示全部 /.test(button.textContent || ''))?.click()`)
+  await waitFor(live, `Array.from(document.querySelectorAll('button[aria-label]'))
+    .some(button => button.getAttribute('aria-label') === '项目：400章长篇小说')`, 10_000, 'writing project revealed')
   return evalOn<string | null>(live, openFixtureProjectExpression('writing'))
 }
 

@@ -260,6 +260,7 @@ export const CHANNEL_ROUTING = {
   'fs:listDirectory': 'REMOTE_ELIGIBLE',
 
   'search:queryWorkspace': 'REMOTE_ELIGIBLE',
+  'search:cancelWorkspace': 'REMOTE_ELIGIBLE',
 
   'credentials:healthCheck': 'REMOTE_ELIGIBLE',
 

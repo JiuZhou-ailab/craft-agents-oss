@@ -5,6 +5,7 @@ Product, release, and operator-facing documentation for Storyflow.
 - `cli.md` - CLI usage, server validation, and TLS notes.
 - `current-architecture.puml` - source-of-truth layered module, runtime, and data-flow architecture; render diagrams on demand.
 - `electron-performance-qa.md` - desktop performance measurement runbook and metric interpretation.
+- `plans/2026-09-08-interaction-performance.md` - Spec #29 implementation, measured interaction gains and runtime residency evidence.
 - `environment.md` - environment variable lifecycle and release/broker boundaries.
 - `feedback-issue-ingestion.md` - feedback issue ingestion setup.
 - `feishu-desktop-auth.md` - desktop identity, role-scoped model access, and recovery override.

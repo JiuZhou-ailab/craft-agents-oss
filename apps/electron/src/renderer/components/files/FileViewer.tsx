@@ -1,12 +1,12 @@
-// input: Selected project file path and an optional explicit system-open action
+// input: Selected project file path, optional Search Hit, and explicit system-open action
 // output: Bounded inline preview for the shared project document tab
 // pos: Read-only counterpart to the writing editor for non-editable project files
 
-import { lazy, Suspense, useState, useEffect, useMemo, useCallback } from 'react'
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ExternalLink, FileText, FileVideo } from 'lucide-react'
-import { Spinner } from '@craft-agent/ui'
+import { Spinner, locateSourceSearch, type DocumentSearchTarget } from '@craft-agent/ui'
 import { classifyFile, isVideoFile } from '@craft-agent/ui/file-classification'
 import { useTheme } from '@/hooks/useTheme'
 import type { FilePreviewState } from '@/hooks/useLinkInterceptor'
@@ -18,6 +18,7 @@ const FilePreviewRenderer = lazy(async () => {
 
 interface FileViewerProps {
   path: string | null
+  searchTarget?: DocumentSearchTarget
   onOpenExternal?: (path: string) => void
   onClose?: () => void
 }
@@ -26,10 +27,16 @@ function getFileName(path: string): string {
   return path.replace(/\\/g, '/').split('/').pop() ?? path
 }
 
-export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
+export function FileViewer({ path, searchTarget, onOpenExternal, onClose }: FileViewerProps) {
   const { t } = useTranslation()
   const { isDark } = useTheme()
   const [content, setContent] = useState<string>('')
+  const readKey = JSON.stringify([path, searchTarget?.requestId])
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  const matchRef = useRef<HTMLElement>(null)
+  const searchLocation = useMemo(() => searchTarget && loadedFor === readKey
+    ? locateSourceSearch(content, searchTarget) : null, [content, loadedFor, readKey, searchTarget])
+  useEffect(() => { matchRef.current?.scrollIntoView({ block: 'center' }) }, [searchLocation])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const classification = useMemo(() => path ? classifyFile(path) : null, [path])
@@ -44,6 +51,7 @@ export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
   useEffect(() => {
     let cancelled = false
     setContent('')
+    setLoadedFor(null)
     setError(null)
 
     if (!path) {
@@ -65,7 +73,7 @@ export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
       setIsLoading(true)
       try {
         const fileContent = await window.electronAPI.readFile(path)
-        if (!cancelled) setContent(fileContent)
+        if (!cancelled) { setContent(fileContent); setLoadedFor(readKey) }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load file')
@@ -78,7 +86,7 @@ export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
 
     void loadFile()
     return () => { cancelled = true }
-  }, [classification, isVideo, path])
+  }, [classification, isVideo, path, readKey])
 
   if (!path) {
     return (
@@ -101,7 +109,7 @@ export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
 
   const embeddedPreviewState: FilePreviewState | null = previewKind === 'pdf'
     ? { type: 'pdf', filePath: path }
-    : previewKind === 'json' && !isLoading
+    : previewKind === 'json' && !isLoading && !searchTarget
       ? { type: 'json', filePath: path, content, error: error ?? undefined }
       : null
 
@@ -144,6 +152,11 @@ export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
         ) : null}
       </div>
 
+      {searchLocation?.status === 'missing' || searchLocation?.status === 'relocated' ? (
+        <div role="status" className="px-3 py-2 text-xs text-muted-foreground">
+          {t(`globalSearch.location.${searchLocation.status}`)}
+        </div>
+      ) : null}
       {/* File content */}
       {isLoading ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
@@ -190,7 +203,11 @@ export function FileViewer({ path, onOpenExternal, onClose }: FileViewerProps) {
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-4">
             <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed selection:bg-foreground/20">
-              {content}
+              {searchLocation?.from !== undefined && searchLocation.to !== undefined ? <>
+                {content.slice(0, searchLocation.from)}
+                <mark ref={matchRef} data-document-search-match>{content.slice(searchLocation.from, searchLocation.to)}</mark>
+                {content.slice(searchLocation.to)}
+              </> : content}
             </pre>
           </div>
         </ScrollArea>

@@ -112,6 +112,7 @@ export const RPC_CHANNELS = {
   },
   search: {
     QUERY_WORKSPACE: 'search:queryWorkspace',
+    CANCEL_WORKSPACE: 'search:cancelWorkspace',
   },
   debug: {
     LOG: 'debug:log',

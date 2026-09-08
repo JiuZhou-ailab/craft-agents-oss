@@ -5,6 +5,8 @@
 import type { PushTarget } from '@craft-agent/shared/protocol'
 
 export interface RequestContext {
+  /** Aborted when this connection disconnects or leaves its workspace. */
+  workspaceSignal?: AbortSignal
   clientId: string
   workspaceId: string | null
   webContentsId: number | null

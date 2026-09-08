@@ -24,3 +24,5 @@ export {
 export { ImageCardStack, type ImageCardStackProps, type ImageCardStackItem } from './ImageCardStack'
 export { TiptapMarkdownEditor, type TiptapMarkdownEditorHandle, type TiptapMarkdownEditorProps } from './TiptapMarkdownEditor'
 export type { TiptapSelectionAiRequest, TiptapSelectionChatRequest } from './TiptapBubbleMenus'
+
+export type { DocumentSearchTarget, DocumentSearchLocation } from './document-search'

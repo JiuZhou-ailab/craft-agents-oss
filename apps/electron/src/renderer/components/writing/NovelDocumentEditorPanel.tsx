@@ -5,7 +5,7 @@
 import * as React from 'react'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { FileChange } from '@craft-agent/ui'
+import type { FileChange, DocumentSearchTarget, DocumentSearchLocation } from '@craft-agent/ui'
 import {
   buildNovelSelectionContext,
   formatNovelSelectionChatMessage,
@@ -44,6 +44,7 @@ export interface NovelSelectionChatRequest {
 export interface NovelDocumentEditorPanelProps {
   file?: NovelWorkspaceFile
   content: string
+  searchTarget?: DocumentSearchTarget
   loading: boolean
   saving: boolean
   error?: string | null
@@ -64,6 +65,7 @@ export interface NovelDocumentEditorPanelHandle {
 export const NovelDocumentEditorPanel = React.forwardRef<NovelDocumentEditorPanelHandle, NovelDocumentEditorPanelProps>(function NovelDocumentEditorPanel({
   file,
   content,
+  searchTarget,
   loading,
   saving,
   error,
@@ -76,6 +78,10 @@ export const NovelDocumentEditorPanel = React.forwardRef<NovelDocumentEditorPane
   className,
 }, ref) {
   const { t } = useTranslation()
+  const [searchLocation, setSearchLocation] = React.useState<(DocumentSearchLocation & { requestId: string }) | null>(null)
+  const handleSearchLocation = React.useCallback((location: DocumentSearchLocation) => {
+    if (searchTarget) setSearchLocation({ ...location, requestId: searchTarget.requestId })
+  }, [searchTarget])
   const editorRef = React.useRef<TiptapMarkdownEditorHandle>(null)
   const getMarkdownSnapshot = React.useCallback(
     () => editorRef.current?.getMarkdownSnapshot() ?? content,
@@ -142,7 +148,13 @@ export const NovelDocumentEditorPanel = React.forwardRef<NovelDocumentEditorPane
   }
 
   return (
-    <div className={cn('flex h-full min-w-0 flex-col bg-background', className)}>
+    <div className={cn('flex h-full min-w-0 flex-col bg-background', className)}
+      data-document-search-state={searchTarget ? (searchLocation?.requestId === searchTarget.requestId ? searchLocation.status : 'pending') : undefined}>
+      {searchLocation && searchLocation.requestId === searchTarget?.requestId && searchLocation.status !== 'located' ? (
+        <div role="status" className="shrink-0 px-3 py-2 text-xs text-muted-foreground">
+          {t(`globalSearch.location.${searchLocation.status}`)}
+        </div>
+      ) : null}
       {error ? (
         <div className="flex shrink-0 items-center gap-2 border-b border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
@@ -158,6 +170,8 @@ export const NovelDocumentEditorPanel = React.forwardRef<NovelDocumentEditorPane
           <TiptapMarkdownEditor
             ref={editorRef}
             content={content}
+            searchTarget={searchTarget}
+            onSearchLocation={handleSearchLocation}
             onDocumentChanged={onDocumentChanged}
             placeholder={t('writing.emptySection')}
             editable={!loading}

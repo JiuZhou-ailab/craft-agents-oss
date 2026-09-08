@@ -6,6 +6,7 @@ import * as React from 'react'
 import { FileText, FolderKanban, MessageSquareText } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue } from 'jotai'
+import type { DocumentSearchTarget } from '@craft-agent/ui'
 import type { Workspace, WorkspaceSearchHit } from '../../../shared/types'
 import { sessionMetaMapAtom, type SessionMeta } from '@/atoms/sessions'
 import {
@@ -32,7 +33,7 @@ export interface GlobalSearchDialogProps {
   formatNovelFileTitle: (file: NovelWorkspaceFile) => string
   onOpenWorkspace: (workspaceId: string) => void | Promise<void>
   onOpenSession: (workspaceId: string, sessionId: string, query: string) => void | Promise<void>
-  onOpenNovelFile: (path: string) => void | Promise<void>
+  onOpenNovelFile: (path: string, target?: DocumentSearchTarget) => void | Promise<void>
 }
 
 type SearchState = 'idle' | 'searching' | 'complete' | 'unavailable' | 'error'
@@ -153,11 +154,13 @@ function GlobalSearchResults({
 
     let cancelled = false
     setSearchState('searching')
-    const requestId = `global-${Date.now().toString(36)}`
+    const requestId = crypto.randomUUID()
+    let started = false
     const timer = window.setTimeout(async () => {
       try {
+        started = true
         const response = await window.electronAPI.searchWorkspace({ query: trimmedQuery, requestId })
-        if (cancelled) return
+        if (cancelled || response.status === 'cancelled') return
         const resultMap = new Map(response.hits.map(hit => [workspaceHitKey(hit), hit]))
         setContentResults(prev => reuseGlobalSearchContentResults(prev, resultMap))
         setSearchState(response.status)
@@ -172,6 +175,10 @@ function GlobalSearchResults({
     return () => {
       cancelled = true
       window.clearTimeout(timer)
+      if (started) void window.electronAPI.cancelWorkspaceSearch(requestId).catch((error: unknown) => {
+        if (error && typeof error === 'object' && 'code' in error && error.code === 'CHANNEL_NOT_FOUND') return
+        console.warn('[GlobalSearch] Cancellation failed:', error)
+      })
     }
   }, [isComposing, trimmedQuery, workspaceId, clearContentResults])
 
@@ -262,7 +269,7 @@ function GlobalSearchResults({
             <CommandItem
               key={`file:${file.path}`}
               value={`file:${file.path}`}
-              onSelect={() => closeAndRun(() => onOpenNovelFile(file.path))}
+              onSelect={() => closeAndRun(() => onOpenNovelFile(file.path, lineNumber ? { lineNumber, query: trimmedQuery, snippet: preview ?? '', requestId: crypto.randomUUID() } : undefined))}
               className="items-start gap-3 rounded-[6px] px-2.5 py-2"
             >
               <SearchResultIcon><FileText className="h-4 w-4" /></SearchResultIcon>

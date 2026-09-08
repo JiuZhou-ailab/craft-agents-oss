@@ -877,7 +877,14 @@ export async function clearPendingPlanExecution(
   workspaceRootPath: string,
   sessionId: string
 ): Promise<void> {
-  const session = await loadSessionForUpdate(workspaceRootPath, sessionId);
+  await sessionPersistenceQueue.flush(sessionId);
+  const readablePath = recoverSessionFile(getSessionFilePath(workspaceRootPath, sessionId), workspaceRootPath);
+  const header = readablePath ? readSessionHeader(readablePath) : null;
+  // A valid header answers the common no-op without parsing the transcript.
+  // Incomplete headers and interrupted replacements retain the full recovery path.
+  if (header?.id === sessionId && typeof header.workspaceRootPath === 'string' && !header.pendingPlanExecution) return;
+
+  const session = loadSession(workspaceRootPath, sessionId);
   if (!session?.pendingPlanExecution) return;
 
   delete session.pendingPlanExecution;

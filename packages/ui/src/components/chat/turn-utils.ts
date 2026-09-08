@@ -521,10 +521,9 @@ export function groupMessagesByTurn(messages: Message[]): Turn[] {
 
     // Assistant messages are the response part of a turn
     if (message.role === 'assistant') {
-      // Intermediate messages OR pending messages (don't know yet) are activities, not responses
-      // Pending: streaming text where we don't yet know if it's intermediate - treat as intermediate
-      // until text_complete arrives with the definitive isIntermediate flag
-      if (message.isIntermediate || message.isPending) {
+      // Show unclassified top-level text immediately. A later text_complete can
+      // classify it as intermediate; subagent text remains in its activity tree.
+      if (message.isIntermediate || (message.isPending && message.parentToolUseId)) {
         if (!currentTurn) {
           // Start a new turn for this intermediate message
           currentTurn = {
@@ -690,7 +689,7 @@ export function tryPatchTurnsForStreamingContentChange(
     isComplete: false,
   }
 
-  const treatAsIntermediate = !!(nextLast.isIntermediate || nextLast.isPending)
+  const treatAsIntermediate = !!(nextLast.isIntermediate || (nextLast.isPending && nextLast.parentToolUseId))
   if (treatAsIntermediate) {
     const activities = turn.activities.slice()
     let activityIndex = -1

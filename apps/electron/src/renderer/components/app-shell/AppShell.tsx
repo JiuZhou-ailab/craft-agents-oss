@@ -2,6 +2,7 @@
 // output: Desktop app shell with window-pinned title-bar actions, project navigation, and writing panels
 // pos: Top-level renderer layout coordinator for workspace navigation
 
+import type { DocumentSearchTarget } from '@craft-agent/ui'
 import * as React from "react"
 import { useTranslation, Trans } from "react-i18next"
 import { useRef, useEffect, useCallback, useMemo } from "react"
@@ -2478,6 +2479,9 @@ function AppShellContent({
     [novelDocumentTabs.paths, novelWorkspaceFileByPath, novelWorkspaceRoot],
   )
 
+  const [novelSearchTarget, setNovelSearchTarget] = React.useState<(DocumentSearchTarget & { path: string }) | null>(null)
+  const [novelDocumentReloadVersion, setNovelDocumentReloadVersion] = React.useState(0)
+  const [loadedNovelDocumentPath, setLoadedNovelDocumentPath] = React.useState<string | null>(null)
   const [novelDocumentContent, setNovelDocumentContent] = React.useState('')
   const [savedNovelDocumentContent, setSavedNovelDocumentContent] = React.useState('')
   const [novelDocumentChangeVersion, setNovelDocumentChangeVersion] = React.useState(0)
@@ -2611,6 +2615,7 @@ function AppShellContent({
   }, [novelWorkspaceRoot])
 
   React.useEffect(() => {
+    setLoadedNovelDocumentPath(null)
     if (!selectedNovelDocumentPath) {
       replaceNovelDocumentContent('')
       setNovelDocumentLoading(false)
@@ -2633,6 +2638,7 @@ function AppShellContent({
           contentLength: content.length,
         })
         replaceNovelDocumentContent(content)
+        setLoadedNovelDocumentPath(selectedNovelDocumentPath)
         rememberNovelVersionBaseline(selectedNovelDocumentPath, content, 'ensure')
       })
       .catch((error) => {
@@ -2672,7 +2678,7 @@ function AppShellContent({
     return () => {
       cancelled = true
     }
-  }, [rememberNovelVersionBaseline, replaceNovelDocumentContent, selectedNovelDocumentPath])
+  }, [novelDocumentReloadVersion, rememberNovelVersionBaseline, replaceNovelDocumentContent, selectedNovelDocumentPath])
 
   const novelDocumentDirty = !!selectedNovelFile && (
     novelDocumentContent !== savedNovelDocumentContent
@@ -3004,6 +3010,8 @@ function AppShellContent({
     openMode: NovelDocumentOpenMode = 'append',
   ): Promise<boolean> => {
     if (file.path === selectedNovelFilePath) {
+      setNovelSearchTarget(null)
+      setRightWorkspaceVisible(true)
       return true
     }
 
@@ -3016,15 +3024,18 @@ function AppShellContent({
       durationMs: performance.now() - saveStartedAt,
     })
     if (!saved) return false
+    setNovelSearchTarget(null)
 
     novelDocumentSwitchStartRef.current = {
       filePath: file.path,
       startedAt: switchStartedAt,
     }
-    if (novelWorkspaceRoot) {
+    setRightWorkspaceVisible(true)
+    const root = novelWorkspaceRoot ?? activeWritingWorkspaceRoot
+    if (root) {
       setNovelDocumentTabs(current => openNovelDocumentTab(
         current,
-        novelWorkspaceRoot,
+        root,
         file.path,
         openMode,
       ))
@@ -3035,20 +3046,33 @@ function AppShellContent({
       durationMs: performance.now() - switchStartedAt,
     })
     return true
-  }, [ensureNovelDocumentSaved, novelWorkspaceRoot, selectedNovelFilePath])
+  }, [activeWritingWorkspaceRoot, ensureNovelDocumentSaved, novelWorkspaceRoot, selectedNovelFilePath])
 
-  const handleSelectNovelFileByPath = React.useCallback(async (filePath: string | null) => {
+  const handleSelectNovelFileByPath = React.useCallback(async (filePath: string | null, target?: DocumentSearchTarget) => {
     if (!filePath) return
+    const root = novelWorkspaceRoot ?? activeWritingWorkspaceRoot
     const file = novelWorkspaceFileByPath.get(filePath)
+      ?? (root && isNovelWorkspaceFilePathInRoot(filePath, root)
+        ? { path: filePath, relativePath: getNovelWorkspaceRelativePath(filePath, root) }
+        : undefined)
     if (!file) {
       onOpenFile(filePath)
       return
     }
+    // A clean open editor may have changed on disk since the previous search.
+    // Reuse its loader; unsaved edits remain the current source of truth.
+    const refreshCleanDocument = !!target && filePath === selectedNovelDocumentPath && !isCurrentNovelDocumentDirty()
     const selected = await handleSelectNovelFile(file)
+    if (selected && refreshCleanDocument) {
+      setLoadedNovelDocumentPath(null)
+      setNovelDocumentLoading(true)
+      setNovelDocumentReloadVersion(version => version + 1)
+    }
+    if (selected) setNovelSearchTarget(target ? { ...target, path: filePath } : null)
     if (selected && !isWritingNavigation(navState) && !isSessionsNavigation(navState)) {
       onOpenWritingWorkspace()
     }
-  }, [handleSelectNovelFile, navState, novelWorkspaceFileByPath, onOpenFile, onOpenWritingWorkspace])
+  }, [activeWritingWorkspaceRoot, handleSelectNovelFile, isCurrentNovelDocumentDirty, navState, novelWorkspaceFileByPath, novelWorkspaceRoot, onOpenFile, onOpenWritingWorkspace, selectedNovelDocumentPath])
 
   const handleOpenNovelWorkspaceStart = React.useCallback(async () => {
     if (!selectedNovelFilePath) return
@@ -4490,6 +4514,7 @@ function AppShellContent({
                   ref={novelDocumentEditorRef}
                   file={selectedNovelFile}
                   content={novelDocumentContent}
+                  searchTarget={novelSearchTarget?.path === loadedNovelDocumentPath && loadedNovelDocumentPath === selectedNovelDocumentPath ? novelSearchTarget : undefined}
                   loading={novelDocumentLoading}
                   saving={novelDocumentSaving}
                   error={novelDocumentError}
@@ -4511,6 +4536,7 @@ function AppShellContent({
               ) : (
                 <FileViewer
                   path={selectedNovelFile.path}
+                  searchTarget={novelSearchTarget?.path === selectedNovelFile.path ? novelSearchTarget : undefined}
                   onClose={() => { void handleCloseNovelFileTab(selectedNovelFile.path) }}
                 />
               ) : (
@@ -5480,9 +5506,7 @@ function AppShellContent({
           setSearchQuery(query)
           void handleActivitySessionSelect(sessionId, workspaceId)
         }}
-        onOpenNovelFile={(path) => {
-          void handleSelectNovelFileByPath(path)
-        }}
+        onOpenNovelFile={handleSelectNovelFileByPath}
       />
 
       {/* Delete automation confirmation dialog */}

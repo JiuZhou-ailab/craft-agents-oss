@@ -26,7 +26,7 @@ import {
   Gauge,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { Markdown } from '../markdown'
+import { MemoizedMarkdown as Markdown } from '../markdown'
 import { Spinner } from '../ui/LoadingIndicator'
 import { type IslandTransitionConfig } from '../ui'
 import { AnnotationIslandMenu } from '../annotations/AnnotationIslandMenu'
@@ -352,151 +352,7 @@ export interface TurnCardProps {
 // Buffering Constants & Utilities
 // ============================================================================
 
-/**
- * Aggressive buffering configuration.
- * Waits until content is suspected to be meaningful "commentary" before showing.
- */
-const BUFFER_CONFIG = {
-  MIN_WORDS_STANDARD: 40,      // Base threshold for showing content
-  MIN_WORDS_CODE: 15,          // Code blocks show faster
-  MIN_WORDS_LIST: 20,          // Lists show faster
-  MIN_WORDS_QUESTION: 8,       // Questions from AI show faster
-  MIN_WORDS_HEADER: 12,        // Headers indicate structure
-  MIN_BUFFER_MS: 500,          // Always wait at least 500ms
-  MAX_BUFFER_MS: 2500,         // Never buffer longer than 2.5s
-  TIMEOUT_MIN_WORDS: 5,        // Show on timeout if at least this many words
-  HIGH_WORD_COUNT: 60,         // Show regardless of structure at this count
-  CONTENT_THROTTLE_MS: 300,    // Throttle content updates during streaming (perf optimization)
-} as const
-
-type BufferReason =
-  | 'complete'
-  | 'min_time'
-  | 'timeout'
-  | 'code_block'
-  | 'list'
-  | 'header'
-  | 'question'
-  | 'threshold_met'
-  | 'high_word_count'
-  | 'buffering'
-
-/** Count words in text */
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(w => w.length > 0).length
-}
-
-/** Detect code blocks (fenced) */
-function hasCodeBlock(text: string): boolean {
-  return /```/.test(text)
-}
-
-/** Detect markdown lists (bullet or numbered) */
-function hasList(text: string): boolean {
-  return /^\s*[-*•]\s/m.test(text) || /^\s*\d+\.\s/m.test(text)
-}
-
-/** Detect markdown headers */
-function hasHeader(text: string): boolean {
-  return /^#{1,4}\s/m.test(text)
-}
-
-/** Detect structural content (sentences, paragraphs, etc) */
-function hasStructure(text: string): boolean {
-  // Sentence ending (period, exclamation, question mark, colon)
-  if (/[.!?:]\s*$/.test(text.trimEnd())) return true
-  // Paragraph breaks
-  if (/\n\s*\n/.test(text)) return true
-  // Headers anywhere
-  if (/\n\s*#{1,4}\s/.test(text)) return true
-  // Code blocks
-  if (hasCodeBlock(text)) return true
-  return false
-}
-
-/** Detect if text ends with a question (AI asking for clarification) */
-function isQuestion(text: string): boolean {
-  return /\?\s*$/.test(text.trim())
-}
-
-/**
- * Determine if buffered content should be shown.
- * This is the core buffering decision function.
- *
- * @param text - The accumulated response text
- * @param isStreaming - Whether the response is still streaming
- * @param streamStartTime - When streaming started (for timeout calculation)
- * @returns Decision with reason for debugging
- */
-function shouldShowContent(
-  text: string,
-  isStreaming: boolean,
-  streamStartTime?: number
-): { shouldShow: boolean; reason: BufferReason; wordCount: number } {
-  const wordCount = countWords(text)
-
-  // Always show complete content immediately
-  if (!isStreaming) {
-    return { shouldShow: true, reason: 'complete', wordCount }
-  }
-
-  const elapsed = streamStartTime ? Date.now() - streamStartTime : 0
-
-  // Minimum buffer time - always wait at least 500ms
-  if (elapsed < BUFFER_CONFIG.MIN_BUFFER_MS) {
-    return { shouldShow: false, reason: 'min_time', wordCount }
-  }
-
-  // Maximum buffer time - force show after 2.5s if we have some content
-  if (elapsed > BUFFER_CONFIG.MAX_BUFFER_MS && wordCount >= BUFFER_CONFIG.TIMEOUT_MIN_WORDS) {
-    return { shouldShow: true, reason: 'timeout', wordCount }
-  }
-
-  // High-confidence patterns get expedited treatment
-
-  // Code blocks - developers want to see code early
-  if (hasCodeBlock(text) && wordCount >= BUFFER_CONFIG.MIN_WORDS_CODE) {
-    return { shouldShow: true, reason: 'code_block', wordCount }
-  }
-
-  // Headers indicate structured content
-  if (hasHeader(text) && wordCount >= BUFFER_CONFIG.MIN_WORDS_HEADER) {
-    return { shouldShow: true, reason: 'header', wordCount }
-  }
-
-  // Lists indicate structured content
-  if (hasList(text) && wordCount >= BUFFER_CONFIG.MIN_WORDS_LIST) {
-    return { shouldShow: true, reason: 'list', wordCount }
-  }
-
-  // Questions from AI (clarification) - show quickly
-  if (isQuestion(text) && wordCount >= BUFFER_CONFIG.MIN_WORDS_QUESTION) {
-    return { shouldShow: true, reason: 'question', wordCount }
-  }
-
-  // Standard threshold - 40 words with some structure
-  if (wordCount >= BUFFER_CONFIG.MIN_WORDS_STANDARD && hasStructure(text)) {
-    return { shouldShow: true, reason: 'threshold_met', wordCount }
-  }
-
-  // High word count - show regardless of structure
-  if (wordCount >= BUFFER_CONFIG.HIGH_WORD_COUNT) {
-    return { shouldShow: true, reason: 'high_word_count', wordCount }
-  }
-
-  return { shouldShow: false, reason: 'buffering', wordCount }
-}
-
-/**
- * Check if a response is currently in buffering state
- * Used by TurnCard to show subtle indicator instead of big card
- */
-function isResponseBuffering(response: ResponseContent | undefined): boolean {
-  if (!response) return false
-  if (!response.isStreaming) return false
-  const decision = shouldShowContent(response.text, response.isStreaming, response.streamStartTime)
-  return !decision.shouldShow
-}
+const CONTENT_THROTTLE_MS = 300
 
 function hasRelevantActivityGroupExpansionChanged(
   activities: ActivityItem[],
@@ -1581,25 +1437,12 @@ function clearAnnotationMarks(root: HTMLElement): void {
 }
 
 /**
- * ResponseCard - Unified card component for AI responses and plans
- *
- * Variants:
- * - 'response': Buffered streaming response with smart content gating
- * - 'plan': Plan message with header and Accept Plan button
- *
- * Response variant implements smart buffering:
- * - Waits for 40+ words with structure OR
- * - High-confidence patterns (code blocks, headers, lists) with lower threshold OR
- * - Timeout after 2.5 seconds
- *
- * Performance optimization: Uses throttled static snapshots instead of re-rendering
- * on every character. Content updates every 300ms during streaming, avoiding
- * expensive markdown parsing on every delta.
+ * ResponseCard - Shared response/plan surface. First content is visible immediately;
+ * later stream snapshots are coalesced without delaying completion.
  */
 export function ResponseCard({
   text,
   isStreaming,
-  streamStartTime,
   onOpenFile,
   onOpenUrl,
   variant = 'response',
@@ -2342,7 +2185,7 @@ export function ResponseCard({
     const now = Date.now()
     const elapsed = now - lastUpdateRef.current
 
-    if (elapsed >= BUFFER_CONFIG.CONTENT_THROTTLE_MS) {
+    if (elapsed >= CONTENT_THROTTLE_MS) {
       // Enough time passed - update immediately
       setDisplayedText(text)
       lastUpdateRef.current = now
@@ -2351,23 +2194,13 @@ export function ResponseCard({
       const timeout = setTimeout(() => {
         setDisplayedText(text)
         lastUpdateRef.current = Date.now()
-      }, BUFFER_CONFIG.CONTENT_THROTTLE_MS - elapsed)
+      }, CONTENT_THROTTLE_MS - elapsed)
       return () => clearTimeout(timeout)
     }
   }, [text, isStreaming])
 
-  // Calculate buffering decision based on current text (not displayed text)
-  const bufferDecision = useMemo(() => {
-    return shouldShowContent(text, isStreaming, streamStartTime)
-  }, [text, isStreaming, streamStartTime])
-
   const isCompleted = !isStreaming
-  const isBuffering = isStreaming && !bufferDecision.shouldShow
-
-  // While buffering, return null - TurnCard will show a subtle indicator instead
-  if (isBuffering) {
-    return null
-  }
+  if (!text.trim()) return null
 
   // Completed responses render inline; plans remain framed, bounded artifacts.
   if (isCompleted || variant === 'plan') {
@@ -2680,13 +2513,7 @@ export const TurnCard = React.memo(function TurnCard({
   const expandedActivityGroups = externalExpandedActivityGroups ?? localExpandedActivityGroups
   const handleExpandedActivityGroupsChange = onExpandedActivityGroupsChange ?? setLocalExpandedActivityGroups
 
-  // Check if response is in buffering state
-  // No polling needed - parent updates trigger re-evaluation naturally
-  const isBuffering = useMemo(
-    () => isResponseBuffering(response),
-    [response]
-  )
-
+  const isAwaitingContent = !!response && !response.text.trim()
 
   // Compute preview text with cross-fade animation
   const previewText = useMemo(
@@ -2772,7 +2599,7 @@ export const TurnCard = React.memo(function TurnCard({
   // Determine if thinking indicator should show using the phase-based state machine.
   // This properly handles the "gap" state (awaiting) between tool completion and next action,
   // which was previously causing the turn card to "disappear".
-  const isThinking = shouldShowThinkingIndicator(turnPhase, isBuffering)
+  const isThinking = shouldShowThinkingIndicator(turnPhase, isAwaitingContent)
     && !sortedActivities.some(activity => activity.status === 'running')
 
   return (
@@ -2932,7 +2759,7 @@ export const TurnCard = React.memo(function TurnCard({
                       className={cn("flex items-center gap-2 py-0.5 text-muted-foreground/70", SIZE_CONFIG.fontSize)}
                     >
                       <Spinner className={SIZE_CONFIG.spinnerSize} />
-                      <span>{isBuffering ? 'Preparing response...' : 'Thinking...'}</span>
+                      <span>{isAwaitingContent ? 'Preparing response...' : 'Thinking...'}</span>
                     </motion.div>
                   )}
                   </AnimatePresence>
@@ -2947,7 +2774,7 @@ export const TurnCard = React.memo(function TurnCard({
       {!hasActivities && isThinking && !animateResponse && (
         <div className={cn("flex items-center gap-2 px-3 py-1.5 text-muted-foreground", SIZE_CONFIG.fontSize)}>
           <Spinner className={SIZE_CONFIG.spinnerSize} />
-          <span>{isBuffering ? 'Preparing response...' : 'Thinking...'}</span>
+          <span>{isAwaitingContent ? 'Preparing response...' : 'Thinking...'}</span>
         </div>
       )}
 
@@ -2985,7 +2812,7 @@ export const TurnCard = React.memo(function TurnCard({
       {/* Animated version for playground demos */}
       {animateResponse && (
         <AnimatePresence>
-          {response && !isBuffering && (
+          {response && !isAwaitingContent && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -3022,7 +2849,7 @@ export const TurnCard = React.memo(function TurnCard({
         </AnimatePresence>
       )}
       {/* Non-animated version for regular app use */}
-      {!animateResponse && response && !isBuffering && (
+      {!animateResponse && response && !isAwaitingContent && (
         <div className={cn("select-text", hasActivities && "mt-2")}>
           <ResponseCard
             text={response.text}

@@ -63,7 +63,7 @@ function assistantResponseText(turns: readonly Turn[]): string | undefined {
 }
 
 describe('tryPatchTurnsForStreamingContentChange', () => {
-  it('patches last intermediate activity content without regrouping when only delta content grows', () => {
+  it('patches pending response content without regrouping when only delta content grows', () => {
     const previousMessages = buildLongHistory(3)
     const previousTurns = groupMessagesByTurn(previousMessages)
     const nextMessages = growLastContent(previousMessages, 'Hello')

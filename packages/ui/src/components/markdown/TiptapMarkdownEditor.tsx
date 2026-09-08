@@ -2,6 +2,7 @@
 // output: TipTap-powered Markdown editing surface with toolbar and bubble menus
 // pos: Shared Markdown editor used by app document and writing surfaces
 
+import { locateDocumentSearch, type DocumentSearchTarget, type DocumentSearchLocation } from './document-search'
 import * as React from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -472,6 +473,8 @@ async function handleDroppedOrPastedFiles(
 }
 
 export interface TiptapMarkdownEditorProps {
+  searchTarget?: DocumentSearchTarget
+  onSearchLocation?: (location: DocumentSearchLocation) => void
   /** Markdown string content */
   content: string
   /** Called when content changes */
@@ -503,6 +506,8 @@ export interface TiptapMarkdownEditorProps {
 
 export const TiptapMarkdownEditor = React.forwardRef<TiptapMarkdownEditorHandle, TiptapMarkdownEditorProps>(function TiptapMarkdownEditor({
   content,
+  searchTarget,
+  onSearchLocation,
   onUpdate,
   onDocumentChanged,
   placeholder = 'Write something...',
@@ -522,6 +527,8 @@ export const TiptapMarkdownEditor = React.forwardRef<TiptapMarkdownEditorHandle,
   const onDocumentChangedRef = React.useRef(onDocumentChanged)
   onDocumentChangedRef.current = onDocumentChanged
   const lastEmittedMarkdownRef = React.useRef<string | null>(null)
+  const hasLocalEditsRef = React.useRef(false)
+  const handledSearchRef = React.useRef<string | null>(null)
   const isApplyingExternalContentRef = React.useRef(false)
   const [bubbleMenuAppendTo, setBubbleMenuAppendTo] = React.useState<HTMLElement | null>(null)
   const [bubbleMenuScrollTarget, setBubbleMenuScrollTarget] = React.useState<HTMLElement | null>(null)
@@ -647,6 +654,7 @@ export const TiptapMarkdownEditor = React.forwardRef<TiptapMarkdownEditorHandle,
     },
     onUpdate: ({ editor }) => {
       if (isApplyingExternalContentRef.current || !editor.isFocused) return
+      hasLocalEditsRef.current = true
       if (!onUpdateRef.current) {
         onDocumentChangedRef.current?.()
         return
@@ -719,6 +727,7 @@ export const TiptapMarkdownEditor = React.forwardRef<TiptapMarkdownEditorHandle,
 
       try {
         isApplyingExternalContentRef.current = true
+        hasLocalEditsRef.current = false
         const normalized = preprocessMarkdownForOfficial(content)
         editor.commands.setContent(normalized, {
           contentType: 'markdown',
@@ -751,6 +760,21 @@ export const TiptapMarkdownEditor = React.forwardRef<TiptapMarkdownEditorHandle,
       })
     }
   }, [editor, content])
+
+  React.useEffect(() => {
+    if (!editor || !editable || !searchTarget || handledSearchRef.current === searchTarget.requestId) return
+    handledSearchRef.current = searchTarget.requestId
+    const source = hasLocalEditsRef.current
+      ? postprocessMarkdownFromOfficial(getOfficialMarkdown(editor))
+      : content
+    const location = locateDocumentSearch(source, searchTarget, editor.state.doc, value =>
+      editor.schema.nodeFromJSON(editor.markdown!.parse(preprocessMarkdownForOfficial(value))))
+    if (location.from !== undefined && location.to !== undefined) {
+      editor.chain().focus().setTextSelection({ from: location.from, to: location.to }).scrollIntoView().run()
+    }
+    onSearchLocation?.(location)
+  }, [editor, editable, searchTarget, content, onSearchLocation])
+
 
   return (
     <div

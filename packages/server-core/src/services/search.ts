@@ -43,6 +43,7 @@ export interface SearchOptions {
   maxMatchesPerSession?: number
   maxSessions?: number
   ignoreCase?: boolean
+  signal?: AbortSignal
   searchId?: string
 }
 
@@ -63,6 +64,7 @@ export interface DocumentSearchOptions {
   maxMatchesPerFile?: number
   maxFiles?: number
   ignoreCase?: boolean
+  signal?: AbortSignal
   searchId?: string
 }
 
@@ -134,7 +136,9 @@ async function runRipgrep(
   args: string[],
   timeout: number,
   onMatch: (data: RipgrepMatchData) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
+  signal?.throwIfAborted()
   const rgPath = getRipgrepPath()
   if (!rgPath || !existsSync(rgPath)) {
     throw new SearchUnavailableError(`ripgrep binary not found: ${rgPath ?? 'undefined'}`)
@@ -148,11 +152,18 @@ async function runRipgrep(
     let stderr = ''
     let settled = false
     let timedOut = false
+    let killHandle: ReturnType<typeof setTimeout> | undefined
+    const terminate = () => {
+      child.kill()
+      killHandle ??= setTimeout(() => child.kill('SIGKILL'), 250)
+    }
 
     const finish = (error?: Error) => {
       if (settled) return
       settled = true
       clearTimeout(timeoutHandle)
+      clearTimeout(killHandle)
+      signal?.removeEventListener('abort', terminate)
       if (error) reject(error)
       else resolve()
     }
@@ -173,8 +184,11 @@ async function runRipgrep(
 
     const timeoutHandle = setTimeout(() => {
       timedOut = true
-      child.kill(process.platform === 'win32' ? undefined : 'SIGTERM')
+      terminate()
     }, timeout)
+
+    signal?.addEventListener('abort', terminate, { once: true })
+    if (signal?.aborted) terminate()
 
     child.stdout.on('data', (chunk: Buffer) => {
       buffer += chunk.toString()
@@ -188,7 +202,9 @@ async function runRipgrep(
     })
     child.on('close', code => {
       consumeLines(true)
-      if (timedOut) {
+      if (signal?.aborted) {
+        finish(signal.reason)
+      } else if (timedOut) {
         finish(new SearchUnavailableError(`Search timed out after ${timeout}ms`))
       } else if (code === 0 || code === 1) {
         finish()
@@ -253,7 +269,7 @@ export async function searchSessions(
       })
     }
     results.set(sessionId, result)
-  })
+  }, options.signal)
 
   const resultArray = Array.from(results.values())
     .sort((a, b) => b.matchCount - a.matchCount)
@@ -320,7 +336,7 @@ export async function searchWorkspaceDocuments(
       snippet: extractTextWindow(data.lines?.text ?? '', matchText, 180),
     })
     results.set(path, result)
-  })
+  }, options.signal)
 
   const resultArray = Array.from(results.values())
     .sort((a, b) => b.matchCount - a.matchCount || a.relativePath.localeCompare(b.relativePath))

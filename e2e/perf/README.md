@@ -11,6 +11,8 @@ Uses **raw CDP** (bun native WebSocket via `cdp.ts`), not Playwright — Playwri
 - `contract.ts` — strict scenario/config parsing and fail-closed baseline decision
 - `contract.test.ts` — regression coverage for invalid or incomplete runs
 - `run.ts` — scenario driver + pass/fail report
+- `search-stream-runtime.ts` — Spec #29 的真实 Electron 首片/长回复/搜索定位及离线 Pi 20/50 会话诊断
+- `markdown-probe.tsx` — 浏览器内 Markdown memo、回调与语义等价检查
 - `results/` — timestamped JSON reports (gitignored)
 
 CI interaction proxies: `apps/electron/src/renderer/__tests__/interaction-perf-contracts.test.ts`
@@ -64,3 +66,11 @@ An explicit `PERF_SCENARIOS` value is diagnostic mode (selected baselines only).
 - **Heavy-writing / memory-leak-docs**: metadata-only writing catalog → explicitly selected chapter → Tiptap
 - **Switch / memory / continuous-typing**: ActivityRail → non-writing fixture → sessions + chat input
 - **Heavy-search**: writing fixture → activity-search → results
+
+## Spec #29 interactions and runtime residency
+
+After rebuilding Electron, run `bun run e2e/perf/search-stream-runtime.ts`.
+`PERF_INTERACTIONS` accepts a comma-separated subset of `first-text,long-stream,search-navigation,markdown,runtime` and rejects unknown/duplicate names. Run `runtime` alone so its residency stages are exactly 20/50 sessions.
+The default runs the first four; `PERF_RUNTIME=1` runs only the bounded 20/50 real Pi session diagnostic. The model is a local deterministic SSE server; no paid provider is used. Runtime diagnostics report the complete descendant process tree, not only renderer heap, and explicitly release idle transcript caches before measuring resume.
+
+`PERF_BASELINE=1` records pre-change behavior without enforcing optimized targets. Build the intended revision before each measurement. JSON evidence is written to `results/interaction-*.json`, including failed runs; only complete, corresponding scenario sets are comparable. First-text samples start at renderer receipt of a nonblank delta and end at DOM body visibility; model network time is excluded. Long-stream input waits for a real delta; the 30k case verifies that IME overlaps incoming deltas, preserves historical selection/scroll, and checks final persisted and displayed text. Search navigation also exercises a real read-only-file save failure and retry. The Markdown probe runs after measurements via Vite in the same Electron renderer, with a fixture-owned dependency cache. [Measured results](../../docs/plans/2026-09-08-interaction-performance.md).

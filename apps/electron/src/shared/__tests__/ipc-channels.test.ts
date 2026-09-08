@@ -203,6 +203,7 @@ const EXPECTED_CHANNELS: string[] = [
   'resources:import',
   'resources:listInstallReceipts',
   'resources:upgradeSkill',
+  'search:cancelWorkspace',
   'search:queryWorkspace',
   'server:createWorkspace',
   'server:getActiveSessions',

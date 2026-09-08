@@ -604,7 +604,7 @@ export interface WorkspaceDocumentSearchHit {
 export type WorkspaceSearchHit = WorkspaceSessionSearchHit | WorkspaceDocumentSearchHit
 
 export interface WorkspaceSearchResponse {
-  status: 'complete' | 'unavailable'
+  status: 'complete' | 'unavailable' | 'cancelled'
   hits: WorkspaceSearchHit[]
   message?: string
 }

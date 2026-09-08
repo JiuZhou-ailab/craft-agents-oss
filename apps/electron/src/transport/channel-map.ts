@@ -249,6 +249,7 @@ export const CHANNEL_MAP = {
   // Session content search
   searchSessionContent: invoke(RPC_CHANNELS.sessions.SEARCH_CONTENT),
   searchWorkspace: invoke(RPC_CHANNELS.search.QUERY_WORKSPACE),
+  cancelWorkspaceSearch: invoke(RPC_CHANNELS.search.CANCEL_WORKSPACE),
 
   // OAuth (server-owned credentials)
   oauthRevoke: invoke(RPC_CHANNELS.oauth.REVOKE),
