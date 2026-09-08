@@ -385,6 +385,14 @@ export class PiAgent extends PiAgentToolHost {
     return this._isProcessing;
   }
 
+  /** Native operations must all finish before Host idle eviction may close Pi. */
+  isIdle(): boolean {
+    return !this._isProcessing && !this.activePromptId && !this.pendingPermissions.size
+      && !this.pendingLlmQueries.size && !this.pendingEnsureSessionReady.size
+      && !this.pendingCompactions.size && !this.pendingRewindUserMessages.size
+      && !this.pendingRuntimeConfigUpdates.size && !this.pendingCredentialUpdates.size;
+  }
+
   async abort(reason?: string): Promise<void> {
     // Fire Stop hook event (fire-and-forget)
     this.emitAutomationEvent('Stop', { hook_event_name: 'Stop' });
@@ -495,12 +503,12 @@ export class PiAgent extends PiAgentToolHost {
   }
 
   async disposeForRestart(): Promise<void> {
+    await this.killSubprocessGracefully();
     if (this.config.session?.id) {
       unregisterSessionScopedToolCallbacks(this.config.session.id);
     }
 
     this._sessionToolContext = null;
-    await this.killSubprocessGracefully();
     this.debug('PiAgent disposed for restart');
   }
 
@@ -524,12 +532,14 @@ export class PiAgent extends PiAgentToolHost {
     }
 
     const pid = child.pid;
+    let onExit!: (code: number | null, signal: string | null) => void;
     const waitForExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
       if (child.exitCode !== null || child.signalCode) {
         resolve({ code: child.exitCode, signal: child.signalCode });
         return;
       }
-      child.once('exit', (code, signal) => resolve({ code, signal }));
+      onExit = (code, signal) => resolve({ code, signal });
+      child.once('exit', onExit);
     });
 
     try {
@@ -553,6 +563,11 @@ export class PiAgent extends PiAgentToolHost {
       ]);
     }
 
+    if (!result) {
+      if (onExit) child.off('exit', onExit);
+      throw new Error(`Pi subprocess ${pid ?? '(unknown pid)'} stop timed out after SIGKILL`);
+    }
+
     this.stopReadingStdout?.();
     this.stopReadingStdout = null;
     if (this.subprocess === child) {
@@ -560,11 +575,7 @@ export class PiAgent extends PiAgentToolHost {
     }
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
-    if (result) {
-      this.debug(`Pi subprocess ${pid ?? '(unknown pid)'} stopped for restart: code=${result.code}, signal=${result.signal}`);
-    } else {
-      this.debug(`Pi subprocess ${pid ?? '(unknown pid)'} stop timed out after SIGKILL`);
-    }
+    this.debug(`Pi subprocess ${pid ?? '(unknown pid)'} stopped for restart: code=${result.code}, signal=${result.signal}`);
   }
 
   /**

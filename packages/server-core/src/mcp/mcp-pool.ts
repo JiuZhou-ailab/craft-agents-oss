@@ -140,7 +140,7 @@ export class McpClientPool {
   async disconnect(slug: string): Promise<void> {
     const client = this.clients.get(slug);
     if (client) {
-      await client.close().catch(() => {});
+      await client.close();
       this.clients.delete(slug);
     }
 
@@ -161,14 +161,9 @@ export class McpClientPool {
    * Disconnect all sources and clear all state.
    */
   async disconnectAll(): Promise<void> {
-    const closePromises = Array.from(this.clients.values()).map(c => c.close().catch(() => {}));
-    await Promise.all(closePromises);
-    this.clients.clear();
-    this.toolCache.clear();
-    this.proxyTools.clear();
-    this.proxyToolPermissions.clear();
-    this.activeConfigs.clear();
-    this.activeCapabilityRefs.clear();
+    const results = await Promise.allSettled([...this.clients.keys()].map(slug => this.disconnect(slug)));
+    const errors = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+    if (errors.length) throw new AggregateError(errors.map(result => result.reason), 'MCP clients failed to close');
     this.debug('Disconnected all MCP clients');
   }
 

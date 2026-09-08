@@ -7,6 +7,41 @@ import { AgentRuntimeLease } from './agent-runtime-lease.ts'
 import type { AgentInstance, ManagedSession } from './managed-session.ts'
 
 describe('AgentRuntimeLease', () => {
+  it('failed idle cleanup does not schedule itself again; real work still schedules cleanup', async () => {
+    const managed = { id: 'flush-failure' } as ManagedSession
+    let drains = 0
+    const lease = new AgentRuntimeLease({
+      isSessionTracked: () => true, refreshSessionWorkspace: () => false,
+      revalidateAgentWorkingDirectory: () => false, disposeAgentRuntime: async () => {},
+      getOrCreateAgent: async () => ({} as AgentInstance),
+      onOperationsDrained: () => { drains++ },
+    })
+    await expect(lease.tryWithIdleRuntimeLock(managed, async () => { throw new Error('ENOSPC') })).rejects.toThrow('ENOSPC')
+    expect(drains).toBe(0)
+    await lease.withAgentRuntimeLock(managed, async () => {})
+    expect(drains).toBe(1)
+  })
+
+  it('idle cleanup skips active leases and send admission, then releases ownership for the next request', async () => {
+    const managed = { id: 'idle', runtimeEpoch: 0 } as ManagedSession
+    const lease = new AgentRuntimeLease({
+      isSessionTracked: () => true, refreshSessionWorkspace: () => false,
+      revalidateAgentWorkingDirectory: () => false, disposeAgentRuntime: async () => {},
+      getOrCreateAgent: async () => ({} as AgentInstance),
+    })
+    let cleanups = 0
+    const cleanup = () => lease.tryWithIdleRuntimeLock(managed, async () => { cleanups++; return true })
+    const release = lease.beginSessionOperationLease(managed)
+    expect(await cleanup()).toBe(false)
+    release()
+    const unlock = await lease.acquireSendAdmission(managed.id)
+    expect(await cleanup()).toBe(false)
+    unlock()
+    expect(await cleanup()).toBe(true)
+    expect(cleanups).toBe(1)
+    await lease.withAgentRuntimeLease(managed, async () => { expect(await cleanup()).toBe(false) })
+  })
+
   it('disposes a live Pi runtime when Host Project inputs change', async () => {
     const staleAgent = {} as AgentInstance
     const freshAgent = {} as AgentInstance

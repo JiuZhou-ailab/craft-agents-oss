@@ -28,6 +28,7 @@ import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 
 interface AgentStub {
   isProcessing: () => boolean
+  isIdle?: () => boolean
   updateRuntimeConfig: jest.Mock
   reloadCredentials?: jest.Mock
   dispose: () => void
@@ -133,6 +134,49 @@ describe('refreshConnectionRuntime', () => {
 
   afterEach(() => {
     rmSync(tmpRoot, { recursive: true, force: true })
+  })
+
+  it('keeps failed cleanup retryable without replacing the existing runtime', async () => {
+    const agent = createAgentStub({ refreshSucceeds: false })
+    let failed = true
+    agent.disposeForRestart = async () => { if (failed) throw new Error('child still alive') }
+    const managed = injectSession(sm, 'cleanup-failure', tmpRoot, 'slug-A', agent)
+    await sm.refreshConnectionRuntime('slug-A')
+    expect(managed.agent).toBe(agent)
+    failed = false
+    await sm.refreshConnectionRuntime('slug-A')
+    expect(managed.agent).toBeNull()
+  })
+
+  it('releases every connection invalidation after one child fails, allowing retry', async () => {
+    const agent = createAgentStub()
+    let failed = true
+    agent.disposeForRestart = async () => { if (failed) throw new Error('child still alive') }
+    const first = injectSession(sm, 'failed-child', tmpRoot, 'slug-A', agent)
+    const second = injectSession(sm, 'stopped-child', tmpRoot, 'slug-A', createAgentStub())
+    await expect(sm.disposeConnectionRuntimes('slug-A')).rejects.toThrow()
+    expect(first.runtimeState).toBeUndefined()
+    expect(second.runtimeState).toBeUndefined()
+    expect(first.agent).toBe(agent)
+    expect(second.agent).toBeNull()
+    failed = false
+    await sm.disposeConnectionRuntimes('slug-A')
+    expect(first.agent).toBeNull()
+  })
+
+  it('keeps three most recent idle runtimes and exempts background and interaction work', async () => {
+    const sessions = Array.from({ length: 7 }, (_, i) => {
+      const agent = createAgentStub()
+      agent.isIdle = () => true
+      const managed = injectSession(sm, `idle-${i}`, tmpRoot, 'slug-A', agent)
+      Object.assign(managed, { runtimeLastUsedAt: i })
+      return managed
+    })
+    Object.assign(sessions[0]!, { pendingAuthRequestId: 'auth-pending' })
+    Object.assign(sessions[1]!, { activeBackgroundTasks: new Map([['tool', 'task']]) })
+    await sm.refreshConnectionRuntime('slug-A')
+    for (let i = 0; i < 10 && sessions[2]!.agent; i++) await new Promise(resolve => setImmediate(resolve))
+    expect(sessions.map(s => !!s.agent)).toEqual([true, true, false, false, true, true, true])
   })
 
   it('pushes updateRuntimeConfig to sessions on the matching connection slug', async () => {

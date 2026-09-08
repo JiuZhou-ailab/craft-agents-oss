@@ -16,7 +16,7 @@ Modules by reason-of-change (all flat in this directory):
 | `persistence.ts` | Boot/init gate, disk load, debounced persist queue, lazy message load, idle release |
 | `agent-runtime-lease.ts` | Per-session send-admission gates, runtime mutex, and shared-subprocess lease counting |
 | `isolated-test-runner.ts` | Shared Bun subprocess + marked JSON parsing for lifecycle tests |
-| `agent-runtime.ts` | Pi subprocess lifecycle: getOrCreateAgentLocked, runtime refresh, credential rotation, connection-scoped disposal; AGENT_FLAGS |
+| `agent-runtime.ts` | Pi subprocess lifecycle: getOrCreateAgentLocked, runtime refresh, three eligible idle runtimes, credential rotation, confirmed disposal; AGENT_FLAGS |
 | `wire-agent-callbacks.ts` | Post-construction product callback wiring onto a live agent |
 | `browser-pane-bridge.ts` | browser_* tool delegation to BrowserPaneManager |
 | `source-bridge.ts` | buildServersFromSources shared by source reload paths (bridge updates call `agent.applyBridgeUpdates(...)` directly) |
@@ -34,3 +34,5 @@ Standalone scheduled tasks live in the free-conversation runtime and start at Ho
 Every send serializes its short admission phase per Session: loading, queue selection, persistence, and claiming the processing generation. The gate releases before model execution, so concurrent sends durably queue rather than overwrite the active turn. Bound automation validation hands off synchronously to the send's own operation lease; validation never retains a lease while cold runtime acquisition waits for active operations to drain.
 
 Session titles derive from the user-visible request: context badges and edit instructions do not enter first-title inference. The full original message remains unchanged in the transcript; explicit title refresh also strips edit metadata.
+
+Idle runtime residency is independent of the transcript cache. Operation drain and native Pi settlement trigger an opportunistic sweep, keeping the three most recently used eligible runtimes. Active leases/admission, native prompts or pending requests, queued sends, permission/auth interactions, background work, and closing Sessions are exempt. The existing per-Session mutex protects the final eligibility check, durable flush, and disposal; sweeps never wait behind user operations or trigger themselves on failure. Cleanup failures retain their original runtime/MCP owners and block replacement until the same cleanup succeeds. Native history is restored through the existing Pi creation path, without replaying the user request.

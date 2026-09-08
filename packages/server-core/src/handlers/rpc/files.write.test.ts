@@ -2,7 +2,7 @@
 // output: Regression coverage for text file operations, filesystem search, and handler latency spans
 // pos: Guards server-core filesystem RPC behavior at the transport boundary
 
-import { existsSync, rmSync } from 'node:fs'
+import { existsSync, rmSync, chmodSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, truncate, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir, tmpdir } from 'node:os'
@@ -220,6 +220,21 @@ describe('file write RPC registration', () => {
     expect(filterFileSearchSnapshot(snapshot, '大纲').map(result => result.relativePath)).toEqual([
       '大纲.md',
     ])
+  })
+
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)('reports an unreadable directory instead of publishing a partial catalog', async () => {
+    const { listWorkspaceFiles, ctx } = createFileHarness()
+    const root = await mkdtemp(join(tmpdir(), 'craft-list-denied-'))
+    const denied = join(root, 'blocked')
+    await mkdir(denied)
+    await writeFile(join(denied, 'chapter.md'), 'preserved content')
+    chmodSync(denied, 0)
+    try {
+      await expect(listWorkspaceFiles(ctx, root, [])).rejects.toThrow()
+    } finally {
+      chmodSync(denied, 0o700)
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it('lists known workspace roots without fuzzy search snapshots', async () => {

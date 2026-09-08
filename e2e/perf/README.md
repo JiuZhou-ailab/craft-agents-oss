@@ -11,7 +11,8 @@ Uses **raw CDP** (bun native WebSocket via `cdp.ts`), not Playwright — Playwri
 - `contract.ts` — strict scenario/config parsing and fail-closed baseline decision
 - `contract.test.ts` — regression coverage for invalid or incomplete runs
 - `run.ts` — scenario driver + pass/fail report
-- `search-stream-runtime.ts` — Spec #29 的真实 Electron 首片/长回复/搜索定位及离线 Pi 20/50 会话诊断
+- `catalog.ts` — Specs #30/#31 standard-fixture verification, real cold/warm directory rows and failed-read retry QA
+- `search-stream-runtime.ts` — Specs #29/#30 的真实 Electron 首片/长回复/搜索定位及离线 Pi 20/50 会话诊断
 - `markdown-probe.tsx` — 浏览器内 Markdown memo、回调与语义等价检查
 - `results/` — timestamped JSON reports (gitignored)
 
@@ -74,3 +75,18 @@ After rebuilding Electron, run `bun run e2e/perf/search-stream-runtime.ts`.
 The default runs the first four; `PERF_RUNTIME=1` runs only the bounded 20/50 real Pi session diagnostic. The model is a local deterministic SSE server; no paid provider is used. Runtime diagnostics report the complete descendant process tree, not only renderer heap, and explicitly release idle transcript caches before measuring resume.
 
 `PERF_BASELINE=1` records pre-change behavior without enforcing optimized targets. Build the intended revision before each measurement. JSON evidence is written to `results/interaction-*.json`, including failed runs; only complete, corresponding scenario sets are comparable. First-text samples start at renderer receipt of a nonblank delta and end at DOM body visibility; model network time is excluded. Long-stream input waits for a real delta; the 30k case verifies that IME overlaps incoming deltas, preserves historical selection/scroll, and checks final persisted and displayed text. Search navigation also exercises a real read-only-file save failure and retry. The Markdown probe runs after measurements via Vite in the same Electron renderer, with a fixture-owned dependency cache. [Measured results](../../docs/plans/2026-09-08-interaction-performance.md).
+
+## Runtime residency and catalog follow-up
+
+```bash
+bun run perf:fixture
+bun run electron:build
+bun run e2e/perf/catalog.ts                       # 20 cold / 30 warm; enforces both budgets
+PERF_BASELINE=1 PERF_CATALOG_RECOVERY=1 bun run e2e/perf/catalog.ts
+PERF_RUNTIME=1 bun run e2e/perf/search-stream-runtime.ts  # 50 sessions + 20 paired cold/clean restarts
+PERF_RUNTIME=1 PERF_RUNTIME_CYCLES=3 PERF_RUNTIME_RESUMES=0 bun run e2e/perf/search-stream-runtime.ts
+```
+
+`PERF_BASELINE=1` records failed timing budgets without stopping the run; it is not an acceptance pass. Catalog timings start at the Session click which activates a Project and end at the actual directory row, with the preceding project-expansion click and legacy wall time retained separately. The driver verifies 6000 globally unique Sessions, a 1000-message Session in every workspace, and all 400 chapters through the real APIs after timing, so verification does not warm the measured path. No chapter is opened before catalog measurement. `PERF_CATALOG_RECOVERY=1` edits only the generated fixture, denies its chapter-directory permissions, exercises focus refresh and two retries, and restores permissions in a finally block; the mounted editor and unsaved marker must survive. Do not use it on a real Project.
+
+Runtime samples record complete owned process trees. `PERF_RUNTIME_CYCLES` accepts 1–3 and repeats 50 newly-created Sessions in the same Electron host; `PERF_RUNTIME_RESUMES` accepts 0–40 (default 20). A cold resume must create exactly one Pi, retain prior native assistant context, and make exactly one model request. Its paired clean restart terminates that newly-created, harness-owned Pi and uses the same Session. Warm measurements are explicitly distinguished from cold resumes. [Results and remaining acceptance gaps](../../docs/plans/2026-09-08-runtime-catalog-performance.md).

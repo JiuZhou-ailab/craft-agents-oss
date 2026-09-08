@@ -1,5 +1,5 @@
 // input: HTTP/stdio MCP connection configs from shared/mcp types
-// output: CraftMcpClient — an SDK-backed MCP client with connect health check
+// output: CraftMcpClient — an SDK-backed MCP client with connect health check and confirmed stdio exit
 // pos: Main-process MCP transport client; pure types remain in @craft-agent/shared/mcp
 
 /**
@@ -44,6 +44,7 @@ export class CraftMcpClient {
   private client: Client;
   private transport: Transport;
   private connected = false;
+  private stdioExit?: Promise<void>;
 
   constructor(config: McpClientConfig) {
     this.client = new Client({
@@ -83,6 +84,12 @@ export class CraftMcpClient {
     if (this.connected) return;
 
     await this.client.connect(this.transport);
+    if (this.transport instanceof StdioClientTransport) {
+      const onclose = this.transport.onclose;
+      this.stdioExit = new Promise<void>(resolve => {
+        this.transport.onclose = () => { resolve(); onclose?.(); };
+      });
+    }
 
     // Verify connection works by listing tools
     try {
@@ -128,6 +135,15 @@ export class CraftMcpClient {
   async close(): Promise<void> {
     if (this.connected) {
       await this.client.close();
+      if (this.stdioExit) {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            this.stdioExit,
+            new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('MCP subprocess exit was not confirmed')), 1000); }),
+          ]);
+        } finally { clearTimeout(timer); }
+      }
       this.connected = false;
     }
   }

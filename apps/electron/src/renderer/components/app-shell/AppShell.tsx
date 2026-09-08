@@ -1906,6 +1906,8 @@ function AppShellContent({
       && previous.every((directory, index) => directory === catalog.directories[index])
     ) ? previous : catalog.directories)
   }, [])
+  const [catalogFailure, setCatalogFailure] = React.useState<{ rootPath: string; message: string } | null>(null)
+  const [catalogRetry, setCatalogRetry] = React.useState(0)
   const [novelWorkspaceDetecting, setNovelWorkspaceDetecting] = React.useState(false)
   const [novelWorkspaceDetectionSettledKey, setNovelWorkspaceDetectionSettledKey] = React.useState<string | null>(null)
   const novelWorkspaceRootRef = React.useRef<string | null>(null)
@@ -1944,6 +1946,9 @@ function AppShellContent({
       }
     }
   }, [])
+
+  const novelWorkspaceCandidateRootsRef = React.useRef(novelWorkspaceCandidateRoots)
+  novelWorkspaceCandidateRootsRef.current = novelWorkspaceCandidateRoots
 
   const loadNovelWorkspaceFiles = React.useCallback(async (
     rootPath: string,
@@ -1988,14 +1993,20 @@ function AppShellContent({
       }
       novelWorkspaceCatalogCacheRef.current.set(rootPath, catalog)
       return catalog
-    })()
+    })().catch(error => {
+      if (novelWorkspaceCandidateRootsRef.current.includes(rootPath)
+        && readWorkspaceCatalogRevision(novelWorkspaceCatalogRevisionRef.current, rootPath) === requestRevision) {
+        setCatalogFailure({ rootPath, message: error instanceof Error ? error.message : String(error) })
+      }
+      throw error
+    })
 
     novelWorkspaceLoadInFlightRef.current.set(loadKey, loadPromise)
-    loadPromise.finally(() => {
+    void loadPromise.finally(() => {
       if (novelWorkspaceLoadInFlightRef.current.get(loadKey) === loadPromise) {
         novelWorkspaceLoadInFlightRef.current.delete(loadKey)
       }
-    })
+    }).catch(() => {})
     return loadPromise
   }, [])
 
@@ -2028,15 +2039,16 @@ function AppShellContent({
 
       setNovelWorkspaceRoot(rootPath)
       setNovelWorkspaceCatalogIfChanged(catalog)
+      setCatalogFailure(previous => previous?.rootPath === rootPath ? null : previous)
       return true
     })()
 
     novelWorkspaceRefreshInFlightRef.current.set(rootPath, refreshPromise)
-    refreshPromise.finally(() => {
+    void refreshPromise.finally(() => {
       if (novelWorkspaceRefreshInFlightRef.current.get(rootPath) === refreshPromise) {
         novelWorkspaceRefreshInFlightRef.current.delete(rootPath)
       }
-    })
+    }).catch(() => {})
     return refreshPromise
   }, [loadNovelWorkspaceFiles, setNovelWorkspaceCatalogIfChanged])
 
@@ -2237,6 +2249,7 @@ function AppShellContent({
         const cachedNovelWorkspaceCatalog = novelWorkspaceCatalogCacheRef.current.get(rootPath)
         const knownWritingWorkspaceRoot = rootPath === activeWritingWorkspaceRoot
         if (cachedNovelWorkspaceCatalog) {
+          setCatalogFailure(previous => previous?.rootPath === rootPath ? null : previous)
           setNovelWorkspaceRoot(rootPath)
           setNovelWorkspaceCatalogIfChanged(cachedNovelWorkspaceCatalog)
           setNovelWorkspaceDetectionSettledKey(novelWorkspaceCandidateKey)
@@ -2271,6 +2284,7 @@ function AppShellContent({
           }
 
           if (catalog) {
+            setCatalogFailure(null)
             setNovelWorkspaceRoot(rootPath)
             setNovelWorkspaceCatalogIfChanged(catalog)
             setNovelWorkspaceDetectionSettledKey(novelWorkspaceCandidateKey)
@@ -2280,6 +2294,12 @@ function AppShellContent({
           }
         } catch {
           if (cancelled) return
+          if (rootPath === currentNovelWorkspaceRoot) {
+            // A failed refresh must keep the mounted editor and its unsaved buffer.
+            setNovelWorkspaceDetectionSettledKey(novelWorkspaceCandidateKey)
+            setNovelWorkspaceDetecting(false)
+            return
+          }
         }
       }
 
@@ -2295,7 +2315,7 @@ function AppShellContent({
     return () => {
       cancelled = true
     }
-  }, [activeWritingWorkspaceRoot, loadNovelWorkspaceFiles, markNovelWorkspaceFileChangesCovered, novelWorkspaceCandidateKey, novelWorkspaceCandidateRoots, rightWorkspaceVisible, setNovelWorkspaceCatalogIfChanged])
+  }, [catalogRetry, activeWritingWorkspaceRoot, loadNovelWorkspaceFiles, markNovelWorkspaceFileChangesCovered, novelWorkspaceCandidateKey, novelWorkspaceCandidateRoots, rightWorkspaceVisible, setNovelWorkspaceCatalogIfChanged])
 
   React.useEffect(() => {
     if (!novelWorkspaceRoot || !latestNovelFileChangesSignature) return
@@ -2393,26 +2413,7 @@ function AppShellContent({
     if (!novelWorkspaceRoot) return
 
     const syncWorkspaceTreeFromDisk = (): void => {
-      novelWorkspaceCatalogCacheRef.current.delete(novelWorkspaceRoot)
-      void refreshNovelWorkspaceFiles(novelWorkspaceRoot)
-        .then((refreshed) => {
-          if (!refreshed) return
-          const catalog = novelWorkspaceCatalogCacheRef.current.get(novelWorkspaceRoot)
-          if (!catalog) return
-
-          // A transiently incomplete catalog must not discard an open editor.
-          // Explicit move/delete actions below reconcile tabs with confirmed disk mutations.
-        })
-        .catch((error) => {
-          if (!(error instanceof Error) || !error.message.includes('Workspace not found')) {
-            console.warn('[AppShell] Failed to sync workspace tree from disk:', error)
-            return
-          }
-
-          const emptyCatalog: NativeWorkspaceCatalog = { files: [], directories: [] }
-          novelWorkspaceCatalogCacheRef.current.set(novelWorkspaceRoot, emptyCatalog)
-          setNovelWorkspaceCatalogIfChanged(emptyCatalog)
-        })
+      void refreshNovelWorkspaceFilesAfterMutation(novelWorkspaceRoot)
     }
     const handleVisibilityChange = (): void => {
       if (document.visibilityState === 'visible') syncWorkspaceTreeFromDisk()
@@ -2424,7 +2425,7 @@ function AppShellContent({
       window.removeEventListener('focus', syncWorkspaceTreeFromDisk)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [novelWorkspaceRoot, refreshNovelWorkspaceFiles, setNovelWorkspaceCatalogIfChanged])
+  }, [novelWorkspaceRoot, refreshNovelWorkspaceFilesAfterMutation])
 
   const selectedNovelFile = React.useMemo(() => {
     const canResolveSelectedNovelFile = showNovelWorkspaceSidebar || showNovelWorkspacePending
@@ -4470,12 +4471,25 @@ function AppShellContent({
     }
   }, [navState, t, sessionFilter, automationFilter, labelConfigs, viewConfigs, sessionStatuses])
 
+  const catalogError = catalogFailure && novelWorkspaceCandidateRootSet.has(catalogFailure.rootPath) ? (
+    <div role="alert" className="px-3 py-2 text-sm text-destructive">
+      {catalogFailure.message}
+      <Button variant="ghost" size="sm" onClick={() => {
+        invalidateNovelWorkspaceCatalogRequests(catalogFailure.rootPath)
+        setCatalogFailure(null)
+        setCatalogRetry(value => value + 1)
+      }}>{t('common.retry', '重试')}</Button>
+    </div>
+  ) : null
+
   const activityWorkspaceDirectory = showPrimarySidebar
     && showNovelWorkspaceSidebar
     && workspaceDirectoryVisible
     && novelWorkspaceRoot
     && activeWorkspaceId
     ? (
+      <>
+      {catalogError}
       <WorkspaceProjectSidebar
         sidebarRef={sidebarRef}
         treeRef={workspaceFileTreeRef}
@@ -4502,6 +4516,7 @@ function AppShellContent({
           onDismissReviewDot: handleDismissNovelReviewDot,
         }}
       />
+      </>
     )
     : undefined
 
@@ -4575,7 +4590,7 @@ function AppShellContent({
                   )}
                 />
                 <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
-                  {t('writing.workspaceUnavailable', '未检测到项目目录')}
+                  {catalogError ?? t('writing.workspaceUnavailable', '未检测到项目目录')}
                 </div>
               </div>
             ) : null

@@ -487,6 +487,7 @@ function main() {
   }> = [];
   const wsNamePool = ["长篇小说", "短篇练习", "世界观设定", "资料整理", "番外集", "修订稿", "投稿准备", "读者反馈", "灵感碎片", "连载主线"];
 
+  const existingIds = new Set<string>();
   for (let w = 0; w < nWorkspaces; w++) {
     const isNovelWs = w === 0;
     const slug = isNovelWs ? "perf-novel" : `perf-ws-${String(w + 1).padStart(2, "0")}`;
@@ -537,7 +538,6 @@ function main() {
     }
 
     // Sessions: 1 designated long session + (n-1) following real-data distribution
-    const existingIds = new Set<string>();
     const model = pick(rng, ["gpt-5.5", "gemini-3.5-flash", "deepseek-v4-pro"]);
     for (let s = 0; s < nSessionsPerWs; s++) {
       const isLong = s === 0;

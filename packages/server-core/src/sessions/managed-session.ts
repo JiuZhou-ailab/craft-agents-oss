@@ -89,6 +89,10 @@ export interface ManagedSession {
   id: string;
   workspace: Workspace;
   agent: AgentInstance | null;
+  /** A failed teardown must finish before this runtime can be acquired again. */
+  runtimeCleanupPending?: boolean;
+  runtimeLastUsedAt?: number;
+  activeBackgroundTasks?: Map<string, string | undefined>;
   messages: Message[];
   isProcessing: boolean;
   /** Source files changed while the active turn held the Pi runtime lease. */

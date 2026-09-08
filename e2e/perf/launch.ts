@@ -3,7 +3,7 @@
 // pos: Shared launch/teardown/interaction boundary for the perf harness; owns no measurement policy itself
 
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { CdpClient, evaluate } from './cdp.ts'
@@ -275,4 +275,30 @@ function unwrap(line: string): string {
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
+}
+
+/** Verify registry acceptance after timing, so validation does not warm the measured path. */
+export async function verifyStandardFixture(app: LaunchedApp, fixtureDir: string): Promise<void> {
+  const marker = JSON.parse(readFileSync(join(fixtureDir, '.perf-fixture'), 'utf8'))
+  if (marker.scale !== 1) throw new Error('Performance acceptance requires the standard scale=1 fixture')
+  const config = JSON.parse(readFileSync(join(fixtureDir, 'config.json'), 'utf8'))
+  if (config.workspaces.length !== 20) throw new Error('Expected 20 fixture workspaces')
+  const ids = new Set<string>()
+  for (const workspace of config.workspaces) {
+    const sessions = await callOn<Array<{id: string; messageCount?: number}>>(app,
+      'async function(id) { return window.electronAPI.listSessionsByWorkspace(id) }', [workspace.id])
+    if (sessions.length !== 300 || !sessions.some(session => session.messageCount === 1000)) {
+      throw new Error(`Fixture workspace ${workspace.slug}: expected 300 sessions including 1000-message history, received ${sessions.length}`)
+    }
+    for (const session of sessions) {
+      if (ids.has(session.id)) throw new Error(`Duplicate registry Session: ${session.id}`)
+      ids.add(session.id)
+    }
+  }
+  if (ids.size !== 6000) throw new Error(`Expected 6000 registered Sessions, received ${ids.size}`)
+  const entries = await callOn<Array<{relativePath: string}>>(app,
+    'async function(root) { return window.electronAPI.listWorkspaceFiles(root, []) }', [config.workspaces[0].rootPath])
+  if (entries.filter(entry => /第\d{3}章/.test(entry.relativePath)).length !== 400) {
+    throw new Error('Expected 400 real chapter files')
+  }
 }

@@ -606,6 +606,7 @@ export abstract class PiAgentToolHost extends PiAgentTransport {
     this.debug(`Pi subprocess exited: code=${code}, signal=${signal}`);
 
     this.subprocess = null;
+    this.activePromptId = null;
     this.stopReadingStdout?.();
     this.stopReadingStdout = null;
     this.resetSubprocessErrorDedup();

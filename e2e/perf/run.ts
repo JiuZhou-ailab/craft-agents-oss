@@ -6,6 +6,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   launchApp,
+  verifyStandardFixture,
   evalOn,
   heapUsed,
   waitFor,
@@ -142,7 +143,7 @@ interface WritingWorkspaceEntryTiming {
   startupMarks: Record<string, number>
 }
 
-async function enterFirstWritingWorkspace(live: LaunchedApp): Promise<WritingWorkspaceEntryTiming> {
+export async function enterFirstWritingWorkspace(live: LaunchedApp): Promise<WritingWorkspaceEntryTiming> {
   await waitFor(
     live,
     projectButtonsReadyExpression(),
@@ -238,7 +239,7 @@ async function openWritingProject(live: LaunchedApp): Promise<string | null> {
 }
 
 /** ActivityRail project buttons expand folders; selecting a child session enters the project. */
-async function openExpandedProjectSession(live: LaunchedApp): Promise<void> {
+export async function openExpandedProjectSession(live: LaunchedApp): Promise<void> {
   const selector = '[data-testid="activity-project-conversations"] [data-session-id] button'
   await waitFor(live, `!!document.querySelector('${selector}')`, 90_000, 'expanded project session')
   const opened = await evalOn<boolean>(live, `(() => {
@@ -257,7 +258,7 @@ async function openExpandedProjectSession(live: LaunchedApp): Promise<void> {
 }
 
 /** Same navigation event used by in-app route links after the project runtime is active. */
-async function navigateToWritingWorkspace(live: LaunchedApp): Promise<void> {
+export async function navigateToWritingWorkspace(live: LaunchedApp): Promise<void> {
   await evalOn(live, `window.dispatchEvent(new CustomEvent('craft-agent-navigate', {
     detail: { route: 'writing' },
     bubbles: true,
@@ -290,6 +291,7 @@ async function runStartup(): Promise<Metric[]> {
       hubDurations.push(timing.hubReadyAt - t0)
       catalogDurations.push(timing.catalogReadyAt - timing.projectClickedAt)
       totalDurations.push(timing.catalogReadyAt - t0)
+      if (i === 0) await verifyStandardFixture(live, FIXTURE)
     } finally {
       await live.close()
     }
@@ -776,7 +778,7 @@ async function runDocumentLeak(): Promise<Metric[]> {
 }
 
 /** Scroll virtualized catalog to chapter N and click it. Chapters are 1-indexed. */
-async function openWritingChapter(live: LaunchedApp, chapter: number): Promise<void> {
+export async function openWritingChapter(live: LaunchedApp, chapter: number): Promise<void> {
   const label = writingChapterLabel(chapter)
 
   await ensureWritingChapterDirectory(live)
@@ -1048,7 +1050,7 @@ function report(metrics: Metric[], elapsedMs: number) {
   if (!decision.selectedPass) process.exitCode = 1
 }
 
-main().catch((err) => {
+if (import.meta.main) main().catch((err) => {
   console.error('perf harness failed:', err)
   process.exit(1)
 })

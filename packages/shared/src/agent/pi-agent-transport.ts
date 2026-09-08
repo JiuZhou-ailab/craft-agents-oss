@@ -107,6 +107,8 @@ export abstract class PiAgentTransport extends PiAgentHost {
   protected _isProcessing: boolean = false;
   protected abortReason?: AbortReason;
   protected activePromptId: string | null = null;
+  /** Host may reconsider eviction after a cancelled native turn finally settles. */
+  onNativeTurnSettled?: () => void;
 
   // Event adapter
   protected adapter: PiEventAdapter;
@@ -669,6 +671,7 @@ export abstract class PiAgentTransport extends PiAgentHost {
         if (msg.id === this.activePromptId) {
           this.activePromptId = null;
           this.eventQueue.complete();
+          this.onNativeTurnSettled?.();
         }
         break;
 
@@ -897,6 +900,7 @@ export abstract class PiAgentTransport extends PiAgentHost {
     if (eventType === 'agent_settled') {
       this.activePromptId = null;
       this.eventQueue.complete();
+      this.onNativeTurnSettled?.();
     }
   }
 

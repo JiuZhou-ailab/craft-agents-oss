@@ -404,11 +404,17 @@ export class SessionManager implements ISessionManager {
     },
     disposeAgentRuntime: (managed, reason) => this.disposeManagedAgentRuntime(managed, reason),
     getOrCreateAgent: managed => this.getOrCreateAgentLocked(managed),
+    onOperationsDrained: () => this.agentRuntime.scheduleIdleReclaim(),
   })
   // Pi subprocess lifecycle (create/refresh/rotate/dispose) lives in AgentRuntime.
   private agentRuntime = new AgentRuntime({
     isSessionTracked: managed => this.sessions.get(managed.id) === managed,
     allSessions: () => this.sessions.values(),
+    hasActiveOperations: id => this.agentLease.hasActiveOperations(id),
+    hasPendingInteraction: id => [...this.pendingPermissionRequests.values()].some(request => request.sessionId === id)
+      || [...this.pendingUserQuestions.values()].some(request => request.sessionId === id),
+    tryWithIdleRuntimeLock: (managed, work) => this.agentLease.tryWithIdleRuntimeLock(managed, work),
+    flushSession: id => this.flushSession(id),
     getAutomationSystem: workspaceRootPath => this.automationSystems.get(workspaceRootPath),
     withAgentRuntimeLock: (managed, work, allowClosing) => this.withAgentRuntimeLock(managed, work, allowClosing),
     tryRefreshAgentRuntimeLocked: (managed, reason) => this.tryRefreshAgentRuntimeLocked(managed, reason),
@@ -5280,6 +5286,9 @@ export class SessionManager implements ISessionManager {
 
       case 'task_backgrounded':
       case 'task_progress':
+        managed.activeBackgroundTasks ??= new Map()
+        if (event.type === 'task_backgrounded') managed.activeBackgroundTasks.set(event.toolUseId, event.taskId)
+        else if (!managed.activeBackgroundTasks.has(event.toolUseId)) managed.activeBackgroundTasks.set(event.toolUseId, undefined)
         // Forward background task events directly to renderer
         this.sendEvent({
           ...event,
@@ -5288,6 +5297,10 @@ export class SessionManager implements ISessionManager {
         break
 
       case 'task_completed':
+        for (const [toolUseId, taskId] of managed.activeBackgroundTasks ?? []) {
+          if (taskId === event.taskId) managed.activeBackgroundTasks?.delete(toolUseId)
+        }
+        this.agentRuntime.scheduleIdleReclaim()
         // Store output for later retrieval via getTaskOutput()
         if (managed) {
           managed.backgroundTaskOutputs.set(event.taskId, {

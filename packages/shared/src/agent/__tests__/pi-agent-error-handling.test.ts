@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from 'bun:test'
 import { PiAgent } from '../pi-agent.ts'
+import { AbortReason } from '../backend/types.ts'
 import type { BackendConfig } from '../backend/types.ts'
 
 function createConfig(overrides: Partial<BackendConfig> = {}): BackendConfig {
@@ -36,6 +37,26 @@ function captureSuccessfulCredentialUpdate(agent: PiAgent, sent: unknown[]): voi
 }
 
 describe('PiAgent subprocess error handling', () => {
+  it('stays busy after host abort until Pi reports native settlement', async () => {
+    const agent = new PiAgent(createConfig())
+    ;(agent as any).ensureSubprocess = async () => {}
+    let promptSent!: () => void
+    const sent = new Promise<void>(resolve => { promptSent = resolve })
+    ;(agent as any).send = (message: { type: string }) => { if (message.type === 'prompt') promptSent() }
+    const iterator = agent.chat('cancel me')
+    const pending = iterator.next()
+    await sent
+    agent.forceAbort(AbortReason.UserStop)
+    await pending
+    expect(agent.isProcessing()).toBe(false)
+    expect(agent.isIdle()).toBe(false)
+    ;(agent as any).handleLine(JSON.stringify({ type: 'event', event: { type: 'agent_end' } }))
+    expect(agent.isIdle()).toBe(false)
+    ;(agent as any).handleLine(JSON.stringify({ type: 'event', event: { type: 'agent_settled' } }))
+    expect(agent.isIdle()).toBe(true)
+    agent.destroy()
+  })
+
   it('keeps transient context separate from the durable prompt message', async () => {
     const agent = new PiAgent(createConfig())
     ;(agent as any).ensureSubprocess = async () => {}

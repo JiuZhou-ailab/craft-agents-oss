@@ -41,7 +41,7 @@ export class ApiSourcePoolClient implements PoolClient {
 
   async close(): Promise<void> {
     if (this.connected) {
-      await this.client.close().catch(() => {});
+      await this.client.close();
       this.connected = false;
     }
   }

@@ -273,8 +273,9 @@ async function collectWorkspaceFileList(
     let rootStat: Awaited<ReturnType<typeof stat>>
     try {
       rootStat = await stat(rootPath)
-    } catch {
-      continue
+    } catch (error) {
+      if (normalizedRoot !== '' && (error as NodeJS.ErrnoException).code === 'ENOENT') continue
+      throw error
     }
 
     const rootName = parsePath(rootPath).base
@@ -299,8 +300,9 @@ async function collectWorkspaceFileList(
         let dirEntries: import('fs').Dirent[]
         try {
           dirEntries = await readdir(absDir, { withFileTypes: true })
-        } catch {
-          dirEntries = []
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT' && relDir) continue
+          throw error
         }
 
         for (const entry of dirEntries) {

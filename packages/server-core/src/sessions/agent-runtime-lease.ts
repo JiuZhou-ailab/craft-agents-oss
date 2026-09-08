@@ -15,6 +15,7 @@ export interface AgentRuntimeLeaseDeps {
   disposeAgentRuntime(managed: ManagedSession, reason: string): Promise<void>
   /** Resolve or create the session's Pi subprocess. Resolves through the Facade at call time so per-instance stubs keep working. */
   getOrCreateAgent(managed: ManagedSession): Promise<AgentInstance>
+  onOperationsDrained?(): void
 }
 
 /**
@@ -46,6 +47,7 @@ export class AgentRuntimeLease {
   private async withAgentRuntimeMutex<T>(
     managed: ManagedSession,
     work: () => Promise<T>,
+    notifyOperationsDrained = true,
   ): Promise<T> {
     const previous = this.agentRuntimeLocks.get(managed.id) ?? Promise.resolve()
     let release!: () => void
@@ -60,6 +62,7 @@ export class AgentRuntimeLease {
       if (this.agentRuntimeLocks.get(managed.id) === slot) {
         this.agentRuntimeLocks.delete(managed.id)
       }
+      if (notifyOperationsDrained) this.deps.onOperationsDrained?.()
     }
   }
 
@@ -86,11 +89,24 @@ export class AgentRuntimeLease {
     const waiters = this.agentRuntimeLeaseWaiters.get(sessionId)
     this.agentRuntimeLeaseWaiters.delete(sessionId)
     for (const resolve of waiters ?? []) resolve()
+    this.deps.onOperationsDrained?.()
   }
 
   /** Synchronous admission check for non-destructive idle cleanup. */
   hasActiveOperations(sessionId: string): boolean {
     return (this.agentRuntimeLeaseCounts.get(sessionId) ?? 0) > 0
+  }
+
+  /** Opportunistic eviction never queues behind active work or an exclusive mutation. */
+  async tryWithIdleRuntimeLock(managed: ManagedSession, work: () => Promise<boolean>): Promise<boolean> {
+    const available = () => this.deps.isSessionTracked(managed) && !managed.runtimeState
+      && !this.hasActiveOperations(managed.id) && !this.sendAdmissionTails.has(managed.id)
+    if (this.agentRuntimeLocks.has(managed.id) || !available()) return false
+    const epoch = managed.runtimeEpoch
+    return this.withAgentRuntimeMutex(managed, async () => {
+      if (!available() || managed.runtimeEpoch !== epoch) return false
+      return work()
+    }, false)
   }
 
   /** Hold only until a send is durably queued or claims the processing generation. */
@@ -116,6 +132,7 @@ export class AgentRuntimeLease {
     if (this.deps.refreshSessionWorkspace(managed)) {
       this.workspaceRuntimeRefreshRequired.add(managed.id)
     }
+    managed.runtimeLastUsedAt = performance.now()
     this.retainAgentRuntimeLease(managed.id)
     let retained = true
     return () => {
@@ -169,6 +186,7 @@ export class AgentRuntimeLease {
     if (
       !agent
       || runtimeChanged
+      || managed.runtimeCleanupPending
       || managed.credentialRestartRequired
       || (this.agentRuntimeLeaseCounts.get(managed.id) ?? 0) === 0
     ) {
@@ -219,6 +237,7 @@ export class AgentRuntimeLease {
     const expectedEpoch = managed.runtimeEpoch ?? 0
     const agent = await this.withAgentRuntimeMutex(managed, async () => {
       const agent = await this.getOrCreateValidatedAgentLocked(managed, expectedEpoch)
+      managed.runtimeLastUsedAt = performance.now()
       this.retainAgentRuntimeLease(managed.id)
       return agent
     })

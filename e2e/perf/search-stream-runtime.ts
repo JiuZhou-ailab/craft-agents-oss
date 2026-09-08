@@ -1,6 +1,6 @@
 // input: Standard fixture, built Electron, deterministic local model SSE
 // output: First-text latency, source-locator QA, and 20/50-session process-tree diagnostics
-// pos: Spec #29 user-visible and runtime performance evidence; no external provider calls
+// pos: Specs #29/#30 user-visible and runtime performance evidence; no external provider calls
 
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process'
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { launchApp, evalOn, callOn, waitFor, heapUsed, sleep, type LaunchedApp } from './launch'
+import { launchApp, verifyStandardFixture, evalOn, callOn, waitFor, heapUsed, sleep, type LaunchedApp } from './launch'
 
 const root = resolve(import.meta.dirname, '../..')
 const connection = 'offline-perf'
@@ -23,12 +23,13 @@ const fixture = realpathSync(mkdtempSync(join(tmpdir(), 'storyflow-interaction-'
 let app: LaunchedApp | undefined
 let responseText = '中文首片暂停测试'
 let requests = 0
+let lastAgentMessages: Array<{ role: string; content: unknown }> = []
 let streamLong = false
 const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
   if (!new URL(request.url).pathname.endsWith('/chat/completions')) return new Response('not found', { status: 404 })
   const body = await request.json() as any
   const isAgent = body.tools?.length > 0
-  if (isAgent) requests++
+  if (isAgent) { requests++; lastAgentMessages = body.messages }
   const text = isAgent ? responseText : 'Offline test'
   const sse = (content: string, finish_reason: string | null = null) => `data: ${JSON.stringify({ id: 'offline', model: connection, choices: [{ index: 0, delta: { content }, finish_reason }] })}\n\n`
   return new Response(new ReadableStream({ async start(controller) {
@@ -86,6 +87,8 @@ try {
   results.electron = await evalOn(live, 'navigator.userAgent')
   await callOn(live, `async function(id) { await window.electronAPI.switchWorkspace(id); const url = new URL(location.href); url.search = new URLSearchParams({workspaceId:id,ws:id,route:'allSessions'}).toString(); location.href = url.href }`, [workspace.id])
   await sleep(3000)
+  await verifyStandardFixture(live, fixture)
+  results.fixtureVerified = true
   const create = async () => await callOn<{ id: string }>(live, `async function(workspaceId, rootPath, connection) { return window.electronAPI.createSession(workspaceId, {name:'Offline performance', permissionMode:'ask', workingDirectory:rootPath, llmConnection:connection, model:connection}) }`, [workspace.id, workspace.rootPath, connection])
   const navigate = async (id: string) => {
     await callOn(live, `function(id) { const url = new URL(location.href); url.searchParams.set('route','allSessions/session/'+id); location.href=url.href }`, [id])
@@ -123,33 +126,81 @@ try {
   if (latencies.length) { results.firstTextMs = stats(latencies); console.log('firstTextMs', results.firstTextMs) }
   if (selected.includes('runtime')) {
     const stages = []
-    const ids: string[] = []
-    for (let i = 0; i < 50; i++) {
-      const session = await create(); ids.push(session.id)
-      await navigate(session.id)
-      responseText = 'Offline lifecycle reply'
-      await send(session.id)
-      if (i === 19 || i === 49) {
-        await callOn(live, `function() { window.dispatchEvent(new CustomEvent('craft-agent-navigate', {detail:{route:'allSessions'}})) }`, [])
-        await sleep(3000)
-        const released = await callOn<number>(live, `async function(ids) { const results = await Promise.all(ids.map(id => window.electronAPI.releaseSessionMessages(id))); return results.filter(Boolean).length }`, [ids])
-        const heapMb = await heapUsed(live) / 1e6
-        const tree = processTree(live.proc.pid!)
-        const readBegin = performance.now()
-        await callOn(live, `async function(id) { return window.electronAPI.getSessionMessages(id) }`, [ids[0]])
-        const coldTranscriptMs = performance.now() - readBegin
-        await navigate(ids[0]!)
-        await callOn(live, `function(id) { window.__resumeDelta = null; window.__resumeOff = window.electronAPI.onSessionEvent(e => {if(e.sessionId === id && e.type==='text_delta' && window.__resumeDelta===null) window.__resumeDelta=performance.now()-window.__resumeStart}) }`, [ids[0]])
-        await callOn(live, `async function(id) {window.__resumeStart=performance.now(); await window.electronAPI.sendMessage(id,'Reply with the offline fixture')}`, [ids[0]])
-        await waitFor(live, 'window.__resumeDelta !== null', 30000, 'resume first delta')
-        const resumeFirstDeltaMs = await evalOn(live, 'window.__resumeDelta')
-        await evalOn(live, 'window.__resumeOff()')
-        await sleep(1200)
-        stages.push({ sessions: i + 1, releasedTranscripts: released, heapMb, ...tree, coldTranscriptMs, resumeFirstDeltaMs })
-        console.log('runtime stage', JSON.stringify({ sessions: i + 1, heapMb, rssMb: tree.rssMb, piCount: tree.piCount, resumeFirstDeltaMs }))
+    const cycles = Number(process.env.PERF_RUNTIME_CYCLES ?? '1')
+    assert.ok(Number.isInteger(cycles) && cycles >= 1 && cycles <= 3, 'Invalid PERF_RUNTIME_CYCLES')
+    let ids: string[] = []
+    for (let cycle = 1; cycle <= cycles; cycle++) {
+      ids = []
+      for (let i = 0; i < 50; i++) {
+        const session = await create(); ids.push(session.id)
+        await navigate(session.id)
+        responseText = 'Offline lifecycle reply'
+        await send(session.id)
+        if (i === 19 || i === 49) {
+          await callOn(live, `function() { window.dispatchEvent(new CustomEvent('craft-agent-navigate', {detail:{route:'allSessions'}})) }`, [])
+          await sleep(3000)
+          const released = await callOn<number>(live, `async function(ids) { const results = await Promise.all(ids.map(id => window.electronAPI.releaseSessionMessages(id))); return results.filter(Boolean).length }`, [ids])
+          const heapMb = await heapUsed(live) / 1e6
+          const tree = processTree(live.proc.pid!)
+          if (!baseline) assert.ok(tree.piCount <= 3, `Idle Pi count exceeds limit: ${tree.piCount}`)
+          const readBegin = performance.now()
+          await callOn(live, `async function(id) { return window.electronAPI.getSessionMessages(id) }`, [ids[0]])
+          const coldTranscriptMs = performance.now() - readBegin
+          await navigate(ids[0]!)
+          await callOn(live, `function(id) { window.__resumeDelta = null; window.__resumeOff = window.electronAPI.onSessionEvent(e => {if(e.sessionId === id && e.type==='text_delta' && window.__resumeDelta===null) window.__resumeDelta=performance.now()-window.__resumeStart}) }`, [ids[0]])
+          await callOn(live, `async function(id) {window.__resumeStart=performance.now(); await window.electronAPI.sendMessage(id,'Reply with the offline fixture')}`, [ids[0]])
+          await waitFor(live, 'window.__resumeDelta !== null', 30000, 'resume first delta')
+          const resumeFirstDeltaMs = await evalOn(live, 'window.__resumeDelta')
+          await evalOn(live, 'window.__resumeOff()')
+          await sleep(1200)
+          stages.push({ cycle, sessions: i + 1, releasedTranscripts: released, heapMb, ...tree, coldTranscriptMs, resumeFirstDeltaMs })
+          console.log('runtime stage', JSON.stringify({ cycle, sessions: i + 1, heapMb, rssMb: tree.rssMb, piCount: tree.piCount, resumeFirstDeltaMs }))
+        }
       }
     }
     results.runtime = stages
+    const resumes = Number(process.env.PERF_RUNTIME_RESUMES ?? '20')
+    assert.ok(Number.isInteger(resumes) && resumes >= 0 && resumes <= 40, 'Invalid PERF_RUNTIME_RESUMES')
+    const coldResumes: number[] = []
+    const cleanRestarts: number[] = []
+    for (let i = 1; i <= resumes; i++) {
+      const id = ids[i]!
+      const measure = async () => {
+        await callOn(live, `function(id) { window.__resumeDelta=null; window.__resumeOff=window.electronAPI.onSessionEvent(e=>{if(e.sessionId===id && e.type==='text_delta' && window.__resumeDelta===null) window.__resumeDelta=performance.now()-window.__resumeStart});window.__resumeStart=performance.now() }`, [id])
+        await send(id)
+        const ms = await evalOn<number>(live, 'window.__resumeDelta')
+        await evalOn(live, 'window.__resumeOff()')
+        assert.ok(typeof ms === 'number', 'Missing resume first delta')
+        return ms
+      }
+      const previous = processTree(live.proc.pid!)
+      coldResumes.push(await measure())
+      assert.ok(lastAgentMessages.some(message => message.role === 'assistant'
+        && JSON.stringify(message.content).includes('Offline lifecycle reply')), 'Restored Pi must send prior native conversation context')
+      const current = processTree(live.proc.pid!)
+      const created = current.processes.filter(p => /pi-agent-server/.test(p.command) && !previous.processes.some(old => old.pid === p.pid))
+      if (!baseline) {
+        assert.equal(created.length, 1, 'Evicted Session must recreate exactly one Pi process')
+        const pid = created[0]!.pid
+        process.kill(pid, 'SIGTERM')
+        for (let attempt = 0; attempt < 100; attempt++) {
+          if (!processTree(live.proc.pid!).processes.some(p => p.pid === pid)) break
+          await sleep(20)
+        }
+        assert.ok(!processTree(live.proc.pid!).processes.some(p => p.pid === pid), 'Old Pi must exit before clean restart')
+        cleanRestarts.push(await measure())
+      }
+    }
+    assert.equal(requests, cycles * 52 + resumes * (baseline ? 1 : 2), 'Each user send must cause exactly one model request, including resumes')
+    results.runtimeResume = { nativeHistoryVerified: resumes > 0, samples: coldResumes, cleanRestartSamples: cleanRestarts,
+      kind: baseline ? 'warm' : 'cold', resume: coldResumes.length ? stats(coldResumes) : null, cleanRestart: cleanRestarts.length ? stats(cleanRestarts) : null,
+      preparationSpans: live.perfLines.filter(line => /pi.subprocess.ready|agent.facade.ready/.test(line.text)).map(line => line.text) }
+    console.log('runtime resume', JSON.stringify({ samples: coldResumes.length, resume: stats(coldResumes), cleanRestart: stats(cleanRestarts) }))
+    if (!baseline && resumes) {
+      const coldP95 = stats(coldResumes).p95!
+      const restartP95 = stats(cleanRestarts).p95!
+      assert.ok(coldP95 - restartP95 <= Math.max(250, restartP95 * .1), 'Cold resume overhead exceeds clean restart budget')
+    }
   }
   if (selected.includes('long-stream')) {
     const sessionsRoot = join(workspace.rootPath, '.craft-agent', 'sessions')

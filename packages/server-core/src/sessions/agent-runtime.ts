@@ -1,5 +1,5 @@
 // input: Workspace/connection config, Pi backend SDK, and the Facade callback bundle
-// output: AgentRuntime — lazy Pi subprocess creation, runtime refresh, credential rotation, connection-scoped disposal
+// output: AgentRuntime — lazy Pi subprocess creation, runtime refresh, bounded idle residency, credential rotation, confirmed disposal
 // pos: Owns every reason an agent runtime is created, refreshed, or torn down
 
 import { join } from 'path'
@@ -69,6 +69,10 @@ export interface AgentRuntimeDeps extends WireAgentCallbacksDeps {
   isSessionTracked(managed: ManagedSession): boolean
   /** Snapshot of every managed session (connection-scoped fan-out). */
   allSessions(): Iterable<ManagedSession>
+  hasActiveOperations(sessionId: string): boolean
+  hasPendingInteraction(sessionId: string): boolean
+  tryWithIdleRuntimeLock(managed: ManagedSession, work: () => Promise<boolean>): Promise<boolean>
+  flushSession(sessionId: string): Promise<void>
   /** Workspace automation system lookup (injected into new agents). */
   getAutomationSystem(workspaceRootPath: string): AutomationSystem | undefined
   /** Exclusive-mutation mutex from AgentRuntimeLease, resolved through the Facade. */
@@ -83,29 +87,64 @@ export interface AgentRuntimeDeps extends WireAgentCallbacksDeps {
 export class AgentRuntime {
   constructor(private deps: AgentRuntimeDeps) {}
 
+  private idleSweepScheduled = false
+
+  scheduleIdleReclaim(): void {
+    if (this.idleSweepScheduled) return
+    this.idleSweepScheduled = true
+    setImmediate(() => {
+      this.idleSweepScheduled = false
+      void this.reclaimIdleRuntimes().catch(error => getSessionLog().warn('Idle runtime sweep failed:', error))
+    })
+  }
+
+  private isIdleCandidate(managed: ManagedSession): boolean {
+    return !!managed.agent && managed.agent.isIdle?.() === true
+      && this.deps.isSessionTracked(managed) && !managed.runtimeState
+      && !managed.runtimeCleanupPending && !managed.isProcessing && !managed.messageQueue.length
+      && !managed.rewindCommitInProgress && !managed.isAsyncOperationOngoing
+      && !managed.pendingAuthRequest && !managed.pendingAuthRequestId
+      && !managed.backgroundShellCommands.size && !managed.activeBackgroundTasks?.size
+      && !this.deps.hasActiveOperations(managed.id) && !this.deps.hasPendingInteraction(managed.id)
+  }
+
+  private async reclaimIdleRuntimes(): Promise<void> {
+    // ponytail: scan the Host registry on operation drain; index only if measured at larger scale.
+    const candidates = [...this.deps.allSessions()].filter(managed => this.isIdleCandidate(managed))
+      .sort((a, b) => (b.runtimeLastUsedAt ?? 0) - (a.runtimeLastUsedAt ?? 0))
+    const idleRuntimeLimit = 3
+    await Promise.all(candidates.slice(idleRuntimeLimit).map(async managed => {
+      try {
+        await this.deps.tryWithIdleRuntimeLock(managed, async () => {
+          if (!this.isIdleCandidate(managed)) return false
+          await this.deps.flushSession(managed.id)
+          if (!this.isIdleCandidate(managed)) return false
+          await this.disposeManagedAgentRuntime(managed, 'idle runtime limit')
+          getSessionLog().info(`Reclaimed idle Pi runtime for ${managed.id}`)
+          return true
+        })
+      } catch (error) {
+        getSessionLog().warn(`Idle runtime cleanup failed for ${managed.id}: ${error instanceof Error ? error.message : error}`)
+      }
+    }))
+  }
+
   async disposeManagedAgentRuntime(managed: ManagedSession, reason: string): Promise<void> {
     const sessionId = managed.id
 
-    if (managed.agent) {
-      try {
-        if (managed.agent.disposeForRestart) {
-          await managed.agent.disposeForRestart()
-        } else {
-          managed.agent.dispose()
-        }
-      } catch (error) {
-        getSessionLog().warn(`Failed to dispose agent for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
+    managed.runtimeCleanupPending = true
+    try {
+      if (managed.agent) {
+        if (managed.agent.disposeForRestart) await managed.agent.disposeForRestart()
+        else managed.agent.dispose()
       }
+      if (managed.mcpPool) await managed.mcpPool.disconnectAll()
+    } catch (error) {
+      getSessionLog().warn(`Runtime cleanup failed for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
+      throw error
     }
 
-    if (managed.mcpPool) {
-      try {
-        await managed.mcpPool.disconnectAll()
-      } catch (error) {
-        getSessionLog().warn(`Failed to disconnect MCP pool for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
-      }
-    }
-
+    managed.runtimeCleanupPending = false
     managed.agent = null
     managed.mcpPool = undefined
     managed.envOverrides = undefined
@@ -321,21 +360,24 @@ export class AgentRuntime {
         return { managed, invalidationEpoch }
       })
 
-    await Promise.all(targets.map(({ managed }) => this.deps.withAgentRuntimeLock(
-      managed,
-      () => this.disposeManagedAgentRuntime(managed, 'connection sign-out'),
-      true,
-    )))
-
-    for (const { managed, invalidationEpoch } of targets) {
-      if (
-        this.deps.isSessionTracked(managed)
-        && managed.runtimeEpoch === invalidationEpoch
-        && managed.runtimeState === 'invalidating'
-      ) {
-        managed.runtimeState = undefined
+    const results = await Promise.allSettled(targets.map(async ({ managed, invalidationEpoch }) => {
+      try {
+        await this.deps.withAgentRuntimeLock(
+          managed,
+          () => this.disposeManagedAgentRuntime(managed, 'connection sign-out'),
+          true,
+        )
+      } finally {
+        if (
+          this.deps.isSessionTracked(managed)
+          && managed.runtimeEpoch === invalidationEpoch
+          && managed.runtimeState === 'invalidating'
+        ) managed.runtimeState = undefined
       }
-    }
+    }))
+    const failures = results.filter(result => result.status === 'rejected')
+    if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Connection runtime cleanup failed')
+
   }
   async ensureManagedCredentialForSessionLocked(
     managed: ManagedSession,
@@ -376,6 +418,7 @@ export class AgentRuntime {
   * 4. fallback: no connection configured
   */
   async getOrCreateAgentLocked(managed: ManagedSession): Promise<AgentInstance> {
+    if (managed.runtimeCleanupPending) await this.disposeManagedAgentRuntime(managed, 'retry unfinished cleanup')
     if (!isFreeConversationWorkspaceId(managed.workspace.id)) {
       managed.workingDirectory = resolveWorkspaceWorkingDirectory(
         managed.workspace,
@@ -787,6 +830,7 @@ export class AgentRuntime {
 
       // Wire product callbacks (permission/auth/plan/spawn/self-management/
       // source activation). Extracted verbatim into wire-agent-callbacks.ts.
+      managed.agent.onNativeTurnSettled = () => this.scheduleIdleReclaim()
       wireAgentCallbacks(managed.agent, managed, this.deps)
 
       // NOTE: Source reloading is now handled by ConfigWatcher callbacks
