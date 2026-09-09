@@ -35,6 +35,9 @@ describe('resolveMarkdownLinkTarget', () => {
   })
 
   it('decodes percent-encoded CJK relative paths before classifying as files', () => {
+    expect(resolveMarkdownLinkTarget('%E6%96%AF%E5%A5%88%E5%BE%B7%E8%8A%82%E6%8B%8D%E8%A1%A8.md')).toEqual({
+      kind: 'file', path: '斯奈德节拍表.md',
+    })
     const encoded = './%E6%AD%A3%E6%96%87/02-%E5%88%AB%E7%AC%91%E4%BA%86.md'
     expect(resolveMarkdownLinkTarget(encoded)).toEqual({
       kind: 'file',

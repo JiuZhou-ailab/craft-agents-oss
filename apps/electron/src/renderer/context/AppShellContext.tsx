@@ -212,6 +212,7 @@ export interface AppShellContextType {
 }
 
 interface SessionInteractionActionsContextType {
+  onOpenFile: AppShellContextType['onOpenFile']
   onCreateSession: AppShellContextType['onCreateSession']
   onSendMessage: AppShellContextType['onSendMessage']
   onRespondToPermission?: AppShellContextType['onRespondToPermission']
@@ -330,6 +331,7 @@ export function AppShellProvider({
   value: AppShellContextType
 }) {
   const sessionInteractionActions = React.useMemo<SessionInteractionActionsContextType>(() => ({
+    onOpenFile: value.onOpenFile,
     onCreateSession: value.onCreateSession,
     onSendMessage: value.onSendMessage,
     onRespondToPermission: value.onRespondToPermission,
@@ -341,6 +343,7 @@ export function AppShellProvider({
     onOpenFileChanges: value.onOpenFileChanges,
     onRevertFileChanges: value.onRevertFileChanges,
   }), [
+    value.onOpenFile,
     value.onCreateSession,
     value.onSendMessage,
     value.onRespondToPermission,

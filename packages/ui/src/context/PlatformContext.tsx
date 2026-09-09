@@ -64,6 +64,9 @@ export interface PlatformActions {
    */
   onCopyToClipboard?: (text: string) => Promise<void>
 
+  /** Copy a file path, resolving relative links against the host's current directory. */
+  onCopyFilePath?: (path: string) => Promise<void>
+
   /**
    * Open turn details in a new window/modal
    */

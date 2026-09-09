@@ -1,4 +1,12 @@
+// input: Markdown content, click handlers, and optional host file-reveal/clipboard capabilities
+// output: Rendered Markdown with previews and local-file context menus
+// pos: Shared Markdown renderer for chat, documents, and viewers
 import * as React from 'react'
+import * as ContextMenu from '@radix-ui/react-context-menu'
+import { Copy, FileText, FolderOpen } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { usePlatform } from '../../context/PlatformContext'
+import { MENU_CONTENT_STYLES, MENU_ITEM_STYLES } from '../ui/StyledDropdown'
 import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markdown'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
@@ -160,21 +168,18 @@ function createComponents(
       return <div {...props}>{children}</div>
     },
     // Links: Make clickable with callbacks
-    a: ({ href, children }) => {
+    a: function MarkdownLink({ href, children }) {
+      const { onRevealInFinder, onCopyFilePath } = usePlatform()
+      const { t } = useTranslation()
+      // Resolve once so left-click and the context menu use the same decoded path.
+      const fallbackText = React.Children.toArray(children)
+        .map((child) => (typeof child === 'string' ? child : ''))
+        .join('').trim()
+      const target = href?.trim() || fallbackText
+      const resolvedTarget = resolveMarkdownLinkTarget(target)
       const handleClick = (e: React.MouseEvent) => {
         e.preventDefault()
-
-        // Some AI outputs include raw HTML anchors with empty href but path text content.
-        // Fallback to the anchor text when href is missing/empty.
-        const fallbackText = React.Children.toArray(children)
-          .map((child) => (typeof child === 'string' ? child : ''))
-          .join('')
-          .trim()
-
-        const target = (href?.trim() || fallbackText)
         if (!target) return
-
-        const resolvedTarget = resolveMarkdownLinkTarget(target)
         if (resolvedTarget.kind === 'file' && onFileClick) {
           onFileClick(resolvedTarget.path)
         } else if (resolvedTarget.kind === 'url' && onUrlClick) {
@@ -182,7 +187,7 @@ function createComponents(
         }
       }
 
-      return (
+      const link = (
         <a
           href={href}
           onClick={handleClick}
@@ -190,6 +195,35 @@ function createComponents(
         >
           {children}
         </a>
+      )
+      if (resolvedTarget.kind !== 'file' || (!onFileClick && !onRevealInFinder && !onCopyFilePath)) return link
+      const itemClass = cn('relative flex cursor-default items-center outline-none select-none', MENU_ITEM_STYLES)
+
+      return (
+        <ContextMenu.Root>
+          <ContextMenu.Trigger asChild onContextMenu={event => event.stopPropagation()}>
+            {link}
+          </ContextMenu.Trigger>
+          <ContextMenu.Portal>
+            <ContextMenu.Content className={cn('popover-styled z-dropdown overflow-hidden', MENU_CONTENT_STYLES)}>
+              {onFileClick && <ContextMenu.Item className={itemClass} onSelect={() => onFileClick(resolvedTarget.path)}>
+                <FileText />
+                {t('chat.openLinkedFile', '打开文件')}
+              </ContextMenu.Item>}
+              {onRevealInFinder && <ContextMenu.Item
+                className={itemClass}
+                onSelect={() => onRevealInFinder(resolvedTarget.path)}
+              >
+                <FolderOpen />
+                {t('chat.openFileLocation', '打开文件位置')}
+              </ContextMenu.Item>}
+              {onCopyFilePath && <ContextMenu.Item className={itemClass} onSelect={() => { void onCopyFilePath(resolvedTarget.path) }}>
+                <Copy />
+                {t('chat.copyFilePath', '复制文件路径')}
+              </ContextMenu.Item>}
+            </ContextMenu.Content>
+          </ContextMenu.Portal>
+        </ContextMenu.Root>
       )
     },
   }

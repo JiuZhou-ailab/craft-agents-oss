@@ -2,7 +2,7 @@
  * ChatPage
  *
  * input: Session state, workspace state, chat actions, and renderer IPC APIs
- * output: Chat view for the selected session with task title and project ownership chrome
+ * output: Chat view with task/project chrome and file actions bound to the session working directory
  * pos: Primary session page inside the Electron app shell
  *
  * Displays a single session's chat with a consistent PanelHeader.
@@ -11,9 +11,10 @@
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, Folder, Info } from 'lucide-react'
-import { usePlatform } from '@craft-agent/ui'
+import { PlatformProvider, usePlatform } from '@craft-agent/ui'
 import { ChatDisplay } from '@/components/app-shell/ChatDisplay'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { SessionMenu } from '@/components/app-shell/SessionMenu'
@@ -38,7 +39,6 @@ export interface ChatPageProps {
   sessionId: string
 }
 
-const noopOpenFile = (_path: string) => {}
 const noopOpenUrl = (_url: string) => {}
 
 const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
@@ -75,11 +75,12 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     onAttachmentsChange,
   } = useSessionDraftActions()
   const { onSetActiveViewingSession } = useSessionReadActions()
+  const platform = usePlatform()
   const {
-    onOpenFile = noopOpenFile,
     onOpenUrl = noopOpenUrl,
-  } = usePlatform()
+  } = platform
   const {
+    onOpenFile,
     onCreateSession,
     onSendMessage,
     onRespondToPermission,
@@ -352,6 +353,20 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
 
   // Working directory for this session
   const workingDirectory = session?.workingDirectory
+  const sessionPlatformActions = React.useMemo(() => ({
+    ...platform,
+    onRevealInFinder: platform.onRevealInFinder
+      ? (path: string) => platform.onRevealInFinder!(resolveFileLinkTarget(path, workingDirectory || chatWorkspace?.rootPath))
+      : undefined,
+    onCopyFilePath: async (path: string) => {
+      try {
+        await navigator.clipboard.writeText(resolveFileLinkTarget(path, workingDirectory || chatWorkspace?.rootPath))
+        toast.success(t('toast.copied'))
+      } catch {
+        toast.error(t('toast.copyFailed'))
+      }
+    },
+  }), [platform, workingDirectory, chatWorkspace?.rootPath, t])
 
   const handleWorkingDirectoryChange = React.useCallback(async (path: string) => {
     if (!session) return
@@ -592,7 +607,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   }
 
   return (
-    <>
+    <PlatformProvider actions={sessionPlatformActions}>
       <div className="relative h-full flex flex-col">
         <PanelHeader className="absolute inset-x-0 top-0 border-b-0 bg-gradient-to-b from-background via-background/95 to-transparent" badge={projectBadge} titleAlign="start" title={displayTitle} titleMenu={titleMenu} leadingAction={headerLeadingAction} actions={headerActions} rightSidebarButton={rightSidebarButton} isRegeneratingTitle={isAsyncOperationOngoing} />
         <div className="flex-1 flex flex-col min-h-0">
@@ -688,7 +703,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
         onSubmit={handleRenameSubmit}
         placeholder={t('chat.enterSessionName')}
       />
-    </>
+    </PlatformProvider>
   )
 })
 

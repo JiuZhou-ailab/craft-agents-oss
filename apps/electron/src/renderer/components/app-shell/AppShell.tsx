@@ -4099,6 +4099,7 @@ function AppShellContent({
   )
   const appShellContextValueWithReview = React.useMemo<AppShellContextType>(() => ({
     ...appShellContextValue,
+    onOpenFile: handleSelectNovelFileByPath,
     resolveFileChangeReviewStatus,
     onAcceptFileChange: handleAcceptConversationFileChange,
     onRejectFileChange: handleRejectConversationFileChange,
@@ -4106,6 +4107,7 @@ function AppShellContent({
     onRevertFileChanges: handleRevertConversationFileChanges,
   }), [
     appShellContextValue,
+    handleSelectNovelFileByPath,
     canPresentConversationDiffInWorkspace,
     handleAcceptConversationFileChange,
     handleOpenConversationFileChanges,
