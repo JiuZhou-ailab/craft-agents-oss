@@ -140,6 +140,7 @@
   "chat.branchFromThisMessageDescription": "この会話の流れを崩さずに、別の方向を試せます。",
   "chat.branchOptions": "ブランチオプション",
   "chat.chooseFolder": "フォルダを選択...",
+  "chat.chooseSkills": "スキルを選択",
   "chat.chooseSources": "ソースを選択",
   "chat.chooseWorkingDirectory": "作業ディレクトリを選択",
   "chat.clearDraft": "下書きをクリア",

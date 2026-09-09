@@ -47,6 +47,11 @@ function skill(overrides: Partial<LoadedSkill> & Pick<LoadedSkill, 'slug'>): Loa
 }
 
 describe('slash skill commands', () => {
+  it('selects a skill from the add menu without a slash query or losing the draft', () => {
+    const result = replaceSlashSkillSelection('[skill:old] 保留中文草稿', 0, 0, skill({ slug: 'new' }))
+    expect(result.value).toBe('[skill:new] 保留中文草稿')
+    expect(result.cursorPosition).toBe(result.value.length)
+  })
   it('offers only ask and direct-run permission modes', () => {
     expect(defaultSlashCommandGroups[0]?.commands.map(command => command.id))
       .toEqual(['ask', 'allow-all'])

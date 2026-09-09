@@ -276,16 +276,17 @@ describe('FreeFormInput attachment read path', () => {
     expect(pickerSource).not.toContain('FolderUp')
   })
 
-  it('collapses the desktop attachment and source controls into one add menu', () => {
+  it('routes desktop attachments, skills and sources through the add menu', () => {
     const source = readFileSync(new URL('../FreeFormInput.tsx', import.meta.url), 'utf-8')
-    const desktopStart = source.indexOf('{/* Desktop: one add menu')
+    const desktopStart = source.indexOf('{/* Desktop: attachments')
     const desktopEnd = source.indexOf('{/* Right side:', desktopStart)
     const desktopSource = source.slice(desktopStart, desktopEnd)
 
-    expect(desktopSource).toContain('<Plus className="h-4 w-4" />')
-    expect(desktopSource).toContain('onSelect={handleAttachClick}')
-    expect(desktopSource).toContain("setSourceDropdownOpen(true)")
-    expect(desktopSource).toContain('data-tutorial="source-selector-button"')
+    expect(desktopSource).toContain('<InputAddMenu')
+    expect(desktopSource).toContain('onAttach={handleAttachClick}')
+    expect(desktopSource).toContain('skills={skills}')
+    expect(desktopSource).toContain('sources={sources}')
+    expect(desktopSource).toContain('replaceSlashSkillSelection(inputRef.current, 0, 0, skill)')
     expect(desktopSource).not.toContain('renderAttachmentPicker(!!isEmptySession)')
   })
 

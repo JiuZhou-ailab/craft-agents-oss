@@ -3,7 +3,8 @@
 
 - `ChatInputZone.tsx`: 输入区外层、项目上下文、标签与队列消息
 - `InputContainer.tsx`: 自由输入与结构化输入切换
-- `FreeFormInput.tsx`: 文本、附件、数据源、模型与发送工具栏
+- `FreeFormInput.tsx`: 文本、附件、技能、数据源、模型与发送工具栏
+- `InputAddMenu.tsx`: 桌面加号菜单；技能和数据源通过可搜索的悬停子菜单选择，复用输入框的技能徽标和数据源状态
 - `WorkingDirectoryBadge.tsx`: 会话工作目录选择
 - `FreeFormInputContextBadge.tsx`: 输入工具栏共享按钮
 - `DesktopPermissionModeSelector.tsx`, `CompactPermissionModeSelector.tsx`: 执行模式选择

@@ -140,6 +140,7 @@
   "chat.branchFromThisMessageDescription": "Explore an alternate direction without disrupting this conversation’s flow.",
   "chat.branchOptions": "Branch options",
   "chat.chooseFolder": "Choose Folder...",
+  "chat.chooseSkills": "Choose Skills",
   "chat.chooseSources": "Choose Sources",
   "chat.chooseWorkingDirectory": "Choose working directory",
   "chat.clearDraft": "Clear draft",

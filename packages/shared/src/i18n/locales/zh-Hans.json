@@ -140,6 +140,7 @@
   "chat.branchFromThisMessageDescription": "在不打断这段对话流程的情况下探索另一种方向。",
   "chat.branchOptions": "分支选项",
   "chat.chooseFolder": "选择文件夹...",
+  "chat.chooseSkills": "选择技能",
   "chat.chooseSources": "选择数据源",
   "chat.chooseWorkingDirectory": "选择工作目录",
   "chat.clearDraft": "清除草稿",

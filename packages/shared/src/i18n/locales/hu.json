@@ -140,6 +140,7 @@
   "chat.branchFromThisMessageDescription": "Fedezz fel egy alternatív irányt anélkül, hogy megszakítanád a beszélgetés menetét.",
   "chat.branchOptions": "Ág beállításai",
   "chat.chooseFolder": "Mappa kiválasztása...",
+  "chat.chooseSkills": "Készségek kiválasztása",
   "chat.chooseSources": "Források kiválasztása",
   "chat.chooseWorkingDirectory": "Munkakönyvtár kiválasztása",
   "chat.clearDraft": "Piszkozat törlése",

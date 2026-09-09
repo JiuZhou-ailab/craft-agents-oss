@@ -1,4 +1,4 @@
-// input: Session draft text, attachments, model/source/permission controls, and processing state
+// input: Session draft text, attachments, skill/model/source/permission controls, and processing state
 // output: Free-form chat composer that submits messages and manages chat input affordances
 // pos: Main app-shell message composer above the session transcript
 
@@ -15,7 +15,6 @@ import {
   ChevronDown,
   AlertCircle,
   Image as ImageIcon,
-  Plus,
 } from 'lucide-react'
 import { Spinner } from '@craft-agent/ui'
 
@@ -24,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import {
   InlineSlashCommand,
   useInlineSlashCommand,
+  replaceSlashSkillSelection,
   type SlashCommandId,
 } from '@/components/ui/slash-command-menu'
 import {
@@ -76,6 +76,7 @@ import {
 import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { SourceSelectorPopover } from '@/components/ui/SourceSelectorPopover'
+import { InputAddMenu } from './InputAddMenu'
 import { ConnectionIcon } from '@/components/icons/ConnectionIcon'
 import { FreeFormInputContextBadge } from './FreeFormInputContextBadge'
 import type { FileAttachment, LoadedSource, LoadedSkill, LlmConnectionWithStatus } from '../../../../shared/types'
@@ -2139,55 +2140,30 @@ export function FreeFormInput({
           </>
           )}
 
-          {/* Desktop: one add menu for attachments/sources, then permission */}
+          {/* Desktop: attachments and hover skill/source submenus, then permission */}
           {!compactMode && (
           <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                ref={sourceButtonRef}
-                type="button"
-                data-tutorial="source-selector-button"
-                aria-label={`${t('chat.attachFiles')} / ${t('chat.chooseSources')}`}
-                disabled={disabled}
-                className="input-toolbar-btn inline-flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-[6px] text-foreground outline-none transition-colors hover:bg-foreground/5 active:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <StyledDropdownMenuContent side="top" align="start" sideOffset={6}>
-              <StyledDropdownMenuItem onSelect={handleAttachClick}>
-                <Paperclip className="h-4 w-4" />
-                <span>{t('chat.attachFiles')}</span>
-              </StyledDropdownMenuItem>
-              {onSourcesChange && (
-                <StyledDropdownMenuItem
-                  onSelect={() => queueMicrotask(() => setSourceDropdownOpen(true))}
-                >
-                  <DatabaseZap className="h-4 w-4" />
-                  <span>{t('chat.chooseSources')}</span>
-                </StyledDropdownMenuItem>
-              )}
-            </StyledDropdownMenuContent>
-          </DropdownMenu>
-
-          {onSourcesChange && (
-            <SourceSelectorPopover
-              open={sourceDropdownOpen}
-              onOpenChange={setSourceDropdownOpen}
-              anchorRef={sourceButtonRef}
-              sources={sources}
-              selectedSlugs={optimisticSourceSlugs}
-              onToggleSlug={(slug) => {
-                const isEnabled = optimisticSourceSlugs.includes(slug)
-                const newSlugs = isEnabled
-                  ? optimisticSourceSlugs.filter(currentSlug => currentSlug !== slug)
-                  : [...optimisticSourceSlugs, slug]
-                setOptimisticSourceSlugs(newSlugs)
-                onSourcesChange(newSlugs)
-              }}
-            />
-          )}
+          <InputAddMenu
+            disabled={disabled}
+            skills={skills}
+            sources={sources}
+            selectedSourceSlugs={optimisticSourceSlugs}
+            onAttach={handleAttachClick}
+            onSelectSkill={skill => {
+              const { value, cursorPosition } = replaceSlashSkillSelection(inputRef.current, 0, 0, skill)
+              setInput(value)
+              syncToParent(value)
+              richInputRef.current?.setSelectionRange(cursorPosition, cursorPosition)
+              richInputRef.current?.focus()
+            }}
+            onToggleSource={onSourcesChange ? slug => {
+              const next = optimisticSourceSlugs.includes(slug)
+                ? optimisticSourceSlugs.filter(current => current !== slug)
+                : [...optimisticSourceSlugs, slug]
+              setOptimisticSourceSlugs(next)
+              onSourcesChange(next)
+            } : undefined}
+          />
 
           {onPermissionModeChange && (
             <DesktopPermissionModeSelector
