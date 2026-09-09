@@ -381,71 +381,6 @@ export function generateSlug(name: string): string {
 }
 
 /**
- * Check if a slug is valid (URL-safe, non-empty).
- * @param slug - Slug to validate
- * @returns true if valid
- */
-export function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(slug);
-}
-
-/**
- * Get credential key for an LLM connection.
- * Format: llm::{slug}::{credentialType}
- *
- * @param slug - Connection slug
- * @param credentialType - Type of credential ('api_key' or 'oauth_token')
- * @returns Credential key string
- */
-export function getLlmCredentialKey(slug: string, credentialType: 'api_key' | 'oauth_token'): string {
-  return `llm::${slug}::${credentialType}`;
-}
-
-/**
- * Credential storage type for each auth mechanism.
- */
-export type LlmCredentialStorageType =
-  | 'api_key'           // Single token stored as value
-  | 'oauth_token'       // OAuth tokens (access, refresh, expiry)
-  | 'iam_credentials'   // AWS-style (accessKeyId, secretAccessKey, region)
-  | 'service_account'   // JSON file contents
-  | null;               // No storage needed (environment or none)
-
-/**
- * Map LlmAuthType to credential storage type.
- * Determines how credentials are stored in the credential manager.
- *
- * @param authType - LLM auth type
- * @returns Credential storage type or null if no credential storage needed
- */
-export function authTypeToCredentialStorageType(authType: LlmAuthType): LlmCredentialStorageType {
-  switch (authType) {
-    case 'api_key':
-    case 'api_key_with_endpoint':
-    case 'bearer_token':
-      return 'api_key';
-    case 'oauth':
-      return 'oauth_token';
-    case 'iam_credentials':
-      return 'iam_credentials';
-    case 'service_account_file':
-      return 'service_account';
-    case 'environment':
-    case 'none':
-      return null;
-  }
-}
-
-/**
- * Check if an auth type requires a custom endpoint URL.
- * @param authType - LLM auth type
- * @returns true if endpoint URL field should be shown in UI
- */
-export function authTypeRequiresEndpoint(authType: LlmAuthType): boolean {
-  return authType === 'api_key_with_endpoint';
-}
-
-/**
  * Check if a provider type is a "compat" provider.
  * Compat providers use custom endpoints and require explicit model lists.
  * @param providerType - Provider type to check
@@ -801,15 +736,6 @@ export function isSessionConnectionUnavailable(
 }
 
 /**
- * Check if an auth type uses browser OAuth flow.
- * @param authType - LLM auth type
- * @returns true if OAuth browser flow should be triggered
- */
-export function authTypeIsOAuth(authType: LlmAuthType): boolean {
-  return authType === 'oauth';
-}
-
-/**
  * Check if a provider supports a given auth type.
  * Returns valid combinations for the type system.
  *
@@ -1118,40 +1044,4 @@ export async function resolveAuthEnvVars(
   }
 
   return { envVars, success: true };
-}
-
-/**
- * Migrate a legacy LlmConnection to the new format.
- * Creates a new connection object with providerType instead of type.
- *
- * @param legacy - Legacy connection with 'type' field
- * @returns Migrated connection with 'providerType' field
- */
-export function migrateLlmConnection(legacy: {
-  slug: string;
-  name: string;
-  type: LlmConnectionType;
-  baseUrl?: string;
-  authType: 'api_key' | 'oauth' | 'none';
-  models?: ModelDefinition[];
-  defaultModel?: string;
-  createdAt: number;
-  lastUsedAt?: number;
-}): LlmConnection {
-  const providerType = migrateConnectionType(legacy.type);
-  const hasCustomEndpoint = !!legacy.baseUrl && legacy.type !== 'anthropic';
-  const authType = migrateAuthType(legacy.authType, hasCustomEndpoint);
-
-  return {
-    slug: legacy.slug,
-    name: legacy.name,
-    providerType,
-    type: legacy.type, // Keep for backwards compatibility
-    baseUrl: legacy.baseUrl,
-    authType,
-    models: legacy.models,
-    defaultModel: legacy.defaultModel,
-    createdAt: legacy.createdAt,
-    lastUsedAt: legacy.lastUsedAt,
-  };
 }

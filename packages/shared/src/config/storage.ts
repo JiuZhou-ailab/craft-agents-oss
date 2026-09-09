@@ -24,7 +24,6 @@ import { normalizeThinkingLevel } from '../agent/thinking-levels.ts';
 import { parsePermissionMode, PERMISSION_MODE_ORDER } from '../agent/mode-types.ts';
 import { type BuiltinLlmConnectionDefaults, type ConfigDefaults } from './config-defaults-schema.ts';
 import { isValidThemeFile } from './validators.ts';
-import { invalidateAllSessionToolsCaches } from '../agent/session-tool-cache-invalidation.ts';
 
 // Re-export CONFIG_DIR for convenience (centralized in paths.ts)
 export { CONFIG_DIR } from './paths.ts';
@@ -714,9 +713,6 @@ export function setBrowserToolEnabled(enabled: boolean): void {
   if (!config) return;
   config.browserToolEnabled = enabled;
   saveConfig(config);
-
-  // Notify any loaded adapter cache without importing an agent framework.
-  invalidateAllSessionToolsCaches();
 }
 
 /**
@@ -1273,13 +1269,6 @@ import type { ThemeOverrides, ThemeFile, PresetTheme } from './theme.ts';
 const APP_THEME_FILE = join(CONFIG_DIR, 'theme.json');
 const APP_THEMES_DIR = join(CONFIG_DIR, 'themes');
 
-/**
- * Get the path to the app-level theme override file (~/.craft-agent/theme.json).
- */
-export function getAppThemePath(): string {
-  return APP_THEME_FILE;
-}
-
 // Track if preset themes have been synced this session (prevents re-init on hot reload)
 let presetsInitialized = false;
 
@@ -1304,15 +1293,6 @@ export function loadAppTheme(): ThemeOverrides | null {
     return null;
   }
 }
-
-/**
- * Save app-level theme overrides
- */
-export function saveAppTheme(theme: ThemeOverrides): void {
-  ensureConfigDir();
-  writeFileSync(APP_THEME_FILE, JSON.stringify(theme, null, 2), 'utf-8');
-}
-
 
 // ============================================
 // Preset Themes (app-level)
@@ -1493,46 +1473,6 @@ export function loadPresetTheme(id: string): PresetTheme | null {
     return { id, path, theme: resolvedTheme };
   } catch {
     return null;
-  }
-}
-
-/**
- * Get the path to the app-level preset themes directory.
- */
-export function getPresetThemesDir(): string {
-  return getAppThemesDir();
-}
-
-/**
- * Reset a preset theme to its bundled default.
- * Copies the bundled version over the user's version.
- * Resolves bundled path automatically via getBundledAssetsDir('themes').
- * @param id - Theme ID to reset
- */
-export function resetPresetTheme(id: string): boolean {
-  // Resolve bundled themes directory via shared asset resolver
-  const bundledThemesDir = getBundledAssetsDir('themes');
-  if (!bundledThemesDir) {
-    return false;
-  }
-
-  const bundledPath = join(bundledThemesDir, `${id}.json`);
-  const themesDir = getAppThemesDir();
-  const destPath = join(themesDir, `${id}.json`);
-
-  if (!existsSync(bundledPath)) {
-    return false;
-  }
-
-  try {
-    const content = readFileSync(bundledPath, 'utf-8');
-    if (!existsSync(themesDir)) {
-      mkdirSync(themesDir, { recursive: true });
-    }
-    writeFileSync(destPath, content, 'utf-8');
-    return true;
-  } catch {
-    return false;
   }
 }
 
