@@ -1,25 +1,22 @@
-/**
- * Model Fetcher Registry
- *
- * Type-safe map from FetchableProvider → ModelFetcher.
- * TypeScript enforces that every FetchableProvider key is present.
- * Adding a new LlmProviderType without registering a fetcher → compile error.
- */
+// input: Provider connections, credentials, and initialized host runtime
+// output: Model fetchers with provider-specific refresh intervals
+// pos: Server model discovery registry delegating to the shared backend
 
-import type { ModelFetcherMap } from '@craft-agent/shared/config'
-import { AnthropicModelFetcher } from './anthropic'
-import { PiModelFetcher } from './pi'
+import type { ModelFetcher, ModelFetcherMap } from '@craft-agent/shared/config'
+import { fetchBackendModels } from '@craft-agent/shared/agent/backend'
+import { getHostRuntime, handlerLog } from './runtime'
 
-// Shared instances — fetchers are stateless
-const anthropicFetcher = new AnthropicModelFetcher()
-const piFetcher = new PiModelFetcher()
+const fetchModels: ModelFetcher['fetchModels'] = (connection, credentials) =>
+  fetchBackendModels({ connection, credentials, hostRuntime: getHostRuntime() })
 
-/**
- * Every FetchableProvider MUST have a fetcher entry.
- * If you add a new LlmProviderType (e.g., 'gemini') and don't exclude it
- * from FetchableProvider, this object will fail to compile until you add it here.
- */
 export const MODEL_FETCHERS: ModelFetcherMap = {
-  anthropic: anthropicFetcher,
-  pi:        piFetcher,
+  anthropic: {
+    refreshIntervalMs: 60 * 60 * 1000,
+    async fetchModels(connection, credentials) {
+      const result = await fetchModels(connection, credentials)
+      handlerLog.info(`Fetched ${result.models.length} Anthropic models: ${result.models.map(m => m.id).join(', ')}`)
+      return result
+    },
+  },
+  pi: { refreshIntervalMs: 0, fetchModels },
 }

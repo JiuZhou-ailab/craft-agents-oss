@@ -53,8 +53,8 @@ export interface ModelFetcherCredentials {
 /**
  * Plugin interface for provider-specific model discovery.
  *
- * Implementations live in apps/electron/src/main/model-fetchers/.
- * Each provider implements fetchModels() with its own SDK/API call.
+ * Implementations live in packages/server-core/src/model-fetchers/.
+ * The registry delegates model discovery to the shared backend runtime.
  */
 export interface ModelFetcher {
   /**
