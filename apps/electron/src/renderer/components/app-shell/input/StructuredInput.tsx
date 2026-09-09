@@ -49,6 +49,7 @@ export function StructuredInput({ state, onResponse, unstyled = false }: Structu
     case 'user_question':
       return (
         <UserQuestionRequest
+          key={(state.data as import('../../../../shared/types').UserQuestionRequest).requestId}
           request={state.data as import('../../../../shared/types').UserQuestionRequest}
           onResponse={onResponse}
           unstyled={unstyled}

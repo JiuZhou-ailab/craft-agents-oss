@@ -13,7 +13,7 @@ interface ExtensionUIHost {
   notify(message: string, type?: 'info' | 'warning' | 'error'): void;
 }
 
-const HEADER = 'Extension';
+const HEADER = '扩展';
 
 export function createExtensionUIContext(
   base: ExtensionUIContext,
@@ -33,7 +33,7 @@ export function createExtensionUIContext(
       return ask({
         header: HEADER,
         question: title,
-        options: options.map((label: string) => ({ label, description: `Choose ${label}` })),
+        options: options.map((label: string) => ({ label, description: `选择 ${label}` })),
         multiSelect: false,
       });
     },
@@ -42,12 +42,12 @@ export function createExtensionUIContext(
         header: HEADER,
         question: message || title,
         options: [
-          { label: 'Confirm', description: 'Continue with this action' },
-          { label: 'Cancel', description: 'Keep the current state' },
+          { label: '确认', description: '继续执行此操作' },
+          { label: '取消', description: '保持当前状态' },
         ],
         multiSelect: false,
       });
-      return answer === 'Confirm';
+      return answer === '确认';
     },
     input: async (title: string, placeholder?: string) => ask({
       header: HEADER,

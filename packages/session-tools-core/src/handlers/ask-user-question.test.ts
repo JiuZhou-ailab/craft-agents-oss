@@ -25,23 +25,23 @@ describe('handleAskUserQuestion', () => {
       callbacks: {
         onPlanSubmitted: () => {},
         onAuthRequest: () => {},
-        onAskUserQuestion: async () => ({ answers: { 'Choose one?': 'First' } }),
+        onAskUserQuestion: async () => ({ answers: { '选择哪个方案？': '第一个方案' } }),
       },
     } as unknown as SessionToolContext;
 
     const result = await handleAskUserQuestion(ctx, {
       questions: [{
-        header: 'Choice',
-        question: 'Choose one?',
+        header: '方案',
+        question: '选择哪个方案？',
         multiSelect: false,
         options: [
-          { label: 'First', description: 'Use the first option' },
-          { label: 'Second', description: 'Use the second option' },
+          { label: '第一个方案', description: '使用第一个方案' },
+          { label: '第二个方案', description: '使用第二个方案' },
         ],
       }],
     });
 
     expect(result.isError).toBe(false);
-    expect(result.content[0]?.text).toContain('"Choose one?":"First"');
+    expect(JSON.parse(result.content[0]!.text!)).toEqual({ answers: { '选择哪个方案？': '第一个方案' } });
   });
 });

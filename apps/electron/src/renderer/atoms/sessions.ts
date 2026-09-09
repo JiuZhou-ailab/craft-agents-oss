@@ -17,6 +17,7 @@ import { selectAtom } from 'jotai/utils'
 import type { Getter, Setter } from 'jotai/vanilla'
 import { atomFamily } from 'jotai-family'
 import type { Session, Message, Workspace } from '../../shared/types'
+import { restoreUserQuestionsAtom } from './pending-requests'
 
 /**
  * Session metadata for list display (lightweight, no messages)
@@ -103,7 +104,7 @@ export function extractSessionMeta(session: Session): SessionMeta {
 
   // Destructure fields that don't exist on SessionMeta or need overrides
   const {
-    messages: _msgs, sessionFolderPath: _sf, supportsBranching: _sb,
+    messages: _msgs, sessionFolderPath: _sf, supportsBranching: _sb, pendingUserQuestions: _pq, userQuestionRevision: _qr,
     workspaceName: _wn, thinkingLevel: _tl, currentStatus: _cs,
     isAsyncOperationOngoing,
     messageCount, lastFinalMessageId: sessionLastFinal,
@@ -271,6 +272,7 @@ export const updateSessionMetaAtom = atom(
 export const replaceLoadedSessionAtom = atom(
   null,
   (get, set, session: Session) => {
+    set(restoreUserQuestionsAtom, session)
     const sessionAtom = sessionAtomFamily(session.id)
     const currentSession = get(sessionAtom)
     if (!currentSession || !shallowEqualSession(currentSession, session)) {
@@ -319,6 +321,7 @@ export const initializeSessionsAtom = atom(
 
     // Set individual session atoms
     for (const session of sessions) {
+      set(restoreUserQuestionsAtom, session)
       set(sessionAtomFamily(session.id), session)
     }
 
@@ -380,6 +383,7 @@ export const refreshSessionsMetadataAtom = atom(
     // Update each session atom, preserving messages for loaded sessions
     const unloadedIds: string[] = []
     for (const session of sessions) {
+      set(restoreUserQuestionsAtom, session)
       const currentSession = get(sessionAtomFamily(session.id))
       const shouldPreserveMessages = !!currentSession && loadedSessionIds.has(session.id)
       let nextSession = shouldPreserveMessages && currentSession
@@ -459,6 +463,7 @@ export const refreshSessionsMetadataAtom = atom(
 export const addSessionAtom = atom(
   null,
   (get, set, session: Session) => {
+    set(restoreUserQuestionsAtom, session)
     // Set session atom
     set(sessionAtomFamily(session.id), session)
 
@@ -573,6 +578,7 @@ async function loadSessionMessages(
     if (!loadedSession) {
       return get(sessionAtomFamily(sessionId))
     }
+    set(restoreUserQuestionsAtom, loadedSession)
 
     // Merge messages and disk-only fields into existing session, preserving in-memory UI state.
     // The renderer's atom is authoritative for UI fields (hasUnread, isFlagged, etc.)

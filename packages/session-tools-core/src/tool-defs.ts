@@ -56,11 +56,11 @@ export const SubmitPlanSchema = z.object({
 
 export const AskUserQuestionSchema = z.object({
   questions: z.array(z.object({
-    header: z.string().min(1).max(12).describe('Short label for the question'),
-    question: z.string().min(1).describe('Clear question shown to the user'),
+    header: z.string().min(1).max(12).describe('用简体中文填写简短的问题页签标题'),
+    question: z.string().min(1).describe('用简体中文清楚地向用户提问'),
     options: z.array(z.object({
-      label: z.string().min(1).max(40).describe('Concise option label'),
-      description: z.string().min(1).describe('Meaning or trade-off of this option'),
+      label: z.string().min(1).max(40).describe('用简体中文填写简洁的选项名称'),
+      description: z.string().min(1).describe('用简体中文说明此选项的含义或取舍'),
     })).max(4).refine(
       options => options.length === 0 || options.length >= 2,
       'Provide either no options for free-form input or 2-4 concrete options.',
@@ -250,12 +250,13 @@ export const UnbindMessagingChannelSchema = z.object({
 // ============================================================
 
 export const TOOL_DESCRIPTIONS = {
-  ask_user_question: `Ask the user one to four focused questions and wait for their answers.
+  ask_user_question: `向用户提出 1–4 个聚焦的问题，并等待回答。
 
-Use this only when the answer materially changes the result and cannot be inferred safely.
-Each question needs 2-4 concrete options, or no options for free-form-only input.
-The UI also provides a free-form answer alongside concrete options.
-Batch independent questions into one call. Do not continue until the tool returns.`,
+所有展示给用户的页签标题、问题、选项名称和选项说明必须使用简体中文；代码、命令、路径和标识符保留原文。
+仅在答案会实质影响结果且无法可靠推断时使用。
+每个问题提供 2–4 个明确选项；只需自由输入时，选项数组留空。
+界面会在选项之外提供自由输入答案的入口。
+将彼此独立的问题合并到一次调用中。工具返回前不要继续执行。`,
   SubmitPlan: `Submit a plan for user review.
 
 Call this after you have written your plan to a markdown file using the Write tool.

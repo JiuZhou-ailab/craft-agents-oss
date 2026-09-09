@@ -52,8 +52,10 @@ export interface WireAgentCallbacksDeps {
   pendingPermissionRequests: Map<string, PermissionRequestMeta>
   pendingUserQuestions: Map<string, {
     sessionId: string
+    request: UserQuestionRequest
     resolve: (response: UserQuestionResponse) => void
   }>
+  advanceUserQuestionRevision(): NonNullable<Session['userQuestionRevision']>
   getAuthRequestDescription(request: AuthRequest): string
   handlePlanSubmitted(managed: ManagedSession, planPath: string): Promise<void>
   createSession(workspaceId: string, options?: CreateSessionOptions): Promise<Session>
@@ -319,10 +321,12 @@ export function wireAgentCallbacks(
     askUserQuestionFn: (request: UserQuestionRequest) => new Promise<UserQuestionResponse>((resolve) => {
       deps.pendingUserQuestions.set(request.requestId, {
         sessionId: managed.id,
+        request,
         resolve,
       })
       deps.sendEvent({
         type: 'user_question_request',
+        revision: deps.advanceUserQuestionRevision(),
         sessionId: managed.id,
         request,
       }, managed.workspace.id)

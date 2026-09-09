@@ -17,6 +17,7 @@ describe('createExtensionUIContext', () => {
     const notifications: string[] = [];
     const ui = createExtensionUIContext(base, {
       askUserQuestion: async (question) => {
+        expect(question.header).toBe('扩展');
         questions.push({
           question: question.question,
           options: question.options.map((option) => option.label),
@@ -37,7 +38,7 @@ describe('createExtensionUIContext', () => {
 
     expect(questions).toEqual([
       { question: 'Choose checkpoint', options: ['one', 'two'] },
-      { question: 'Restore files?', options: ['Confirm', 'Cancel'] },
+      { question: 'Restore files?', options: ['确认', '取消'] },
       { question: 'Name\nOptional label', options: [] },
     ]);
     expect(notifications).toEqual(['Checkpoint restored']);

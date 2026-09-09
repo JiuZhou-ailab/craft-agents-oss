@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'bun:test'
-import { appendUniqueRequestById, appendUniqueRequestForSession, removeFirstRequestForSession } from '../request-queue'
+import { appendUniqueRequestById, appendUniqueRequestForSession, removeFirstRequestForSession, removeRequestForSession } from '../request-queue'
+
+it('keeps the next question when a resolved event is followed by a delayed answer acknowledgement', () => {
+  const queues = new Map([['session', [{ requestId: 'first' }, { requestId: 'second' }]]])
+  const resolved = removeRequestForSession(queues, 'session', 'first')
+  expect(resolved.get('session')).toEqual([{ requestId: 'second' }])
+  expect(removeRequestForSession(resolved, 'session', 'first')).toBe(resolved)
+  expect(removeRequestForSession(resolved, 'other-session', 'second')).toBe(resolved)
+  expect(removeRequestForSession(resolved, 'session', 'second').has('session')).toBe(false)
+})
 
 describe('appendUniqueRequestById', () => {
   it('appends requests to an empty queue', () => {

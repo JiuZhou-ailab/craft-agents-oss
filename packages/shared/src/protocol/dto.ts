@@ -71,6 +71,10 @@ export interface Session {
   lastMessageAt: number
   messages: Message[]
   isProcessing: boolean
+  /** Live questions awaiting answers; restored on reconnect, never persisted to disk. */
+  pendingUserQuestions?: UserQuestionRequest[]
+  /** Orders question snapshots and events within one Host lifetime. */
+  userQuestionRevision?: { epoch: string; sequence: number }
   isFlagged?: boolean
   /** Whether this session is fixed in navigation independently of business flags. */
   isPinned?: boolean
@@ -187,7 +191,8 @@ export type SessionEvent =
   | { type: 'async_operation'; sessionId: string; isOngoing: boolean }
   | { type: 'working_directory_changed'; sessionId: string; workingDirectory: string }
   | { type: 'permission_request'; sessionId: string; request: PermissionRequest }
-  | { type: 'user_question_request'; sessionId: string; request: UserQuestionRequest }
+  | { type: 'user_question_request'; sessionId: string; request: UserQuestionRequest; revision?: Session['userQuestionRevision'] }
+  | { type: 'user_question_resolved'; sessionId: string; requestId: string; revision?: Session['userQuestionRevision'] }
   | { type: 'credential_request'; sessionId: string; request: CredentialRequest }
   | { type: 'permission_mode_changed'; sessionId: string; permissionMode: PermissionMode; previousPermissionMode?: PermissionMode; transitionDisplay?: string; modeVersion?: number; changedAt?: string; changedBy?: PermissionModeState['changedBy'] }
   | { type: 'plan_submitted'; sessionId: string; message: Message }

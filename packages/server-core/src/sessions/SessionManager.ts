@@ -9,7 +9,7 @@ import { join } from 'path'
 import { readFile, mkdir } from 'fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
 import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, type PermissionMode, unregisterSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult } from '@craft-agent/shared/agent'
-import type { UserQuestionResponse } from '@craft-agent/session-tools-core'
+import type { UserQuestionRequest, UserQuestionResponse } from '@craft-agent/session-tools-core'
 import {
   resolveSessionConnection,
   resolveBackendContext,
@@ -367,14 +367,21 @@ export class SessionManager implements ISessionManager {
   }> = new Map()
   private pendingUserQuestions = new Map<string, {
     sessionId: string
+    request: UserQuestionRequest
     resolve: (response: UserQuestionResponse) => void
   }>()
+
+  private userQuestionRevision = { epoch: randomUUID(), sequence: 0 }
+
+  private advanceUserQuestionRevision() {
+    this.userQuestionRevision = { ...this.userQuestionRevision, sequence: this.userQuestionRevision.sequence + 1 }
+    return this.userQuestionRevision
+  }
 
   private cancelPendingUserQuestionsForSession(sessionId: string): void {
     for (const [requestId, pending] of this.pendingUserQuestions) {
       if (pending.sessionId !== sessionId) continue
-      pending.resolve({ answers: {}, cancelled: true })
-      this.pendingUserQuestions.delete(requestId)
+      this.respondToUserQuestion(sessionId, requestId, { answers: {}, cancelled: true })
     }
   }
   // Privileged approval binding + audit logger
@@ -429,6 +436,7 @@ export class SessionManager implements ISessionManager {
     privilegedExecutionBroker: this.privilegedExecutionBroker,
     pendingPermissionRequests: this.pendingPermissionRequests,
     pendingUserQuestions: this.pendingUserQuestions,
+    advanceUserQuestionRevision: () => this.advanceUserQuestionRevision(),
     getAuthRequestDescription: request => this.getAuthRequestDescription(request),
     handlePlanSubmitted: (managed, planPath) => this.handlePlanSubmitted(managed, planPath),
     createSession: (workspaceId, options) => this.createSession(workspaceId, options),
@@ -2094,7 +2102,7 @@ export class SessionManager implements ISessionManager {
     }
 
     return sessions
-      .map(m => managedToSession(m))
+      .map(m => managedToSession(m, { pendingUserQuestions: this.getPendingUserQuestions(m.id), userQuestionRevision: this.userQuestionRevision }))
       .sort((a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0))
   }
 
@@ -2177,7 +2185,11 @@ export class SessionManager implements ISessionManager {
       await this.applyMessageBranchabilityMetadata(m)
       getSessionSpan.mark('branchability.applied')
 
-      const session = managedToSession(m, { messages: m.messages })
+      const session = managedToSession(m, {
+        messages: m.messages,
+        pendingUserQuestions: this.getPendingUserQuestions(sessionId),
+        userQuestionRevision: this.userQuestionRevision,
+      })
       getSessionSpan.mark('session.serialized')
       getSessionSpan.setMetadata('status', 'ok')
       return session
@@ -4697,6 +4709,12 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  private getPendingUserQuestions(sessionId: string): UserQuestionRequest[] {
+    return [...this.pendingUserQuestions.values()]
+      .filter(pending => pending.sessionId === sessionId)
+      .map(pending => pending.request)
+  }
+
   respondToUserQuestion(
     sessionId: string,
     requestId: string,
@@ -4706,6 +4724,11 @@ export class SessionManager implements ISessionManager {
     if (!pending || pending.sessionId !== sessionId) return false
 
     this.pendingUserQuestions.delete(requestId)
+    const revision = this.advanceUserQuestionRevision()
+    const managed = this.sessions.get(sessionId)
+    if (managed) {
+      this.sendEvent({ type: 'user_question_resolved', sessionId, requestId, revision }, managed.workspace.id)
+    }
     pending.resolve(response)
     return true
   }

@@ -30,3 +30,15 @@ export function removeFirstRequestForSession<T>(queues: Map<string, T[]>, sessio
   }
   return next
 }
+
+export function removeRequestForSession<T extends { requestId: string }>(
+  queues: Map<string, T[]>, sessionId: string, requestId: string,
+): Map<string, T[]> {
+  const queue = queues.get(sessionId)
+  if (!queue?.some(request => request.requestId === requestId)) return queues
+  const next = new Map(queues)
+  const remaining = queue.filter(request => request.requestId !== requestId)
+  if (remaining.length) next.set(sessionId, remaining)
+  else next.delete(sessionId)
+  return next
+}

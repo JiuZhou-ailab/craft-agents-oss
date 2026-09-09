@@ -50,7 +50,7 @@ import {
 import { resolvePostSetupAppState, selectStartupWorkspaceId } from './lib/startup-flow'
 
 import { isProjectShellReady } from './lib/app-readiness'
-import { appendUniqueRequestForSession, removeFirstRequestForSession } from './lib/request-queue'
+import { appendUniqueRequestForSession, removeFirstRequestForSession, removeRequestForSession } from './lib/request-queue'
 import { DEFAULT_THINKING_LEVEL } from '@craft-agent/shared/agent/thinking-levels'
 import {
   isManagedLlmConnectionSlug,
@@ -83,7 +83,7 @@ import {
   ownsSessionStatusMutation,
 } from '@/atoms/session-status-transition'
 import { focusedPanelRouteAtom, parseSessionIdFromRoute } from '@/atoms/panel-stack'
-import { pendingCredentialsAtom, pendingPermissionsAtom, pendingUserQuestionsAtom } from '@/atoms/pending-requests'
+import { acceptUserQuestionRevisionAtom, pendingCredentialsAtom, pendingPermissionsAtom, pendingUserQuestionsAtom } from '@/atoms/pending-requests'
 import { sourcesAtom } from '@/atoms/sources'
 import { skillsAtom } from '@/atoms/skills'
 import { llmConnectionsAtom, refreshLlmConnectionsAtom, workspaceDefaultLlmConnectionAtom } from '@/atoms/llm-connections'
@@ -1040,6 +1040,12 @@ function AppContent() {
 
       const sessionId = event.sessionId
       const workspaceId = windowWorkspaceId ?? ''
+      if ((event.type === 'user_question_request' || event.type === 'user_question_resolved')
+        && !store.set(acceptUserQuestionRevisionAtom, sessionId, event.revision)) return
+      if (event.type === 'user_question_resolved') {
+        setPendingUserQuestions(current => removeRequestForSession(current, sessionId, event.requestId))
+        return
+      }
       if (event.type === 'session_status_changed') {
         invalidateSessionStatusMutation(sessionId)
       }
@@ -1797,7 +1803,7 @@ function AppContent() {
     response: import('../shared/types').UserQuestionResponse,
   ) => {
     await window.electronAPI.respondToUserQuestion(sessionId, requestId, response)
-    setPendingUserQuestions(current => removeFirstRequestForSession(current, sessionId))
+    setPendingUserQuestions(current => removeRequestForSession(current, sessionId, requestId))
   }, [])
 
   // Centralized link interceptor: classifies file types and decides whether to

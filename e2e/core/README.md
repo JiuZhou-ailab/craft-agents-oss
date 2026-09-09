@@ -1,4 +1,7 @@
 # Core Electron E2E
+
+`user-question-recovery.ts` uses a local model stub to exercise the real question tool, renderer reload, project return, transport reconnect, visible answer submission, and Pi resume. Run `bun e2e/core/user-question-recovery.ts` after building Electron main and renderer; set `CRAFT_E2E_SCREENSHOTS` to an existing directory to save the recovered prompt. It uses isolated temporary data and no external model calls.
+
 `run.ts` drives the built desktop app through its public preload API against a deterministic local model stub.
 It covers migration from the incompatible v0.17.0 server lock, local no-login startup, managed-model login routing, the real Allow All button and subsequent Pi tools, safe Session cleanup, isolated workspace versions, restore, and restart recovery including the Host's renewed-consent policy for Projects.
 Run `bun run e2e:core`; set `CRAFT_E2E_ELECTRON_BIN` to a packaged app executable to test the release artifact.

@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { createStore } from 'jotai'
+import { acceptUserQuestionRevisionAtom, restoreUserQuestionsAtom, pendingUserQuestionsAtom, pendingUserQuestionAtomFamily } from '../pending-requests'
 import type { Message, Session } from '../../../shared/types'
 import {
   sessionAtomFamily,
@@ -59,6 +60,24 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     ...overrides,
   } as Session
 }
+
+it('restores questions on project reload, stale reconnect and full session refresh', () => {
+  const store = createStore()
+  const question = { requestId: 'question-1', sessionId: 'question-session', questions: [] }
+  const session = makeSession({ id: question.sessionId, pendingUserQuestions: [question] })
+  store.set(initializeSessionsAtom, [session])
+  expect(store.get(pendingUserQuestionAtomFamily(session.id))).toEqual(question)
+  store.set(pendingUserQuestionsAtom, new Map())
+  store.set(initializeSessionsAtom, [session])
+  expect(store.get(pendingUserQuestionAtomFamily(session.id))).toEqual(question)
+  store.set(pendingUserQuestionsAtom, new Map())
+  store.set(refreshSessionsMetadataAtom, { sessions: [session], loadedSessionIds: new Set<string>(), removeMissing: false })
+  expect(store.get(pendingUserQuestionAtomFamily(session.id))).toEqual(question)
+  store.set(replaceLoadedSessionAtom, { ...session, pendingUserQuestions: [] })
+  expect(store.get(pendingUserQuestionAtomFamily(session.id))).toBeUndefined()
+  store.set(replaceLoadedSessionAtom, session)
+  expect(store.get(pendingUserQuestionAtomFamily(session.id))).toEqual(question)
+})
 
 describe('session status transitions', () => {
   it('rolls back a failed optimistic status write when it is still current', async () => {
@@ -1009,4 +1028,24 @@ describe('refreshSessionsMetadataAtom', () => {
 
     expect(store.get(sessionIdsAtom)).toEqual(['newer', 'older'])
   })
+})
+
+
+it('ignores question snapshots older than live events and accepts a restarted Host', () => {
+  const store = createStore()
+  const question = { requestId: 'ordered-question', sessionId: 'ordered-session', questions: [] }
+  const revision = (sequence: number, epoch = 'host-1') => ({ epoch, sequence })
+  const snapshot = (questions: typeof question[], sequence: number, epoch = 'host-1') => makeSession({
+    id: question.sessionId, pendingUserQuestions: questions, userQuestionRevision: revision(sequence, epoch),
+  })
+  store.set(acceptUserQuestionRevisionAtom, question.sessionId, revision(1))
+  store.set(pendingUserQuestionsAtom, new Map([[question.sessionId, [question]]]))
+  store.set(restoreUserQuestionsAtom, snapshot([], 0))
+  expect(store.get(pendingUserQuestionAtomFamily(question.sessionId))).toEqual(question)
+  store.set(acceptUserQuestionRevisionAtom, question.sessionId, revision(2))
+  store.set(pendingUserQuestionsAtom, new Map())
+  store.set(restoreUserQuestionsAtom, snapshot([question], 1))
+  expect(store.get(pendingUserQuestionAtomFamily(question.sessionId))).toBeUndefined()
+  store.set(restoreUserQuestionsAtom, snapshot([question], 0, 'host-2'))
+  expect(store.get(pendingUserQuestionAtomFamily(question.sessionId))).toEqual(question)
 })
