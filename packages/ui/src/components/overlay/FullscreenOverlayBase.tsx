@@ -1,5 +1,5 @@
 // input: Overlay content, dismissal callbacks, platform chrome, and responsive layout mode
-// output: Accessible Radix dialog rendered as fullscreen or centered modal
+// output: Accessible fullscreen or modal dialog with header preceding scrollable content
 // pos: Shared presentation and dismissal boundary for high-priority overlays
 /**
  * FullscreenOverlayBase - Base component for fullscreen and centered modal overlays
@@ -24,11 +24,11 @@
  *
  * Layout:
  *   Dialog.Content (fixed inset-0, relative)
- *   ├── Masked area (absolute inset-0, CSS mask gradient)
- *   │   └── Scroll container (h-full, overflow-y-auto, paddingTop = header + fade)
- *   │       └── {error banner}
- *   │       └── {children}
- *   └── Header (absolute top-0, z-10, floating on top of scroll content)
+ *   ├── Header (floating in fullscreen, in flow for modals)
+ *   └── Masked area (absolute inset-0, CSS mask gradient)
+ *       └── Scroll container (h-full, overflow-y-auto, paddingTop = header + fade)
+ *           └── {error banner}
+ *           └── {children}
  *
  * Used by: PreviewOverlay, DocumentFormattedMarkdownOverlay
  */
@@ -218,6 +218,21 @@ export function FullscreenOverlayBase({
           {/* Visually hidden title for accessibility - required by Radix Dialog */}
           <Dialog.Title className="sr-only">{accessibleTitle}</Dialog.Title>
 
+          {hasHeader && (
+            <div className={isModal ? 'shrink-0' : 'absolute top-0 left-0 right-0 z-10'}>
+              <FullscreenOverlayBaseHeader
+                onClose={onClose}
+                typeBadge={typeBadge}
+                filePath={filePath}
+                title={title}
+                onTitleClick={onTitleClick}
+                subtitle={subtitle}
+                headerActions={headerActions}
+                copyContent={copyContent}
+              />
+            </div>
+          )}
+
           {/* Fullscreen content scrolls behind its floating header; modal content scrolls below it. */}
           <div
             className={
@@ -253,21 +268,6 @@ export function FullscreenOverlayBase({
               </div>
             </div>
           </div>
-
-          {hasHeader && (
-            <div className={isModal ? 'order-first shrink-0' : 'absolute top-0 left-0 right-0 z-10'}>
-              <FullscreenOverlayBaseHeader
-                onClose={onClose}
-                typeBadge={typeBadge}
-                filePath={filePath}
-                title={title}
-                onTitleClick={onTitleClick}
-                subtitle={subtitle}
-                headerActions={headerActions}
-                copyContent={copyContent}
-              />
-            </div>
-          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
