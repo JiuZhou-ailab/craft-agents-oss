@@ -1,5 +1,5 @@
 // input: Workspace catalog, scoped session metadata, session actions, update status, profile, and window chrome inset
-// output: Peer pinned/free/project sections, scoped conversation actions, runtime status, and homepage-link sharing
+// output: Peer pinned/free/project sections, scoped conversation actions, resize lifecycle, runtime status, and homepage-link sharing
 // pos: Global navigation surface; every project subtree is fetched and selected through its own runtime domain (ADR 0006)
 
 import * as React from 'react'
@@ -105,6 +105,7 @@ export interface ActivityRailProps {
   onOpenSettings?: (subpage?: SettingsSubpage) => void
   width?: number
   onWidthChange?: (width: number) => void
+  onResizeChange?: (resizing: boolean) => void
   onSignOut?: () => void | Promise<void>
   profile?: {
     name: string
@@ -181,6 +182,7 @@ export function ActivityRail({
   onOpenSettings,
   width,
   onWidthChange,
+  onResizeChange,
   onSignOut,
   profile,
   onOpenWhatsNew,
@@ -253,6 +255,7 @@ export function ActivityRail({
   const handleResizeStart = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault()
     event.stopPropagation()
+    onResizeChange?.(true)
     const startX = event.clientX
     const startWidth = resolvedWidth
     const previousCursor = document.body.style.cursor
@@ -264,6 +267,7 @@ export function ActivityRail({
       updateWidth(startWidth + moveEvent.clientX - startX)
     }
     const handleMouseUp = () => {
+      onResizeChange?.(false)
       storage.set(storage.KEYS.activityRailWidth, latestWidthRef.current)
       document.body.style.cursor = previousCursor
       document.body.style.userSelect = previousUserSelect
@@ -273,7 +277,7 @@ export function ActivityRail({
 
     document.addEventListener('mousemove', handleMouseMove, true)
     document.addEventListener('mouseup', handleMouseUp, true)
-  }, [resolvedWidth, updateWidth])
+  }, [resolvedWidth, updateWidth, onResizeChange])
   const handleResizeKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
@@ -993,7 +997,7 @@ export function ActivityRail({
         onKeyDown={handleResizeKeyDown}
         className="group absolute inset-y-0 right-0 z-dropdown w-2 cursor-col-resize outline-none"
       >
-        <span className="absolute inset-y-0 right-0 w-px bg-transparent transition-colors group-hover:bg-foreground/15 group-focus-visible:bg-ring" />
+        <span className="absolute inset-y-0 right-0 w-px bg-transparent transition-colors group-hover:bg-border group-focus-visible:bg-foreground/[0.12]" />
       </div>
       {renameTarget ? (
         <RenameDialog

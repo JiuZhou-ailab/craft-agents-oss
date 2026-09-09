@@ -1,5 +1,7 @@
 # Core Electron E2E
 
+`activity-rail-resize.ts` samples every animation frame during native rapid sidebar expansion/contraction and rejects any rail/container width gap. It also checks collapse/reopen and width persistence across reload. Run `bun e2e/core/activity-rail-resize.ts` after building Electron; optionally set `CRAFT_E2E_SCREENSHOTS` to an existing directory. The fixture is offline and temporary.
+
 `input-add-menu.ts` checks desktop plus-menu skill/source hover expansion and descriptions, search, draft-preserving skill insertion, persistent source selection, and keyboard navigation. Run `bun e2e/core/input-add-menu.ts` after building Electron; optionally set `CRAFT_E2E_SCREENSHOTS` to an existing directory. It uses a temporary offline project and makes no model calls.
 
 `file-link-context-menu.ts` verifies that right-clicking a percent-encoded Chinese file link offers “打开文件”, “打开文件位置”, and “复制文件路径”: side-panel preview, correct Finder selection, and the decoded absolute clipboard path relative to the conversation's working directory. Run `bun e2e/core/file-link-context-menu.ts` on macOS after building Electron; optionally set `CRAFT_E2E_SCREENSHOTS` to an existing directory. It uses an offline temporary project, captures clipboard writes without changing the system clipboard, and closes its Finder window afterward.

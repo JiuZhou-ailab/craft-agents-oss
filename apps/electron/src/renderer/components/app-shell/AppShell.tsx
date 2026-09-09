@@ -923,6 +923,7 @@ function AppShellContent({
     return Math.min(ACTIVITY_RAIL_MAX_WIDTH, Math.max(ACTIVITY_RAIL_MIN_WIDTH, storedWidth))
   })
   const shouldReduceMotion = useReducedMotion()
+  const [isActivityRailResizing, setIsActivityRailResizing] = React.useState(false)
   // Session list width in pixels (min 240, max 480)
   const [sessionListWidth, setSessionListWidth] = React.useState(() => {
     return storage.get(storage.KEYS.sessionListWidth, DEFAULT_WORKSPACE_WIDTH)
@@ -4668,16 +4669,20 @@ function AppShellContent({
             <motion.div
               key="activity-rail"
               data-testid="activity-rail-motion"
+              data-resizing={isActivityRailResizing}
               initial={{ width: 0 }}
               animate={{ width: activityRailWidth }}
+              // Motion writes animated width on its next frame; direct dragging must paint with the rail now.
+              style={{ '--activity-rail-width': `${activityRailWidth}px` } as React.CSSProperties}
               exit={{ width: 0 }}
-              transition={shouldReduceMotion ? { duration: 0 } : PANEL_SPRING}
-              className="h-full min-w-0 shrink-0 overflow-hidden border-r border-border"
+              transition={shouldReduceMotion || isActivityRailResizing ? { duration: 0 } : PANEL_SPRING}
+              className="h-full min-w-0 shrink-0 overflow-hidden border-r border-border data-[resizing=true]:w-(--activity-rail-width)!"
             >
               <ActivityRail
                 activeItem={activeActivityRailItem}
                 width={activityRailWidth}
                 onWidthChange={setActivityRailWidth}
+                onResizeChange={setIsActivityRailResizing}
                 workspaces={workspaces}
                 runtimeWorkspaceId={activeWorkspaceId}
                 activeWorkspaceId={projectWorkspaceId}
