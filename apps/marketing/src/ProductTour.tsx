@@ -1,5 +1,5 @@
 // input: Unmodified current Electron captures and authored tour captions
-// output: Accessible screenshot tours with separate annotations and optional playback
+// output: Clean product previews or annotated tutorial tours with optional playback
 // pos: Shared public product evidence for the homepage and tutorial
 import { useEffect, useId, useRef, useState } from "react";
 import "./product-tour.css";
@@ -56,10 +56,12 @@ export function ProductTour({
   steps,
   label = "真实界面导览",
   detail = false,
+  annotated = true,
 }: {
   steps: readonly CaptureKey[];
   label?: string;
   detail?: boolean;
+  annotated?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(detail);
@@ -115,6 +117,7 @@ export function ProductTour({
     <section
       className="product-tour"
       data-zoom={zoom}
+      data-annotated={annotated}
       aria-label={label}
       ref={root}
     >
@@ -127,7 +130,7 @@ export function ProductTour({
             aria-controls={id}
             onClick={() => select(i)}
           >
-            <span>{String(i + 1).padStart(2, "0")}</span>
+            {annotated && <span>{String(i + 1).padStart(2, "0")}</span>}
             {captures[step].title}
           </button>
         ))}
@@ -162,36 +165,42 @@ export function ProductTour({
                 height="900"
                 onError={() => setFailed(true)}
               />
-              <rect
-                className="tour-outline"
-                x={capture.mark[0]}
-                y={capture.mark[1]}
-                width={capture.mark[2]}
-                height={capture.mark[3]}
-                rx="5"
-              />
-              <circle
-                className="tour-marker"
-                cx={capture.mark[0] + 14}
-                cy={capture.mark[1] + 14}
-                r="13"
-              />
-              <text
-                className="tour-marker-label"
-                x={capture.mark[0] + 14}
-                y={capture.mark[1] + 19}
-              >
-                1
-              </text>
+              {annotated && (
+                <>
+                  <rect
+                    className="tour-outline"
+                    x={capture.mark[0]}
+                    y={capture.mark[1]}
+                    width={capture.mark[2]}
+                    height={capture.mark[3]}
+                    rx="5"
+                  />
+                  <circle
+                    className="tour-marker"
+                    cx={capture.mark[0] + 14}
+                    cy={capture.mark[1] + 14}
+                    r="13"
+                  />
+                  <text
+                    className="tour-marker-label"
+                    x={capture.mark[0] + 14}
+                    y={capture.mark[1] + 19}
+                  >
+                    1
+                  </text>
+                </>
+              )}
             </g>
           </svg>
         )}
       </div>
       <div className="tour-caption" aria-live={playing ? "off" : "polite"}>
-        <p>
-          <span className="tour-number">1</span>
-          {capture.text}
-        </p>
+        {annotated && (
+          <p>
+            <span className="tour-number">1</span>
+            {capture.text}
+          </p>
+        )}
         <div className="tour-actions">
           <span>当前实拍 · 示例内容</span>
           <button
@@ -199,7 +208,7 @@ export function ProductTour({
             aria-pressed={zoom}
             onClick={() => setZoom((value) => !value)}
           >
-            {zoom ? "查看全貌" : "放大标注"}
+            {zoom ? "查看全貌" : annotated ? "放大标注" : "查看细节"}
           </button>
           {steps.length > 1 && (
             <button

@@ -28,15 +28,15 @@ bun run electron:build
 bun apps/marketing/capture-product.ts
 ```
 
-This uses an isolated offline fixture and the real renderer; it never sends a model request. Inspect every original PNG and the provenance record before rebuilding marketing. The script waits for visible content and stable layout to avoid recording a partial panel animation.
+This uses an isolated offline fixture and the real renderer; it never sends a model request. Inspect every original PNG and the provenance record before rebuilding marketing. The script waits for visible content and stable layout to avoid recording a partial panel animation. The 1440 × 900 CSS viewport is captured at 3×: verify every original PNG is 4320 × 2700 pixels, not a resized older image.
 
 ## Browser checks
 
-1. Switch actual screenshot steps and focus regions; captions, outline and original-image link must refer to the same state. Images and authored example content are labelled.
+1. Landing previews start in full view with no numbered markers, outlines or explanation paragraphs. Tutorial previews retain them. Switch steps and focus regions; the original-image link must follow the selected state. Images and authored example content are labelled.
 2. Play and pause a tour. It advances only when visible and the picture is not hovered and another control is not focused. Reduced-motion users get instant focus changes and no playback button. Keyboard users can select steps and scroll narrow detail views.
 3. Use Enter to open the installer menu, verify all three destinations, Tab into it, then Escape to close and recover focus. At 390/320 px, the visible download link reaches the installation section.
 4. Refresh `/docs/#first-task`, navigate between pages, then use back/forward. Keep anchor content below the header.
-5. At 1440/768/390/320 px, check overflow, image loads, tutorial layout and failed-image fallback. Inspect SVG screenshot resources as well as ordinary HTML images.
+5. At 1440/768/390/320 px, verify landing scene bounds are 16:10, no overflow, image loads, tutorial layout and failed-image fallback. Check all five desktop navigation links and mobile menu selection/Escape. Inspect SVG screenshot resources as well as ordinary HTML images.
 
 `qa.mjs` exercises state/zoom, downloads, routes, four widths, reduced motion and media failure; screenshot framing is checked separately in the live browser; playback timing and pause behavior are exercised by the script. With an output directory it saves full-page images. It reloads with cache disabled to avoid accepting an older restored preview, and restores caching after success.
 

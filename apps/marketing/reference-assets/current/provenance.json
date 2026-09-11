@@ -1,10 +1,15 @@
 {
-  "capturedAt": "2026-09-11T06:32:20.348Z",
-  "commit": "6f90aae8a47e5d35486582f30308ba0196fea344",
+  "capturedAt": "2026-09-11T07:16:24.180Z",
+  "commit": "dad742b68eed5bcf0dfc950881c61de02e65efe0",
   "version": "0.21.3",
   "viewport": {
     "width": 1440,
     "height": 900
+  },
+  "deviceScaleFactor": 3,
+  "image": {
+    "width": 4320,
+    "height": 2700
   },
   "method": "Unmodified repo-built Electron renderer; isolated filesystem fixture; authored example conversation and tool trace; no model call; no UI injection.",
   "files": [

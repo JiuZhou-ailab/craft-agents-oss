@@ -3,8 +3,8 @@
 Storyflow landing page and release-download metadata.
 
 The landing page uses the archived Cursor homepage geometry with Storyflow's
-own brand, annotated current Electron captures, and published
-release links. The screenshot tour is local to the page and never calls an Agent. Original screenshots come from the unmodified current Electron renderer with authored sample files and transcripts.
+own brand, clean current Electron previews, and published
+release links. The screenshot tour is local to the page and never calls an Agent. Original 4320 × 2700 screenshots come from the unmodified current Electron renderer at a 1440 × 900 viewport and 3× pixel density, with authored sample files and transcripts. Landing previews keep the native 16:10 ratio; annotations and explanatory captions belong only to the tutorial.
 Customer proof, testimonials, team materials and editorial highlights remain
 explicit acceptance gaps; see `implementation-notes.md` before calling the page
 a completed 1:1 replica.
@@ -34,7 +34,7 @@ The release workflow calls the same deployment after publishing release download
 - `src/App.tsx` - Landing page and same-site navigation.
 - `src/DocsPage.tsx` - First-project tutorial and interface reference.
 - `src/styles.css` / `src/docs.css` - Shared landing styles and tutorial layout.
-- `src/ProductTour.tsx` / `src/product-tour.css` - Shared native screenshot tour, captions, focus regions and playback.
+- `src/ProductTour.tsx` / `src/product-tour.css` - Clean landing previews and annotated tutorial tours with focus regions and playback.
 - `capture-product.ts` - Reproducible isolated Electron capture using the existing desktop harness.
 - `reference-assets/current/` - Original current product captures and provenance.
 - `src/downloads.ts` - Shared installer metadata for both pages.

@@ -107,6 +107,8 @@ function Icon({ name }: { name: string }) {
 }
 
 function Header({ isDocsPage }: { isDocsPage: boolean }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
   return (
     <header className="site-header" id="site-header">
       <div className="header-inner">
@@ -119,29 +121,53 @@ function Header({ isDocsPage }: { isDocsPage: boolean }) {
           <img src="/apple-touch-icon.png" alt="" />
           <span>Storyflow</span>
         </a>
-        <nav className="header-nav" aria-label="页面导航">
-          <a href="/#workflow" data-storyflow-page-link="true">
-            理解产品
-          </a>
-          <a
-            href={docsPath}
-            aria-current={isDocsPage ? "page" : undefined}
-            data-storyflow-page-link="true"
+        <div
+          className="header-navigation"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setMenuOpen(false);
+              menuButton.current?.focus();
+            }
+          }}
+        >
+          <button
+            className="header-menu-button"
+            type="button"
+            ref={menuButton}
+            aria-expanded={menuOpen}
+            aria-controls="header-navigation-links"
+            onClick={() => setMenuOpen((open) => !open)}
           >
-            新手教程
-          </a>
-          <a href="/#downloads" data-storyflow-page-link="true">
-            下载
-          </a>
-        </nav>
+            菜单
+          </button>
+          <nav
+            id="header-navigation-links"
+            className={`header-nav${menuOpen ? " is-open" : ""}`}
+            aria-label="页面导航"
+            onClick={() => setMenuOpen(false)}
+          >
+            <a href="/#workflow" data-storyflow-page-link="true">
+              理解产品
+            </a>
+            <a href="/#review" data-storyflow-page-link="true">
+              改动审阅
+            </a>
+            <a href="/#skills" data-storyflow-page-link="true">
+              Skills
+            </a>
+            <a
+              href={docsPath}
+              aria-current={isDocsPage ? "page" : undefined}
+              data-storyflow-page-link="true"
+            >
+              新手教程
+            </a>
+            <a href="/#changelog" data-storyflow-page-link="true">
+              更新日志
+            </a>
+          </nav>
+        </div>
         <div className="header-actions">
-          <a
-            className="button button-ghost header-docs-button"
-            href={docsPath}
-            data-storyflow-page-link="true"
-          >
-            文档
-          </a>
           <a
             className="button button-primary button-sm header-download-desktop"
             href="/#downloads"
@@ -272,7 +298,7 @@ function Hero() {
             <ProductTour
               steps={["workspace", "context", "review"]}
               label="写作实拍导览"
-              detail
+              annotated={false}
             />
           </div>
         </div>
@@ -281,18 +307,10 @@ function Hero() {
   );
 }
 
-function ProductCapture({
-  src,
-  alt,
-  detail = "",
-}: {
-  src: string;
-  alt: string;
-  detail?: string;
-}) {
+function ProductCapture({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <figure className={`product-capture ${detail}`}>
+    <figure className="product-capture">
       <a
         className="capture-viewport"
         href={src}
@@ -382,7 +400,7 @@ function LandingPage() {
           <ProductTour
             steps={["workspace", "context"]}
             label="创作过程实拍"
-            detail
+            annotated={false}
           />
         }
       />
@@ -398,7 +416,7 @@ function LandingPage() {
           <ProductTour
             steps={["review", "history"]}
             label="改动审阅实拍"
-            detail
+            annotated={false}
           />
         }
       />
@@ -413,7 +431,7 @@ function LandingPage() {
           <ProductTour
             steps={["context", "workspace"]}
             label="项目上下文实拍"
-            detail
+            annotated={false}
           />
         }
       />
@@ -429,7 +447,7 @@ function LandingPage() {
           <ProductTour
             steps={["skills", "add-menu"]}
             label="Skills 实拍"
-            detail
+            annotated={false}
           />
         }
       />
@@ -454,7 +472,6 @@ function LandingPage() {
               <ProductCapture
                 src={assets.skills}
                 alt="可查看和编辑的 Skill 方法"
-                detail="capture-skills"
               />
             </article>
             <article className="info-card">
@@ -470,7 +487,6 @@ function LandingPage() {
               <ProductCapture
                 src={assets.dataResults}
                 alt="当前数据源详情与本地参考资料"
-                detail="capture-data"
               />
             </article>
             <article className="info-card">
@@ -486,7 +502,6 @@ function LandingPage() {
               <ProductCapture
                 src={assets.versionHistory}
                 alt="本地版本历史与恢复入口"
-                detail="capture-history"
               />
             </article>
           </div>

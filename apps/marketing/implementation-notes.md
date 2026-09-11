@@ -12,22 +12,24 @@ The fully rendered baseline includes changelog and editorial highlights. Earlier
 | Header height | 52px | 52px |
 | Content width | 1300px | 1300px |
 | H1 top / font / line-height | 164px / 26px / 32.5px | Same; Storyflow text has a different length |
-| Hero stage top / height | 318.17px / 720px | Same |
+| Hero stage top / height | 318.17px / 720px | Top retained; height follows native 16:10 image plus controls/padding |
 | Feature card padding | 17.5px | 17.5px |
 | Feature copy / media | About 1:2 | About 1:2 |
-| Feature media height | 680px | 680px |
+| Feature media height | 680px | Intrinsic image ratio plus controls/padding |
 
 These are calibration observations, not a new design token API. At narrow widths, captions reflow and enlarged screenshot details remain horizontally scrollable. Every scene also offers the original full image.
 
 ## Current revision — authentic product UI
 
-User feedback requested closer agreement with the real Storyflow UI, fresh annotated captures, and the UI/UX rhythm of <https://cursor.com/cn/home>. That page was inspected again on 2026-09-11 with ego-browser. Its compact navigation, warm neutral surfaces, full-width product stage, alternating feature bands and local demo state transitions remain the reference. The header/H1/stage geometry above is unchanged.
+User feedback requested closer agreement with the real Storyflow UI, fresh annotated captures, and the UI/UX rhythm of <https://cursor.com/cn/home>. That page was inspected again on 2026-09-11 with ego-browser. Its compact navigation, warm neutral surfaces, full-width product stage, alternating feature bands and local demo state transitions remain the reference. Header and H1 geometry are retained; screenshot frames now follow the actual product aspect ratio instead of copying the reference’s fixed heights.
 
-The former hand-drawn writing, review, project and Skill components are removed. `ProductTour` shows original screenshots from the current built Electron renderer. Scene tabs, numbered outlines and captions are explicitly website annotations; they do not pretend to be desktop controls. Screenshot changes fade for 320ms and focusing a region transitions over 520ms. Optional six-second playback pauses offscreen, while the picture is hovered or another control is focused, and under reduced motion. No motion library or provider call was added.
+The former hand-drawn writing, review, project and Skill components are removed. `ProductTour` shows original screenshots from the current built Electron renderer. The latest user correction separates presentation from instruction: the landing page starts with full 16:10 images, no numbered markers, outlines or explanation paragraphs; the tutorial keeps those annotations. Both retain screenshot selection, focus, original links and optional six-second playback. Image changes fade for 320ms and focusing a region transitions over 520ms. Playback pauses offscreen, while the picture is hovered or another control is focused, and under reduced motion. No motion library or provider call was added.
+
+The header has five destinations: product, review, Skills, tutorial and changelog, with a separate download action. A mobile menu exposes the same links, closes on selection and supports Escape with focus restoration. Feature frames and secondary cards no longer force tall fixed boxes or arbitrary pixel-offset crops. High-density screenshots provide real source pixels rather than upscaling the previous PNGs.
 
 ## Capture provenance and refresh
 
-`reference-assets/current/provenance.json` records the source commit, build version, capture time and dimensions. `capture-product.ts` reuses `e2e/perf/launch.ts` and the existing fixture generator. It creates an isolated sample project with real Markdown files, an authored conversation, a sample Edit trace, a local source and a Skill. Version creation uses the real workspace-version API. It runs the unmodified application and waits for layout geometry to settle before capture; it does not inject replacement UI or edit screenshot pixels. Original images are linked from every tour. A refresh first captures to a staging directory; only a complete generation replaces the previous images and provenance.
+`reference-assets/current/provenance.json` records the source commit, build version, capture time and dimensions. `capture-product.ts` reuses `e2e/perf/launch.ts` and the existing fixture generator. It creates an isolated sample project with real Markdown files, an authored conversation, a sample Edit trace, a local source and a Skill. Version creation uses the real workspace-version API. It captures 4320 × 2700 pixels from a 1440 × 900 CSS viewport at device scale 3, using the native keyboard path to open the Skill submenu. It runs the unmodified application and waits for layout geometry to settle before capture; it does not inject replacement UI or edit screenshot pixels. Original images are linked from every tour. A refresh first captures to a staging directory; only a complete generation replaces the previous images and provenance.
 
 These are genuine UI captures with **illustrative content**, not recordings of model-generated work. No model is configured or invoked; the original offline state can therefore show “不可用”. They contain no real user conversation or credentials. The capture process only changes its temporary fixture and removes it afterward.
 
@@ -51,14 +53,14 @@ Customer marks, attributable testimonials, team material and editorial articles 
 
 ## Verification
 
-The fresh Electron capture completed for all seven surfaces. Marketing typecheck, build and the eight existing Bun tests passed. Browser verification covers the current image steps, focus transforms, original links, actual installer URLs, Enter/Tab/Escape, mobile download routing, tutorial history/deep links, four viewport widths, reduced motion and media failures. Screenshot fidelity is inspected separately from these programmatic checks.
+The regression checks distinguish the two surfaces: no markers or explanation paragraphs on the landing page; tutorial markers remain present. Browser QA verifies 16:10 scene bounds at 1440/768/390/320 px, five desktop links and the mobile menu’s selection/Escape behavior, alongside existing playback, zoom, download, history, reduced-motion and media-failure checks. Pixel dimensions are checked against capture provenance; clarity and framing are inspected in the rendered page.
 
-Final checks: repository `bun run test` completed with 5,778 passing, 11 skipped and 0 failed tests. The later playback correction passed marketing typechecking and was rechecked by both review axes; the browser run verifies it without manually moving focus off the Play button.
+Final validation passed: marketing typecheck/build, 8 marketing tests (84 assertions), browser QA at all four widths, and the repository test command (5,778 passed, 11 skipped, 0 failed). All seven PNG dimensions are 4320 × 2700; the browser decoded the same native resolution. Desktop overview/detail and mobile captures were visually inspected.
 
 ### Standards review
 
-The playback focus and incomplete-generation publication findings were corrected and rechecked. No remaining actionable Standards findings.
+No actionable code findings. The obsolete annotated-landing description was corrected in this README projection and the marketing README.
 
 ### Spec review
 
-Current screenshots, separate annotations and updated tutorial behavior satisfy this refinement. The playback finding was corrected and rechecked. No remaining actionable findings for this refinement; the pre-existing external-material gaps remain.
+Clean landing presentation, tutorial-only annotations, five meaningful header destinations, native image proportions and 3× capture satisfy the current correction. Historical external-material gaps remain outside this refinement.

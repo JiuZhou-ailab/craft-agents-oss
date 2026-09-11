@@ -69,11 +69,20 @@ for (const title of ["引用项目文件", "审阅具体改动", "目标与正�
     "true",
   );
 }
-await page.click(
-  'section[aria-label="写作实拍导览"] button:has-text("查看全貌")',
+assert.equal(
+  await page.evaluate(
+    () =>
+      document.querySelectorAll(".tour-outline, .tour-marker, .tour-number")
+        .length,
+  ),
+  0,
+);
+assert.equal(
+  await page.evaluate(() => document.querySelectorAll(".header-nav a").length),
+  5,
 );
 await page.click(
-  'section[aria-label="写作实拍导览"] button:has-text("放大标注")',
+  'section[aria-label="写作实拍导览"] button:has-text("查看细节")',
 );
 assert.match(
   await page.evaluate(
@@ -142,6 +151,13 @@ await page.waitForFunction(
       document.querySelector("#first-task").getBoundingClientRect().top - 72,
     ) < 4,
 );
+assert.ok(
+  await page.evaluate(
+    () =>
+      !!document.querySelector(".tour-outline") &&
+      !!document.querySelector(".tour-number"),
+  ),
+);
 await page.reload();
 await page.waitForFunction(
   () =>
@@ -207,6 +223,12 @@ for (const width of [1440, 768, 390, 320]) {
       .querySelector(".hero-stage")
       .getBoundingClientRect()
       .toJSON(),
+    frameRatios: [
+      ...document.querySelectorAll(".product-tour .tour-scene"),
+    ].map((scene) => {
+      const r = scene.getBoundingClientRect();
+      return r.width / r.height;
+    }),
     allImagesLoaded: [...document.images].every(
       (img) => img.complete && img.naturalWidth > 0,
     ),
@@ -218,12 +240,38 @@ for (const width of [1440, 768, 390, 320]) {
     true,
     `Product captures load at ${width}px`,
   );
+  for (const ratio of result.frameRatios)
+    assert.ok(Math.abs(ratio - 1.6) < 0.01, `Native 16:10 frame at ${width}px`);
   observations.push(result);
   if (config.output && [1440, 390].includes(width))
     await page.screenshot({
       path: `${config.output}/storyflow-${width}.png`,
       fullPage: true,
     });
+  if (width < 1024) {
+    await page.click(".header-menu-button");
+    await page.click('header a:has-text("Skills")');
+    await page.waitForURL("**/#skills");
+    assert.equal(
+      await page.evaluate(() =>
+        document
+          .querySelector(".header-menu-button")
+          .getAttribute("aria-expanded"),
+      ),
+      "false",
+    );
+    await page.click(".header-menu-button");
+    await page.keyboard.press("Escape");
+    assert.equal(
+      await page.evaluate(
+        () =>
+          document.activeElement ===
+            document.querySelector(".header-menu-button") &&
+          !document.querySelector(".header-nav.is-open"),
+      ),
+      true,
+    );
+  }
   if (width < 768) {
     await page.click("header a.header-download-mobile");
     await page.waitForURL("**/docs/#install");
@@ -313,7 +361,7 @@ if (config.output) {
   );
 }
 console.log(
-  "PASS: native screenshot steps, zoom, annotations, downloads, deep links/history, four viewport widths, reduced motion, and failed-media fallback.",
+  "PASS: clean 16:10 landing previews, tutorial-only annotations, desktop/mobile navigation, zoom, downloads, deep links/history, four viewport widths, reduced motion, and failed-media fallback.",
 );
 console.log(observations);
 await page.cdp("Network.setCacheDisabled", { cacheDisabled: false });

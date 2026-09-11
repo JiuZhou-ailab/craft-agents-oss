@@ -91,10 +91,13 @@ describe("downloadOptions", () => {
     });
   });
 
-  test("shows native product evidence and captions before starting playback", () => {
+  test("keeps landing previews unannotated and full-frame before interaction", () => {
     const html = renderToStaticMarkup(createElement(App));
     expect(html).toContain('aria-label="写作实拍导览"');
-    expect(html).toContain("在左侧对话里交代目标");
+    expect(html).not.toContain('class="tour-outline"');
+    expect(html).not.toContain('class="tour-number"');
+    expect(html).not.toContain('data-zoom="true"');
+    expect(html).toContain("查看细节");
     expect(html).toContain("/reference-assets/current/workspace.png");
     expect(html).toContain("示例项目");
   });
@@ -144,6 +147,8 @@ describe("downloadOptions", () => {
       expect(html).toContain("判断是否用对了");
       expect(html).toContain("初始给出的信息越明确越好");
       expect(html).toContain("点击输入区的加号");
+      expect(html).toContain('class="tour-outline"');
+      expect(html).toContain('class="tour-number"');
       expect(html).toContain("current/workspace.png");
       expect(html).toContain("current/add-menu.png");
       expect(html).not.toContain("https://ehyg6a9wjd.feishu.cn/wiki");

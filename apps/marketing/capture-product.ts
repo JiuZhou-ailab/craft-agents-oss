@@ -200,7 +200,7 @@ try {
   );
   await app.cdp.send(
     "Emulation.setDeviceMetricsOverride",
-    { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false },
+    { width: 1440, height: 900, deviceScaleFactor: 3, mobile: false },
     app.sid,
   );
   await go("allSessions/session/" + sid);
@@ -271,13 +271,28 @@ try {
     app,
     `[...document.querySelectorAll('[role="menuitem"]')].some(e=>e.textContent==='选择技能')`,
   );
-  const skillPoint = await evalOn<{ x: number; y: number }>(
+  await evalOn(
     app,
-    `(()=>{const r=[...document.querySelectorAll('[role="menuitem"]')].find(e=>e.textContent==='选择技能').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`,
+    `[...document.querySelectorAll('[role="menuitem"]')].find(e=>e.textContent==='选择技能').focus()`,
   );
   await app.cdp.send(
-    "Input.dispatchMouseEvent",
-    { type: "mouseMoved", ...skillPoint },
+    "Input.dispatchKeyEvent",
+    {
+      type: "keyDown",
+      key: "ArrowRight",
+      code: "ArrowRight",
+      windowsVirtualKeyCode: 39,
+    },
+    app.sid,
+  );
+  await app.cdp.send(
+    "Input.dispatchKeyEvent",
+    {
+      type: "keyUp",
+      key: "ArrowRight",
+      code: "ArrowRight",
+      windowsVirtualKeyCode: 39,
+    },
     app.sid,
   );
   await waitFor(app, `document.querySelector('input[aria-label="选择技能"]')`);
@@ -307,6 +322,8 @@ try {
         }).trim(),
         version: "0.21.3",
         viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 3,
+        image: { width: 4320, height: 2700 },
         method:
           "Unmodified repo-built Electron renderer; isolated filesystem fixture; authored example conversation and tool trace; no model call; no UI injection.",
         files: [

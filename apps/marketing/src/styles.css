@@ -143,8 +143,37 @@ ol {
 .header-nav {
   display: none;
 }
+.header-navigation {
+  justify-self: stretch;
+}
+.header-menu-button {
+  border: 0;
+  background: none;
+  font: inherit;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+@media (max-width: 1023px) {
+  .header-nav.is-open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: var(--site-header-height);
+    left: 0;
+    right: 0;
+    padding: 12px 20px;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-nav a {
+    padding: 12px;
+  }
+}
 
 @media (min-width: 1024px) {
+  .header-menu-button {
+    display: none;
+  }
   .header-nav {
     align-items: center;
     display: flex;
@@ -169,16 +198,6 @@ ol {
   display: flex;
   gap: 8px;
   justify-self: end;
-}
-
-a.header-docs-button {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  a.header-docs-button {
-    display: inline-flex;
-  }
 }
 
 .main-content {
@@ -320,15 +339,10 @@ a.header-docs-button {
   isolation: isolate;
   overflow: hidden;
   position: relative;
-  height: 720px;
+  padding: clamp(10px, 3.5vw, 48px);
 }
 .hero-primary-window {
-  position: absolute;
-  width: min(1080px, calc(100% - 96px));
-  height: 640px;
-  left: 50%;
-  top: 50px;
-  transform: translateX(-50%);
+  width: 100%;
 }
 
 .feature-card {
@@ -351,14 +365,13 @@ a.header-docs-button {
   padding: 0 30px 0 2.5px;
 }
 .feature-media {
-  height: 680px;
   min-width: 0;
   overflow: hidden;
   background: #d8d5ce;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  padding: 32px;
+  padding: 16px;
 }
 
 .feature-copy {
@@ -531,17 +544,6 @@ a.header-docs-button {
   .hero-copy {
     margin-bottom: 52.5px;
   }
-  .hero-stage {
-    height: 720px;
-  }
-  .hero-primary-window {
-    top: 24px;
-    width: calc(100% - 32px);
-    height: 656px;
-  }
-  .hero-secondary-window {
-    display: none;
-  }
   .feature-card,
   .feature-card.is-reverse {
     grid-template-columns: minmax(0, 1fr);
@@ -562,17 +564,6 @@ a.header-docs-button {
   .header-inner {
     width: calc(100% - 37.5px);
   }
-  .hero-stage {
-    height: 720px;
-  }
-  .hero-primary-window {
-    top: 20px;
-    width: calc(100% - 20px);
-    height: 680px;
-  }
-  .hero-secondary-window {
-    display: none;
-  }
   .button-row {
     gap: 10px;
   }
@@ -586,16 +577,12 @@ a.header-docs-button {
   .feature-copy p {
     font-size: 18px;
   }
-  .feature-media > .writing-demo {
-    height: 640px;
-  }
   .download-popover {
     min-width: min(240px, calc(100vw - 40px));
   }
 }
 .product-capture {
   width: 100%;
-  height: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -629,13 +616,6 @@ a.header-docs-button {
 .product-capture figcaption a {
   white-space: nowrap;
   text-decoration: underline;
-}
-.capture-skills img {
-  width: 180%;
-  max-width: none;
-  position: relative;
-  left: -78%;
-  top: -20px;
 }
 .capture-fallback {
   padding: 28px;
@@ -677,14 +657,10 @@ a.header-docs-button {
 }
 .info-card .product-capture {
   box-shadow: none;
-  height: 340px;
+  height: auto;
 }
 .info-card .product-capture figcaption span {
   display: none;
-}
-.info-card .capture-skills img {
-  width: 240%;
-  left: -103%;
 }
 .header-download-mobile {
   display: none;
@@ -696,16 +672,6 @@ a.header-docs-button {
   .header-download-mobile {
     display: inline-flex;
   }
-}
-.capture-data img {
-  width: 2000px;
-  max-width: none;
-  position: relative;
-  left: -760px;
-  top: -470px;
-}
-.capture-history img {
-  width: 100%;
 }
 .release-grid {
   display: grid;
@@ -770,13 +736,6 @@ a.header-docs-button {
   .frontier-grid {
     grid-template-columns: 1fr;
   }
-  .info-card .product-capture {
-    height: 440px;
-  }
-  .info-card .capture-skills img {
-    width: 180%;
-    left: -78%;
-  }
   .release-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -791,14 +750,6 @@ a.header-docs-button {
   }
   .hero {
     padding-top: 105px;
-  }
-  .capture-skills img {
-    width: 285%;
-    left: -121%;
-  }
-  .info-card .capture-skills img {
-    width: 285%;
-    left: -121%;
   }
   .section-heading {
     font-size: 24px;
@@ -826,46 +777,7 @@ a.header-docs-button {
 #skills {
   padding-bottom: 67.2px;
 }
-#context .feature-media,
-#skills .feature-media {
-  height: 650px;
-}
 .closing {
   padding-top: 67.2px;
   padding-bottom: 134.4px;
-}
-
-/* Current native captures replace the former hand-drawn product windows. */
-.feature-media > .product-tour {
-  height: 100%;
-}
-.hero-primary-window {
-  height: 620px;
-}
-.info-card .capture-skills img {
-  width: 1440px;
-  left: -430px;
-  top: -435px;
-}
-.info-card .capture-data img {
-  width: 1440px;
-  left: -310px;
-  top: -190px;
-}
-.info-card .capture-history img {
-  width: 1152px;
-  max-width: none;
-  position: relative;
-  left: -355px;
-  top: -247px;
-}
-@media (max-width: 760px) {
-  .hero-primary-window {
-    height: 680px;
-  }
-  .info-card .capture-skills img {
-    width: 1296px;
-    left: -387px;
-    top: -392px;
-  }
 }
