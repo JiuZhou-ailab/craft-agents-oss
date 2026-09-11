@@ -699,7 +699,7 @@ ol {
   border-radius: 999px;
   padding: 1px 8px;
 }
-.release-card h3 {
+.release-card h2 {
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
@@ -707,6 +707,37 @@ ol {
 }
 .changelog .text-arrow {
   margin-top: 22px;
+}
+.changelog-page {
+  min-height: 65vh;
+  padding-block: 88px;
+}
+.changelog-intro {
+  color: var(--muted);
+  margin-bottom: 40px;
+}
+.changelog-page .release-grid {
+  grid-template-columns: 1fr;
+  max-width: 896px;
+}
+.changelog-page .release-card {
+  padding: 24px;
+}
+.footer-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  padding-block: 24px;
+  margin-bottom: 24px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-style: normal;
+}
+.footer-contact a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
 }
 .footer-help details {
   font-size: 12px;

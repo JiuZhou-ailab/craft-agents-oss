@@ -1,12 +1,52 @@
 // input: Public installer links and existing product walkthrough screenshots
-// output: First-project tutorial and linked interface reference
+// output: First-project tutorial, expanded topic navigation and per-page heading navigation
 // pos: Public /docs/ page, independent of landing-page presentation
 
+import { useEffect, useRef, useState } from "react";
 import { downloadOptions } from "./downloads";
 
 import { ProductTour } from "./ProductTour";
 
 export function DocsPage() {
+  const article = useRef<HTMLElement>(null);
+  const [headings, setHeadings] = useState<
+    { id: string; text: string; level: number }[]
+  >([]);
+  const [activeHeading, setActiveHeading] = useState("");
+
+  useEffect(() => {
+    const elements = Array.from(
+      article.current?.querySelectorAll<HTMLElement>("h2[id], h3[id]") ?? [],
+    );
+    setHeadings(
+      elements.map((heading) => ({
+        id: heading.id,
+        text: heading.textContent ?? "",
+        level: Number(heading.tagName.slice(1)),
+      })),
+    );
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const current =
+        elements
+          .filter((heading) => heading.getBoundingClientRect().top <= 108)
+          .slice(-1)[0] ?? elements[0];
+      setActiveHeading(current?.id ?? "");
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    schedule();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, []);
+
   return (
     <div className="docs-layout">
       <section className="docs-hero">
@@ -22,7 +62,7 @@ export function DocsPage() {
         <a href="#create-project">2. 创建项目</a>
         <a href="#first-task">3. 第一次写作</a>
         <a href="#review-changes">4. 审阅与保存</a>
-        <details className="docs-more">
+        <details className="docs-more" open>
           <summary>操作参考</summary>
           <a href="#window-map">认识工作台</a>
           <a href="#header-tools">常用工具</a>
@@ -34,9 +74,26 @@ export function DocsPage() {
           <a href="#full-review">使用审查技能</a>
         </details>
       </nav>
-      <article className="docs-page">
+      <aside className="docs-page-toc" aria-label="本页目录">
+        <p>本页目录</p>
+        <nav aria-label="本页标题">
+          {headings.map((heading) => (
+            <a
+              key={heading.id}
+              href={`#${heading.id}`}
+              data-level={heading.level}
+              aria-current={
+                activeHeading === heading.id ? "location" : undefined
+              }
+            >
+              {heading.text}
+            </a>
+          ))}
+        </nav>
+      </aside>
+      <article className="docs-page" ref={article}>
         <section className="docs-summary">
-          <h2>这次先完成一件小事</h2>
+          <h2 id="overview-title">这次先完成一件小事</h2>
           <p>
             让助手根据你的目标写一份简报或一段正文，把结果保存在项目文件中，再检查一次改动。Skills、数据源和自动化可以等需要时再配置。
           </p>
@@ -45,7 +102,7 @@ export function DocsPage() {
         <section className="docs-section" id="install">
           <div className="docs-section-copy">
             <p className="docs-kicker">准备</p>
-            <h2>1. 安装桌面版，选择可用模型</h2>
+            <h2 id="install-title">1. 安装桌面版，选择可用模型</h2>
             <p>
               按电脑类型选择安装包。Mac 可在系统的“关于本机”中查看芯片；macOS
               需要 12.0 或更高版本。
@@ -70,12 +127,12 @@ export function DocsPage() {
 
         <section className="docs-section" id="create-project">
           <div className="docs-section-copy">
-            <h2>2. 创建你的作品项目</h2>
-            <h3>创建项目功能怎么用</h3>
+            <h2 id="create-project-title">2. 创建你的作品项目</h2>
+            <h3 id="project-how">创建项目功能怎么用</h3>
             <p>
               创建项目可以理解成给一本新作品开一个独立资料柜。系统只建立空项目，不预先创建目录或文件；项目结构由你真正创建或导入的内容决定。
             </p>
-            <h3>创建时要决定什么</h3>
+            <h3 id="project-options">创建时要决定什么</h3>
             <ul className="docs-inline-list">
               <li>
                 项目名称：建议直接写作品名或暂定名，例如《女扮男装入朝后》。
@@ -84,7 +141,7 @@ export function DocsPage() {
                 保存位置：决定这个项目放在哪个工作区或文件夹里，方便以后找回。
               </li>
             </ul>
-            <h3>空项目从哪里开始</h3>
+            <h3 id="project-start">空项目从哪里开始</h3>
             <p>
               新项目从空白文件夹开始。你可以直接描述目标，也可以选择下面的操作。
             </p>
@@ -127,7 +184,7 @@ export function DocsPage() {
         <section className="docs-section" id="first-task">
           <div className="docs-section-copy">
             <p className="docs-kicker">第一次任务</p>
-            <h2>3. 先讨论方向，再写一份文件</h2>
+            <h2 id="first-task-title">3. 先讨论方向，再写一份文件</h2>
             <p>
               在项目对话中说明这次的目标。可以从下面的示例开始，把题材、人物和限制换成自己的内容。
             </p>
@@ -152,7 +209,7 @@ export function DocsPage() {
         <section className="docs-section" id="review-changes">
           <div className="docs-section-copy">
             <p className="docs-kicker">检查结果</p>
-            <h2>4. 审阅改动，保存一个版本</h2>
+            <h2 id="review-changes-title">4. 审阅改动，保存一个版本</h2>
             <p>
               Agent
               写入后，打开文件改动审阅，检查新增和删除的内容。满意的改动选择
@@ -177,7 +234,7 @@ export function DocsPage() {
 
         <div className="docs-reference-heading">
           <p className="docs-kicker">操作参考</p>
-          <h2>需要时，再认识这些工具</h2>
+          <h2 id="reference-title">需要时，再认识这些工具</h2>
           <p>
             以下是 2026-09-11
             从当前桌面版本重新采集的原始画面。标注和讲解属于本页导览，不是应用控件；作品、对话和改动记录均为示例，采集没有调用模型。目录由示例项目创建，新项目仍从空白开始。
@@ -186,7 +243,7 @@ export function DocsPage() {
 
         <section className="docs-section" id="header-tools">
           <div className="docs-section-copy">
-            <h2>常用工具在哪里</h2>
+            <h2 id="header-tools-title">常用工具在哪里</h2>
             <p>
               技能、数据源和定时任务在左侧。版本管理位于正文编辑器工具栏右端；输入框加号可以为当前任务选择技能与资料。
             </p>
@@ -226,7 +283,7 @@ export function DocsPage() {
 
         <section className="docs-section" id="window-map">
           <div className="docs-section-copy">
-            <h2>认识工作台</h2>
+            <h2 id="window-map-title">认识工作台</h2>
           </div>
           <div className="docs-tour">
             <ProductTour
@@ -257,7 +314,7 @@ export function DocsPage() {
 
         <section className="docs-section" id="source-tree">
           <div className="docs-section-copy">
-            <h2>按你的习惯整理项目文件</h2>
+            <h2 id="source-tree-title">按你的习惯整理项目文件</h2>
             <p>
               项目目录显示真实文件。下面是一种整理方式，你可以按自己的作品调整。
             </p>
@@ -281,7 +338,7 @@ export function DocsPage() {
 
         <section className="docs-section" id="collaboration">
           <div className="docs-section-copy">
-            <h2>和助手讨论下一步</h2>
+            <h2 id="collaboration-title">和助手讨论下一步</h2>
           </div>
           <div className="docs-tour">
             <ProductTour
@@ -307,7 +364,7 @@ export function DocsPage() {
 
         <section className="docs-section docs-checklist" id="checklist">
           <div className="docs-section-copy">
-            <h2>判断是否用对了</h2>
+            <h2 id="checklist-title">判断是否用对了</h2>
           </div>
           <ul className="docs-bullet-list">
             <li>能在项目目录中找到刚创建的文件，打开后有完整内容。</li>
@@ -318,7 +375,7 @@ export function DocsPage() {
 
         <section className="docs-section" id="initial-brief">
           <div className="docs-section-copy">
-            <h2>交代创作背景</h2>
+            <h2 id="initial-brief-title">交代创作背景</h2>
             <p>
               初始给出的信息越明确越好：交代题材、人物、核心钩子和限制，再说明本次只完成哪一步。
             </p>
@@ -330,7 +387,7 @@ export function DocsPage() {
 
         <section className="docs-section" id="chapter-check">
           <div className="docs-section-copy">
-            <h2>检查一章正文</h2>
+            <h2 id="chapter-check-title">检查一章正文</h2>
             <p>
               先检查一个章节的人物动机、情节因果和前文衔接，确认后再继续下一章，便于及时调整方向。
             </p>
@@ -346,7 +403,7 @@ export function DocsPage() {
 
         <section className="docs-section" id="full-review">
           <div className="docs-section-copy">
-            <h2>使用技能审查全文</h2>
+            <h2 id="full-review-title">使用技能审查全文</h2>
             <p>
               写完后让 Agent
               审查一遍全文，查看哪里有逻辑上的问题和错误。你可以自定义自己的技能，告诉

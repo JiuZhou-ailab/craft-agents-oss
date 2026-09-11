@@ -1,11 +1,12 @@
 // input: Storyflow release links and current native product captures
-// output: Chinese product landing page and in-site tutorial navigation
+// output: Chinese landing, tutorial and release-history pages with shared navigation
 // pos: React surface for the public marketing route
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { downloadOptions as releaseDownloadOptions } from "./downloads";
 import { DocsPage } from "./DocsPage";
+import { ChangelogPage } from "./ChangelogPage";
 import { ProductTour, captureUrl } from "./ProductTour";
 
 const assets = {
@@ -55,22 +56,6 @@ const faqs = [
   },
 ] as const;
 
-// Release summaries are curated from the existing release notes and verified tags.
-const releases = [
-  {
-    version: "0.21.3",
-    date: "2026-09-09",
-    title: "待回答问题可恢复，文件操作更完整",
-  },
-  {
-    version: "0.21.2",
-    date: "2026-09-08",
-    title: "长对话更流畅，搜索直达正文",
-  },
-  { version: "0.21.1", date: "2026-09-07", title: "会话排序与项目归属更清楚" },
-  { version: "0.21.0", date: "2026-09-07", title: "定时任务与文件预览更新" },
-];
-
 function Icon({ name }: { name: string }) {
   if (name === "download") {
     return (
@@ -106,7 +91,13 @@ function Icon({ name }: { name: string }) {
   );
 }
 
-function Header({ isDocsPage }: { isDocsPage: boolean }) {
+function Header({
+  isDocsPage,
+  isChangelogPage,
+}: {
+  isDocsPage: boolean;
+  isChangelogPage: boolean;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   return (
@@ -162,7 +153,11 @@ function Header({ isDocsPage }: { isDocsPage: boolean }) {
             >
               新手教程
             </a>
-            <a href="/#changelog" data-storyflow-page-link="true">
+            <a
+              href="/changelog/"
+              aria-current={isChangelogPage ? "page" : undefined}
+              data-storyflow-page-link="true"
+            >
               更新日志
             </a>
           </nav>
@@ -188,24 +183,9 @@ function Header({ isDocsPage }: { isDocsPage: boolean }) {
   );
 }
 
-function useDownloadLabel() {
-  const [label, setLabel] = useState("下载 macOS 版本");
-
-  useEffect(() => {
-    setLabel(
-      /Windows/i.test(navigator.userAgent)
-        ? "下载 Windows 版本"
-        : "下载 macOS 版本",
-    );
-  }, []);
-
-  return label;
-}
-
 function DownloadMenu({ marked = false }: { marked?: boolean }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const label = useDownloadLabel();
   const optionsId = marked ? "installer-options" : "installer-options-footer";
 
   useEffect(() => {
@@ -237,7 +217,7 @@ function DownloadMenu({ marked = false }: { marked?: boolean }) {
         aria-controls={optionsId}
         onClick={() => setOpen((value) => !value)}
       >
-        {label}
+        下载 macOS / Windows
         <span className="button-icon" aria-hidden="true">
           <Icon name="download" />
         </span>
@@ -507,38 +487,6 @@ function LandingPage() {
           </div>
         </div>
       </section>
-      <section
-        className="section changelog"
-        id="changelog"
-        aria-labelledby="changelog-title"
-      >
-        <div className="container">
-          <h2 className="section-heading" id="changelog-title">
-            更新日志
-          </h2>
-          <div className="release-grid">
-            {releases.map((release) => (
-              <a
-                className="release-card"
-                key={release.version}
-                href={`https://github.com/JiuZhou-ailab/storyflow/releases/tag/v${release.version}`}
-              >
-                <div>
-                  <span className="release-version">{release.version}</span>
-                  <time dateTime={release.date}>{release.date}</time>
-                </div>
-                <h3>{release.title}</h3>
-              </a>
-            ))}
-          </div>
-          <a
-            className="text-arrow"
-            href="https://github.com/JiuZhou-ailab/storyflow/releases"
-          >
-            查看全部更新 →
-          </a>
-        </div>
-      </section>
       {/* Editorial highlights need published Storyflow articles, not tutorial filler. */}
 
       <section className="section closing">
@@ -590,7 +538,7 @@ function isDocsPagePath(pathname: string) {
 
 function isHandledPagePath(pathname: string) {
   const normalized = normalizePagePath(pathname);
-  return normalized === landingPath || normalized === "/docs";
+  return [landingPath, "/docs", "/changelog"].includes(normalized);
 }
 
 function scrollToPageHash(hash: string) {
@@ -618,12 +566,16 @@ export function App() {
     getCurrentPageTarget(),
   );
   const isDocsPage = isDocsPagePath(pageTarget.pathname);
+  const isChangelogPage =
+    normalizePagePath(pageTarget.pathname) === "/changelog";
 
   useEffect(() => {
     document.title = isDocsPage
       ? "Storyflow 新手教程 - 从项目到第一份稿件"
-      : "Storyflow - 小说创作者的 AI 桌面工作台";
-  }, [isDocsPage]);
+      : isChangelogPage
+        ? "Storyflow 更新日志"
+        : "Storyflow - 小说创作者的 AI 桌面工作台";
+  }, [isDocsPage, isChangelogPage]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -683,12 +635,18 @@ export function App() {
 
   return (
     <div className="page-shell" onClick={handlePageClick}>
-      <Header isDocsPage={isDocsPage} />
+      <Header isDocsPage={isDocsPage} isChangelogPage={isChangelogPage} />
       <a className="skip-link" href="#main-content">
         跳到正文
       </a>
       <main className="main-content" id="main-content" tabIndex={-1}>
-        {isDocsPage ? <DocsPage /> : <LandingPage />}
+        {isDocsPage ? (
+          <DocsPage />
+        ) : isChangelogPage ? (
+          <ChangelogPage />
+        ) : (
+          <LandingPage />
+        )}
       </main>
       <footer className="site-footer">
         <div className="container footer-grid">
@@ -710,8 +668,12 @@ export function App() {
           </div>
           <div>
             <h3>资源</h3>
-            <a href={docsPath} data-storyflow-page-link="true">
-              文档
+            <a
+              id="changelog"
+              href="/changelog/"
+              data-storyflow-page-link="true"
+            >
+              更新日志
             </a>
             <a href={docsPath} data-storyflow-page-link="true">
               新手教程
@@ -727,6 +689,11 @@ export function App() {
             ))}
           </div>
         </div>
+        <address className="container footer-contact">
+          <span>联系我</span>
+          <span>飞书：派大星</span>
+          <a href="mailto:zjdding@gmail.com">zjdding@gmail.com</a>
+        </address>
         <div className="container footer-meta">
           <span>© 2026 Storyflow</span>
           <span>支持 Apple Silicon、Intel Mac 和 Windows x64。</span>

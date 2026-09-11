@@ -2,3 +2,5 @@
 /releases/* https://story-storage.zjding.com/releases/:splat 301
 /docs /docs/ 301
 /docs/ /index.html 200
+/changelog /changelog/ 301
+/changelog/ /index.html 200

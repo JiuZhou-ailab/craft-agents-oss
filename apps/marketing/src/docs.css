@@ -13,6 +13,47 @@
   padding: 40px calc(var(--g) * 2) 96px;
 }
 
+.docs-page-toc {
+  display: none;
+}
+@media (min-width: 1200px) {
+  .docs-layout {
+    max-width: var(--landing-container);
+    grid-template-columns: 180px minmax(0, 1fr) 200px;
+    gap: 32px;
+  }
+  .docs-page-toc {
+    display: block;
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: start;
+    position: sticky;
+    top: 88px;
+    max-height: calc(100dvh - 112px);
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .docs-page-toc p {
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .docs-page-toc a {
+    display: block;
+    padding: 6px 10px;
+    border-left: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .docs-page-toc a[data-level="3"] {
+    padding-left: 22px;
+  }
+  .docs-page-toc a:hover,
+  .docs-page-toc a[aria-current="location"] {
+    color: var(--foreground);
+    border-left-color: var(--foreground);
+  }
+}
+
 .docs-toc {
   grid-column: 1;
   grid-row: 1 / span 2;

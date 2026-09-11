@@ -1,5 +1,5 @@
 // input: Browser DOM root
-// output: Mounted Storyflow landing page
+// output: Mounted Storyflow public pages
 // pos: Marketing app entrypoint
 
 import React from "react";

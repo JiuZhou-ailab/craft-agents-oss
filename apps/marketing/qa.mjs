@@ -110,6 +110,24 @@ await page.click(
   'section[aria-label="Skills 实拍"] .tour-tabs button:has-text("查看写作方法")',
 );
 await page.evaluate(() => document.querySelector("#downloads button").focus());
+assert.match(
+  await page.evaluate(
+    () => document.querySelector("#downloads button").textContent,
+  ),
+  /macOS \/ Windows/,
+);
+assert.equal(
+  await page.evaluate(() =>
+    document.querySelector(".footer-contact a").getAttribute("href"),
+  ),
+  "mailto:zjdding@gmail.com",
+);
+assert.match(
+  await page.evaluate(
+    () => document.querySelector(".footer-contact").textContent,
+  ),
+  /飞书：派大星/,
+);
 await page.press("#downloads button", "Enter");
 const expectedInstallers = [
   "Storyflow-arm64.dmg",
@@ -165,6 +183,58 @@ await page.waitForFunction(
       document.querySelector("#first-task").getBoundingClientRect().top - 72,
     ) < 4,
 );
+assert.equal(
+  await page.evaluate(() => document.querySelector(".docs-toc details").open),
+  true,
+);
+await page.waitForFunction(
+  () =>
+    document.querySelectorAll(".docs-page-toc a").length ===
+    document.querySelectorAll(".docs-page h2[id], .docs-page h3[id]").length,
+);
+await page.click('.docs-page-toc a[href="#project-options"]');
+await page.waitForURL("**/docs/#project-options");
+await page.waitForFunction(
+  () =>
+    document
+      .querySelector('.docs-page-toc a[aria-current="location"]')
+      .getAttribute("href") === "#project-options",
+);
+assert.ok(
+  await page.evaluate(
+    () =>
+      Math.abs(
+        document.querySelector("#project-options").getBoundingClientRect().top -
+          72,
+      ) < 4,
+  ),
+);
+await page.reload();
+await page.waitForFunction(
+  () =>
+    document
+      .querySelector('.docs-page-toc a[aria-current="location"]')
+      ?.getAttribute("href") === "#project-options",
+);
+await page.click('header a:has-text("更新日志")');
+await page.waitForURL("**/changelog/");
+assert.equal(
+  await page.evaluate(() => document.querySelector("h1").textContent),
+  "更新日志",
+);
+assert.equal(
+  await page.evaluate(() => document.querySelectorAll(".release-card").length),
+  4,
+);
+assert.equal(
+  await page.evaluate(() => document.querySelectorAll(".product-tour").length),
+  0,
+);
+await page.reload();
+assert.equal(await page.evaluate(() => document.title), "Storyflow 更新日志");
+await page.evaluate(() => history.back());
+await page.waitForURL("**/docs/#project-options");
+await page.goto(`${base}/docs/#first-task`);
 await page.click('header a:has-text("理解产品")');
 await page.waitForURL("**/#workflow");
 await page.evaluate(() => history.back());
@@ -309,6 +379,16 @@ for (const width of [1440, 768, 390, 320]) {
     true,
     `Tutorial has no overflow at ${width}px`,
   );
+  await page.goto(`${base}/changelog/`);
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+    true,
+    `Changelog has no overflow at ${width}px`,
+  );
 }
 await page.cdp("Emulation.setEmulatedMedia", {
   features: [{ name: "prefers-reduced-motion", value: "reduce" }],
@@ -361,7 +441,7 @@ if (config.output) {
   );
 }
 console.log(
-  "PASS: clean 16:10 landing previews, tutorial-only annotations, desktop/mobile navigation, zoom, downloads, deep links/history, four viewport widths, reduced motion, and failed-media fallback.",
+  "PASS: standalone changelog and history, expanded tutorial navigation and heading outline, all-platform downloads and contact, clean 16:10 previews, playback/zoom, four viewport widths, reduced motion, and failed-media fallback.",
 );
 console.log(observations);
 await page.cdp("Network.setCacheDisabled", { cacheDisabled: false });

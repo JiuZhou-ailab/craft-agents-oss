@@ -14,6 +14,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { App } from "../App";
+import { ChangelogPage } from "../ChangelogPage";
 
 import {
   defaultDownloadBaseUrl,
@@ -109,14 +110,15 @@ describe("downloadOptions", () => {
       "utf8",
     );
     expect(html).toContain("Storyflow 是小说创作者的 AI 写作工作台。");
-    expect(html).toContain("下载 macOS 版本");
+    expect(html).toContain("下载 macOS / Windows");
+    expect(html).toContain("飞书：派大星");
+    expect(html).toContain('href="mailto:zjdding@gmail.com"');
     expect(html).toContain('href="/docs/"');
     expect(html).toContain("本地项目是否等于离线模型");
     expect(html).toContain("支持 Apple Silicon、Intel Mac 和 Windows x64");
     expect(html).toContain("更新日志");
-    expect(html).toContain(
-      'href="https://github.com/JiuZhou-ailab/storyflow/releases/tag/v0.21.3"',
-    );
+    expect(html).toContain('href="/changelog/"');
+    expect(html).not.toContain('class="release-card"');
     expect(html).not.toContain("missing_api_key");
     expect(documentShell).toContain(
       "<title>Storyflow - 小说创作者的 AI 桌面工作台</title>",
@@ -125,6 +127,17 @@ describe("downloadOptions", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const [, target] of html.matchAll(/href="\/#([^"]+)"/g))
       expect(ids).toContain(target);
+  });
+
+  test("renders release history on its own page", () => {
+    const html = renderToStaticMarkup(createElement(ChangelogPage));
+    expect(html).toContain(
+      '<h1 class="section-heading" id="changelog-title">更新日志</h1>',
+    );
+    expect(html).toContain(
+      'href="https://github.com/JiuZhou-ailab/storyflow/releases/tag/v0.21.3"',
+    );
+    expect(html.match(/class="release-card"/g)).toHaveLength(4);
   });
 
   test("renders the documentation as an in-site page", () => {
@@ -141,6 +154,9 @@ describe("downloadOptions", () => {
       expect(html).toContain("从一个项目，写出第一份稿件");
       expect(html).toContain("这次先完成一件小事");
       expect(html).toContain("常用工具在哪里");
+      expect(html).toContain('<details class="docs-more" open="">');
+      expect(html).toContain('aria-label="本页目录"');
+      expect(html).toContain('id="project-options"');
       expect(html).toContain("认识工作台");
       expect(html).toContain("2. 创建你的作品项目");
       expect(html).toContain("系统只建立空项目");
@@ -208,5 +224,7 @@ describe("downloadOptions", () => {
     );
     expect(redirects).toContain("/docs /docs/ 301");
     expect(redirects).toContain("/docs/ /index.html 200");
+    expect(redirects).toContain("/changelog /changelog/ 301");
+    expect(redirects).toContain("/changelog/ /index.html 200");
   });
 });

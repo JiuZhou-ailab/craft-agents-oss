@@ -27,6 +27,16 @@ The former hand-drawn writing, review, project and Skill components are removed.
 
 The header has five destinations: product, review, Skills, tutorial and changelog, with a separate download action. A mobile menu exposes the same links, closes on selection and supports Escape with focus restoration. Feature frames and secondary cards no longer force tall fixed boxes or arbitrary pixel-offset crops. High-density screenshots provide real source pixels rather than upscaling the previous PNGs.
 
+## Page navigation and contact refinement
+
+Release cards now live at `/changelog/`, with its own heading, page title, active header link and refresh rewrite. Existing release summaries and links are unchanged; the old `/#changelog` anchor points to the footer’s standalone-page entry.
+
+The tutorial’s left “操作参考” group defaults to expanded. At 1200px and wider, a sticky right outline reads the actual h2/h3 headings, links to stable heading IDs and highlights the current reading position. Narrow screens retain the existing left/topic navigation above the content. The layout follows the familiar [Docusaurus page-outline pattern](https://docusaurus.io/docs/markdown-features/toc), implemented with existing React and native anchors rather than a framework migration.
+
+Download labels explicitly name both macOS and Windows. The previous platform-detected label made Windows hard to discover even though the menu already offered all three installers. The Apple Silicon, Intel Mac and Windows x64 destinations remain sourced from `downloads.ts`.
+
+The shared footer publishes the user-supplied Feishu name “派大星” and a `mailto:zjdding@gmail.com` link. No Feishu profile URL was supplied, so the name is displayed without inventing a destination.
+
 ## Capture provenance and refresh
 
 `reference-assets/current/provenance.json` records the source commit, build version, capture time and dimensions. `capture-product.ts` reuses `e2e/perf/launch.ts` and the existing fixture generator. It creates an isolated sample project with real Markdown files, an authored conversation, a sample Edit trace, a local source and a Skill. Version creation uses the real workspace-version API. It captures 4320 × 2700 pixels from a 1440 × 900 CSS viewport at device scale 3, using the native keyboard path to open the Skill submenu. It runs the unmodified application and waits for layout geometry to settle before capture; it does not inject replacement UI or edit screenshot pixels. Original images are linked from every tour. A refresh first captures to a staging directory; only a complete generation replaces the previous images and provenance.
@@ -55,12 +65,14 @@ Customer marks, attributable testimonials, team material and editorial articles 
 
 The regression checks distinguish the two surfaces: no markers or explanation paragraphs on the landing page; tutorial markers remain present. Browser QA verifies 16:10 scene bounds at 1440/768/390/320 px, five desktop links and the mobile menu’s selection/Escape behavior, alongside existing playback, zoom, download, history, reduced-motion and media-failure checks. Pixel dimensions are checked against capture provenance; clarity and framing are inspected in the rendered page.
 
-Final validation passed: marketing typecheck/build, 8 marketing tests (84 assertions), browser QA at all four widths, and the repository test command (5,778 passed, 11 skipped, 0 failed). All seven PNG dimensions are 4320 × 2700; the browser decoded the same native resolution. Desktop overview/detail and mobile captures were visually inspected.
+Latest validation passed: marketing typecheck/build, 9 marketing tests (94 assertions), browser QA at all four widths, and the repository test command (5,779 passed, 11 skipped, 0 failed on the full rerun). The first full run missed a filesystem watcher event in the unchanged `sessions.files.test.ts`; its standalone rerun and the subsequent complete run passed. No server code was changed. All three published installer URLs returned HTTP 200 to HEAD requests. Desktop tutorial, release history, download choices and footer contact were visually inspected.
+
+The previous capture validation remains valid: all seven product PNGs are 4320 × 2700, with original 16:10 proportions. This refinement changes navigation and pages, not those captures.
 
 ### Standards review
 
-No actionable code findings. The obsolete annotated-landing description was corrected in this README projection and the marketing README.
+The independent release page now uses h1 → h2 heading levels. The review finding was corrected and rechecked; no remaining actionable Standards findings.
 
 ### Spec review
 
-Clean landing presentation, tutorial-only annotations, five meaningful header destinations, native image proportions and 3× capture satisfy the current correction. Historical external-material gaps remain outside this refinement.
+Independent release history, expanded reference navigation, a right-side heading outline, explicit macOS / Windows download labels and the supplied footer contact satisfy this refinement. Historical external-material gaps remain outside this refinement.
