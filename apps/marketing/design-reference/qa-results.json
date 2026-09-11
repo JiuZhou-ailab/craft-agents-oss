@@ -1,0 +1,105 @@
+{
+  "capturedAt": "2026-09-11T04:06:17.228Z",
+  "observations": [
+    {
+      "width": 1440,
+      "noOverflow": true,
+      "heading": {
+        "x": 62.5,
+        "y": 164,
+        "width": 800,
+        "height": 32.5,
+        "top": 164,
+        "right": 862.5,
+        "bottom": 196.5,
+        "left": 62.5
+      },
+      "stage": {
+        "x": 62.5,
+        "y": 318.171875,
+        "width": 1300,
+        "height": 720,
+        "top": 318.171875,
+        "right": 1362.5,
+        "bottom": 1038.171875,
+        "left": 62.5
+      },
+      "allImagesLoaded": true
+    },
+    {
+      "width": 768,
+      "noOverflow": true,
+      "heading": {
+        "x": 20,
+        "y": 161,
+        "width": 713,
+        "height": 30.46875,
+        "top": 161,
+        "right": 733,
+        "bottom": 191.46875,
+        "left": 20
+      },
+      "stage": {
+        "x": 20,
+        "y": 308.2421875,
+        "width": 713,
+        "height": 720,
+        "top": 308.2421875,
+        "right": 733,
+        "bottom": 1028.2421875,
+        "left": 20
+      },
+      "allImagesLoaded": true
+    },
+    {
+      "width": 390,
+      "noOverflow": true,
+      "heading": {
+        "x": 18.75,
+        "y": 161,
+        "width": 337.5,
+        "height": 60.9375,
+        "top": 161,
+        "right": 356.25,
+        "bottom": 221.9375,
+        "left": 18.75
+      },
+      "stage": {
+        "x": 18.75,
+        "y": 338.7109375,
+        "width": 337.5,
+        "height": 720,
+        "top": 338.7109375,
+        "right": 356.25,
+        "bottom": 1058.7109375,
+        "left": 18.75
+      },
+      "allImagesLoaded": true
+    },
+    {
+      "width": 320,
+      "noOverflow": true,
+      "heading": {
+        "x": 18.75,
+        "y": 161,
+        "width": 267.5,
+        "height": 60.9375,
+        "top": 161,
+        "right": 286.25,
+        "bottom": 221.9375,
+        "left": 18.75
+      },
+      "stage": {
+        "x": 18.75,
+        "y": 338.7109375,
+        "width": 267.5,
+        "height": 720,
+        "top": 338.7109375,
+        "right": 286.25,
+        "bottom": 1058.7109375,
+        "left": 18.75
+      },
+      "allImagesLoaded": true
+    }
+  ]
+}

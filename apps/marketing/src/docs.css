@@ -1,0 +1,379 @@
+/* input: Tutorial markup and shared site tokens
+ * output: Tutorial reading layout, table of contents, and instruction styles
+ * pos: Styles specific to /docs/
+ */
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 48px;
+  margin: 0 auto;
+  max-width: var(--landing-showcase-width);
+  width: 100%;
+  padding: 40px calc(var(--g) * 2) 96px;
+}
+
+.docs-toc {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: start;
+  position: sticky;
+  top: 88px;
+  max-height: calc(100dvh - 112px);
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.docs-toc p {
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.docs-toc a {
+  display: block;
+  padding: 8px 4px;
+  color: var(--muted);
+}
+
+.docs-toc a:hover {
+  color: var(--foreground);
+}
+
+.installer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.installer-grid a {
+  border: 1px solid var(--foreground-10);
+  border-radius: 10px;
+  padding: 16px;
+  background: var(--background);
+}
+
+.installer-grid a:hover {
+  border-color: var(--foreground);
+}
+
+.installer-grid strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.installer-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.docs-section-copy p + p {
+  margin-top: 16px;
+}
+
+.docs-section-copy .docs-kicker {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.docs-section-copy .docs-note {
+  padding: 16px 20px;
+  border-left: 2px solid var(--foreground);
+  background: var(--background);
+  font-size: 14px;
+}
+
+.prompt-example {
+  margin: 20px 0;
+  padding: 24px;
+  background: var(--background);
+  border: 1px solid var(--foreground-10);
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 1.8;
+  user-select: text;
+}
+
+.docs-reference-heading {
+  border-top: 1px solid var(--foreground-10);
+  padding-top: 48px;
+  margin-top: 48px;
+}
+
+.docs-reference-heading h2 {
+  font-size: 26px;
+  margin-bottom: 16px;
+}
+
+.docs-reference-heading > p:last-child {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.docs-page {
+  grid-column: 2;
+  max-width: var(--landing-content-width);
+  min-width: 0;
+  width: 100%;
+}
+
+.docs-hero {
+  grid-column: 2;
+  margin: 0 0 32px;
+  max-width: var(--landing-read-width);
+  text-align: left;
+}
+
+.docs-kicker {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.docs-hero h1 {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.18;
+  margin-bottom: 18px;
+}
+
+.docs-hero p,
+.docs-summary p,
+.docs-section-copy p,
+.docs-section-copy li,
+.docs-bullet-list li {
+  color: color-mix(in oklch, var(--foreground) 70%, transparent);
+  font-size: 16px;
+  line-height: 1.625;
+}
+
+.docs-summary,
+.docs-section {
+  margin-top: 32px;
+  padding: 28px 0;
+}
+
+.docs-summary {
+  border-bottom: 1px solid
+    color-mix(in oklch, var(--foreground) 10%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+  text-align: left;
+}
+
+.docs-summary h2,
+.docs-section-copy h2,
+.docs-section-copy h3 {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 16px;
+}
+
+.docs-section-copy h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  margin-top: 28px;
+}
+
+.docs-section-copy {
+  max-width: var(--landing-read-width);
+}
+
+.docs-figure {
+  background: var(--background);
+  border-radius: 12px;
+  box-shadow: var(--shadow-hero);
+  margin: 32px 0 0;
+  overflow: hidden;
+}
+
+.docs-figure img {
+  max-width: 100%;
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.docs-figure-contain {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+
+.docs-figure-contain img {
+  max-height: 780px;
+  object-fit: contain;
+  width: auto;
+}
+
+.docs-figure figcaption {
+  background: color-mix(in oklch, var(--background) 92%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+  color: color-mix(in oklch, var(--foreground) 54%, transparent);
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 11px 14px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.docs-figure-contain figcaption {
+  background: transparent;
+  margin: 16px -18px -18px;
+}
+
+.docs-bullet-list,
+.docs-inline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+}
+
+.docs-bullet-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.docs-bullet-list li {
+  background: var(--background);
+  border-radius: 8px;
+  box-shadow: var(--shadow-minimal);
+  margin: 0;
+  padding: 18px;
+}
+
+.docs-bullet-list strong {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.docs-inline-list {
+  gap: 8px;
+}
+
+.docs-inline-list li {
+  padding-left: 18px;
+  position: relative;
+}
+
+.docs-inline-list li::before {
+  background: color-mix(in oklch, var(--foreground) 38%, transparent);
+  border-radius: 999px;
+  content: "";
+  height: 5px;
+  left: 2px;
+  position: absolute;
+  top: 13px;
+  width: 5px;
+}
+
+.docs-subsection {
+  margin-top: 32px;
+}
+
+.docs-point-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.docs-point-grid p {
+  background: var(--background);
+  border-radius: 8px;
+  box-shadow: var(--shadow-minimal);
+  color: color-mix(in oklch, var(--foreground) 72%, transparent);
+  font-size: 14px;
+  line-height: 1.625;
+  margin: 0;
+  padding: 18px;
+}
+
+.docs-checklist {
+  margin-bottom: 48px;
+}
+
+@media (max-width: 760px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-top: 12px;
+  }
+
+  .docs-hero,
+  .docs-page,
+  .docs-toc {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .docs-toc {
+    position: static;
+    max-height: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
+    border-bottom: 1px solid var(--foreground-10);
+    padding-bottom: 20px;
+  }
+
+  .docs-toc p {
+    grid-column: 1 / -1;
+  }
+
+  .installer-grid,
+  .docs-bullet-list,
+  .docs-point-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-page {
+    padding-top: 0;
+  }
+
+  .docs-hero {
+    margin-bottom: 0;
+  }
+
+  .docs-hero h1 {
+    font-size: 28px;
+  }
+
+  .docs-figure-contain img {
+    max-height: none;
+    width: 100%;
+  }
+}
+
+.docs-more {
+  margin-top: 24px;
+}
+
+.docs-more summary {
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.8;
+}
+
+.docs-toc .docs-more {
+  grid-column: 1 / -1;
+}
+
+.docs-hero h1 {
+  text-wrap: balance;
+}

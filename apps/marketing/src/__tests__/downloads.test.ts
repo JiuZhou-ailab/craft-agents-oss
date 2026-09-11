@@ -25,7 +25,9 @@ import {
 
 describe("downloadOptions", () => {
   test("points every installer at the public R2 release assets with Chinese labels", () => {
-    expect(defaultDownloadBaseUrl).toBe("https://story-storage.zjding.com/latest");
+    expect(defaultDownloadBaseUrl).toBe(
+      "https://story-storage.zjding.com/latest",
+    );
     expect(downloadBaseUrl).toBe(defaultDownloadBaseUrl);
 
     expect(downloadOptions).toEqual(
@@ -54,19 +56,31 @@ describe("downloadOptions", () => {
       publicInstallerAssets.map((asset) => asset.fileName),
     );
 
-    expect(downloadOptions.every((option) => option.fileName.startsWith("Storyflow-"))).toBe(
-      true,
-    );
-    expect(downloadOptions.every((option) => option.href.endsWith(option.fileName))).toBe(true);
-    expect(downloadOptions.every((option) => !option.href.match(/Storyflow-\d+\.\d+\.\d+/))).toBe(true);
-    expect(downloadOptions.every((option) => !option.href.includes("Craft-Agents"))).toBe(true);
-    expect(downloadOptions.every((option) => !option.href.includes("github.com"))).toBe(true);
+    expect(
+      downloadOptions.every((option) =>
+        option.fileName.startsWith("Storyflow-"),
+      ),
+    ).toBe(true);
+    expect(
+      downloadOptions.every((option) => option.href.endsWith(option.fileName)),
+    ).toBe(true);
+    expect(
+      downloadOptions.every(
+        (option) => !option.href.match(/Storyflow-\d+\.\d+\.\d+/),
+      ),
+    ).toBe(true);
+    expect(
+      downloadOptions.every((option) => !option.href.includes("Craft-Agents")),
+    ).toBe(true);
+    expect(
+      downloadOptions.every((option) => !option.href.includes("github.com")),
+    ).toBe(true);
   });
 
   test("normalizes configured R2 download bases", () => {
-    expect(normalizeDownloadBaseUrl(" https://cdn.example.com/releases/latest/// ")).toBe(
-      "https://cdn.example.com/releases/latest",
-    );
+    expect(
+      normalizeDownloadBaseUrl(" https://cdn.example.com/releases/latest/// "),
+    ).toBe("https://cdn.example.com/releases/latest");
     expect(normalizeDownloadBaseUrl("   ")).toBe(defaultDownloadBaseUrl);
   });
 
@@ -77,67 +91,37 @@ describe("downloadOptions", () => {
     });
   });
 
-  test("renders the Storyflow desktop landing page for writers", () => {
+  test("shows a writing goal and readable chapter before playing any media", () => {
     const html = renderToStaticMarkup(createElement(App));
-    const documentShell = readFileSync(resolve(import.meta.dir, "../../index.html"), "utf8");
+    expect(html).toContain('aria-label="写作演示"');
+    expect(html).toContain("让读者跟着主角一起发现黑洞");
+    expect(html).toContain("第 01 章 主播你刚才说什么，黑洞？");
+    expect(html).toContain("示例项目");
+  });
 
-    expect(html).toContain("Storyflow");
-    expect(html).toContain("小说创作者的 AI 桌面工作台");
-    expect(html).toContain("下载 Storyflow 桌面版");
-    expect(html).toContain("文档");
+  test("keeps the public product, download, and documentation entry points", () => {
+    const html = renderToStaticMarkup(createElement(App));
+    const documentShell = readFileSync(
+      resolve(import.meta.dir, "../../index.html"),
+      "utf8",
+    );
+    expect(html).toContain("Storyflow 是小说创作者的 AI 写作工作台。");
+    expect(html).toContain("下载 macOS 版本");
     expect(html).toContain('href="/docs/"');
-    expect(html).not.toContain("https://ehyg6a9wjd.feishu.cn/wiki");
-    expect(html).toContain('href="#how-it-works-diagram"');
-    expect(html).toContain('id="how-it-works-diagram"');
-    expect(html).toContain("一个写作 Skill 如何推进项目");
-    expect(html).toContain("不是新项目的固定模板");
-    expect(html).toContain("创作目标");
-    expect(html).toContain("黄金三章");
-    expect(html).toContain("正文文件");
-    expect(html).toContain("改动审阅");
-    expect(html).toContain("<svg");
-    expect(html).toContain("不是聊天窗口，而是写作工作台");
-    expect(html).toContain("人物、设定和前文，始终留在项目里");
-    expect(html).toContain("角色动机");
-    expect(html).toContain("语气要求");
-    expect(html).not.toContain('title="正文">正</span>');
-    expect(html).toContain("榜单与资料查询留在同一个工作流里");
-    expect(html).toContain("对话与正文同屏推进");
-    expect(html).toContain("每次文件改动，都可以逐项审阅");
-    expect(html).toContain("把你的写作方法沉淀下来");
-    expect(html).toContain("版本管理，不怕改坏");
-    expect(html).toContain("你的作品，由你决定如何落稿");
     expect(html).toContain("本地项目是否等于离线模型");
     expect(html).toContain("支持 Apple Silicon、Intel Mac 和 Windows x64");
-    expect(html).not.toContain("Agent 在右侧");
-    expect(html).not.toContain("资料在左侧");
-    expect(html).not.toContain("候选章节");
-    expect(html).not.toContain("创建 Workspace 后");
-    expect(html).toContain("<video");
-    expect(html).toContain("controls");
-    expect(html).toContain("播放演示");
-    expect(html).toContain("storyflow-promo-45s.mp4");
-    expect(html).toContain("storyflow-promo-poster.jpg");
-    expect(html).toContain("storyflow-workspace-chat.webp");
-    expect(html).toContain("storyflow-data-results.webp");
-    expect(html).toContain("storyflow-data-expanded.webp");
-    expect(html).toContain("storyflow-skills-detail.webp");
-    expect(html).toContain("storyflow-review-diff.png");
-    expect(html).toContain("storyflow-editor.webp");
-    expect(html).toContain("storyflow-version-history.png");
-    expect(html).not.toContain("storyflow-data-source.png");
+    expect(html).toContain("更新日志");
+    expect(html).toContain(
+      'href="https://github.com/JiuZhou-ailab/storyflow/releases/tag/v0.21.3"',
+    );
     expect(html).not.toContain("missing_api_key");
-    expect(html).toContain('class="hero-shot"');
-    expect(html).toContain('class="video-play-button"');
-    expect(html).toContain('class="card-grid"');
-    expect(html).not.toContain('class="capability-strip"');
-    expect(html).not.toContain('class="story-section"');
-    expect(html).not.toContain("traffic-lights");
-    expect(html).not.toContain("browser-frame");
-    expect(html).not.toContain("window-bar");
-    expect(documentShell).toContain("<title>Storyflow - 小说创作者的 AI 桌面工作台</title>");
-    expect(documentShell).toContain("Agent 读取真实项目文件，修改正文后可逐项审阅和恢复。");
-    expect(documentShell).not.toContain("写作者的本地 AI 工作台");
+    expect(documentShell).toContain(
+      "<title>Storyflow - 小说创作者的 AI 桌面工作台</title>",
+    );
+    const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const [, target] of html.matchAll(/href="\/#([^"]+)"/g))
+      expect(ids).toContain(target);
   });
 
   test("renders the documentation as an in-site page", () => {
@@ -151,11 +135,11 @@ describe("downloadOptions", () => {
     try {
       const html = renderToStaticMarkup(createElement(App));
 
-      expect(html).toContain("小说 Agents 写作工作区说明");
-      expect(html).toContain("一句话理解");
+      expect(html).toContain("从一个项目，写出第一份稿件");
+      expect(html).toContain("这次先完成一件小事");
       expect(html).toContain("图 0：Header 功能区");
-      expect(html).toContain("图 1：整窗地图");
-      expect(html).toContain("创建并开始一个项目");
+      expect(html).toContain("认识工作台");
+      expect(html).toContain("2. 创建你的作品项目");
       expect(html).toContain("系统只建立空项目");
       expect(html).toContain("判断是否用对了");
       expect(html).toContain("初始给出的信息越明确越好");
@@ -164,6 +148,25 @@ describe("downloadOptions", () => {
       expect(html).toContain("doc-08-skill-menu.png");
       expect(html).not.toContain("https://ehyg6a9wjd.feishu.cn/wiki");
       expect(html).toContain('aria-current="page"');
+      const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);
+      expect(new Set(ids).size).toBe(ids.length);
+      for (const [, target] of html.matchAll(/href="#([^"]+)"/g)) {
+        expect(ids).toContain(target);
+      }
+      for (const option of downloadOptions) {
+        expect(html).toContain(`href="${option.href}"`);
+      }
+      const steps = [
+        "install",
+        "create-project",
+        "first-task",
+        "review-changes",
+        "header-tools",
+      ];
+      for (const step of steps) expect(ids).toContain(step);
+      expect(steps.map((id) => ids.indexOf(id))).toEqual(
+        steps.map((id) => ids.indexOf(id)).sort((a, b) => a - b),
+      );
     } finally {
       if (originalWindow === undefined) {
         delete (globalThis as { window?: unknown }).window;
@@ -187,35 +190,18 @@ describe("downloadOptions", () => {
   });
 
   test("keeps legacy root-domain release paths redirected to storage", () => {
-    const redirects = readFileSync(resolve(import.meta.dir, "../../_redirects"), "utf8");
+    const redirects = readFileSync(
+      resolve(import.meta.dir, "../../_redirects"),
+      "utf8",
+    );
 
-    expect(redirects).toContain("/latest/* https://story-storage.zjding.com/latest/:splat 301");
-    expect(redirects).toContain("/releases/* https://story-storage.zjding.com/releases/:splat 301");
+    expect(redirects).toContain(
+      "/latest/* https://story-storage.zjding.com/latest/:splat 301",
+    );
+    expect(redirects).toContain(
+      "/releases/* https://story-storage.zjding.com/releases/:splat 301",
+    );
     expect(redirects).toContain("/docs /docs/ 301");
     expect(redirects).toContain("/docs/ /index.html 200");
-  });
-
-  test("uses a wider showcase width and a narrower content width", () => {
-    const css = readFileSync(resolve(import.meta.dir, "../styles.css"), "utf8");
-
-    expect(css).toContain("--landing-showcase-width: 1100px;");
-    expect(css).toContain("--landing-diagram-width: 760px;");
-    expect(css).toContain("--landing-content-width: 896px;");
-    expect(css).toContain("--landing-read-width: 896px;");
-
-    expect(css).toMatch(/\.hero-shot[^{}]*\{[^}]*max-width: var\(--landing-showcase-width\);/);
-    expect(css).toMatch(/\.diagram-section[^{}]*\{[^}]*max-width: var\(--landing-diagram-width\);/);
-
-    for (const selector of [
-      ".text-section",
-      ".wide-image",
-      ".section-cards",
-      ".site-footer",
-      ".docs-page",
-    ]) {
-      expect(css).toMatch(
-        new RegExp(`${selector.replace(".", "\\.")}[^{}]*\\{[^}]*max-width: var\\(--landing-content-width\\);`),
-      );
-    }
   });
 });

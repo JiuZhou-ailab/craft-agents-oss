@@ -1,26 +1,69 @@
-# Implementation Notes
+# Homepage fidelity — Issue #39
 
-## Landing Mermaid Jump
+## Reference baseline
 
-- Changed the "看它如何工作" CTA to target a new `#how-it-works-diagram` section instead of the existing text-heavy `#workflow` section.
-- Reused `beautiful-mermaid` directly in the marketing app so the diagram is generated as SVG at render time and does not introduce another charting stack.
-- Kept the original workflow section intact. The new diagram is an earlier visual explanation, while the existing cards remain the longer written explanation.
-- Added `beautiful-mermaid` as an explicit marketing app dependency because `App.tsx` now imports it directly.
-- Adjusted the diagram grid to give the SVG more room on desktop. Mobile keeps horizontal scrolling inside the diagram frame so node labels stay readable instead of shrinking the chart too far.
-- Reworked the first diagram after visual review: removed the left-text/right-diagram split, expanded the Mermaid source into a Workspace creation flow closer to the in-app reference, and centered it as a full product canvas.
-- Tuned the mobile diagram width down from the desktop canvas size so the initial mobile viewport shows useful early-flow content instead of landing on an empty part of the chart.
-- Unified the landing page visual width with `--landing-content-width` for hero media, diagram, text sections, screenshots, card rows, and footer. Body copy still uses `--landing-read-width` inside those sections so line length stays readable without making the whole page look ragged.
-- Matched the footer's actual box width to the same content edges instead of using a full-width footer with horizontal padding.
-- Split visual widths after follow-up review: `--landing-showcase-width` stays 1100px for the hero video and Mermaid canvas, while `--landing-content-width` is 896px for downstream text sections, screenshots, card rows, and footer.
-- Switched default installer links to the storage hostname and copied `_redirects` into marketing builds so the legacy root-domain release paths can forward to the public R2 storage domain.
-- Published the marketing build to Cloudflare Pages as the `storyflow` project and attached `story.zjding.com` as its custom domain.
-- Kept R2 release assets on `story-storage.zjding.com`; `story.zjding.com/latest/*` and `/releases/*` now redirect to the storage hostname.
-- Set the `story.zjding.com` DNS CNAME to DNS-only after Pages validation went active, because a manually created proxied CNAME closed HTTPS connections instead of serving the Pages route.
-- Narrowed the Mermaid diagram into its own 760px canvas instead of sharing the 1100px hero showcase width, matching the generated SVG's natural size more closely.
-- Replaced the one-letter context dots with full labels and short descriptions so the source strip reads as real workspace context instead of unexplained initials.
-- Reworked "文档" from an outbound Feishu link into an in-site `/docs` page rendered with the landing page's visual system. The source text was pulled with `lark-cli docs +fetch`; Feishu media download was blocked by missing app scopes, so the first version uses existing Storyflow screenshots rather than remote Feishu media tokens.
-- Changed marketing build and static asset references to root-relative URLs so the `/docs/` page can load JS, CSS, icons, video, and screenshots correctly from a nested route.
-- Replaced the summarized `/docs/` version with the user's full ordered document text and the current chat-uploaded Electron screenshots, stored under `reference-assets/docs/`.
-- The current chat payload contained nine screenshot uploads, not a separate project-switching screenshot for the "图 5：查看项目" placeholder. I kept that section as text instead of reusing or fabricating a mismatched image.
-- Fixed page-switch flicker between the landing page and `/docs/` by handling same-site marketing page links in React with `history.pushState` instead of letting the browser perform a full document reload. The links still keep real `href` values so direct open, refresh, and static-host fallback continue to work.
-- Kept this client-side navigation limited to `/`, `/#...`, and `/docs/`; installer downloads, media links, external links, and normal in-page hash links are intentionally left to browser defaults.
+Reference: <https://cursor.com/>, captured on 2026-09-11 after the Chinese light homepage finished rendering. The archived `design-reference/cursor.json` records the capture time, language, viewport, section order, and computed geometry at 1440, 768, 390, and 320 CSS px. `cursor-1440.png` and `cursor-390.png` are the full-page reference captures, for review only; the build does not publish this directory.
+
+The fully rendered baseline includes changelog and editorial highlights. Earlier observations taken before those sections appeared are not the source of truth for this implementation.
+
+| Desktop landmark | Reference | Implementation target |
+| --- | --- | --- |
+| Viewport | 1440 × 900 CSS px | Same |
+| Header height | 52px | 52px |
+| Content width | 1300px | 1300px |
+| H1 top / font / line-height | 164px / 26px / 32.5px | Same; Storyflow text has a different length |
+| Hero stage top / height | 318.17px / 720px | Same |
+| Feature card padding | 17.5px | 17.5px |
+| Feature copy / media | About 1:2 | About 1:2 |
+| Feature media height | 680px | 680px |
+
+These are calibration observations, not a new design token API. At narrow widths, readable demo content reflows rather than scaling down an entire desktop screenshot.
+
+## Section mapping and outstanding materials
+
+**This is an implementation of the available product sections, not a completed 1:1 homepage. Issue #39 must remain open.** No source for customer endorsements, testimonials, team photography, or editorial articles was supplied during this implementation. An explicit request for those sources was made; absence of a reply is not approval to invent, replace, or drop their requirements.
+
+| Reference section / purpose | Storyflow mapping | State / difference |
+| --- | --- | --- |
+| Header / navigation and acquisition | Existing Storyflow logo, product anchors, tutorial, download | Implemented. No fictional pricing, sign-in or sales destinations. |
+| Hero / show the Agent working and the result | Readable writing goal, chapter excerpt, review; overlapping writing and review windows | Implemented as a deterministic, labelled web demonstration, not a running Agent or desktop screenshot. |
+| Customer Logo garden / external trust | Requires real customer marks and attributable sources | **Blocked on material.** No file categories, empty cards, fake marks or public placeholder text. No claim that this slot is complete. |
+| Feature 1 / task becomes work | Goal, chapter, and review states | Implemented. Storyflow content replaces coding tasks. |
+| Feature 2 / delegated work and control | Review a concrete proposed change, accept, reject, reset | Implemented Storyflow control story; does not claim Cursor cloud/parallel capabilities. |
+| Feature 3 / connected context | Follow a continuation task’s file references to creative requirements, character and chapter content | Implemented. Example files belong to an existing sample Project, not a new-project template. |
+| Feature 4 / reusable work | Readable Skill method and task-example states | Implemented as a local switchable method demonstration, with a link to the real supporting capture. Storyflow Skills replaces the AI-teammate/Slack story; no Slack capability is claimed. |
+| Testimonials / external evidence | Requires real attributable customer quotations | **Blocked on material.** FAQ is retained as footer help and is not counted as testimonial delivery. |
+| Three capability cards / broaden the demonstrated capabilities | Skills, source results, local version history, each with corresponding real media | Implemented for existing Storyflow capabilities, without inventing enterprise or model guarantees. |
+| Changelog / evidence of ongoing development | Four published releases and links | Implemented from checked release notes and GitHub release tags. |
+| Team / who builds the product | Requires a factual team introduction and suitable original image | **Blocked on material.** Version history is not used as a substitute. |
+| Editorial highlights / deepen the product story | Requires published Storyflow articles | **Blocked on material.** Tutorial cards are not a substitute. |
+| Closing CTA / start using the product | Download on desktop, tutorial on mobile | Implemented. No account or sales flow added. |
+| Footer / useful destinations | Existing product/tutorial links and factual FAQ | Implemented using available destinations; no fake legal or company pages. |
+
+Missing sections are not padded with blank space to make a full-page screenshot seem aligned. Consequently absolute positions of later sections and total page height differ. This is an explicit material gap, not passed fidelity acceptance. Completing those requirements needs the listed material or a maintenance decision changing the spec.
+
+## Product material provenance
+
+- The first-chapter excerpt in the web demonstration is transcribed from the existing Storyflow editor capture. The request, creative brief, character notes and proposed edit are labelled illustrative content; they are not claimed to be the recorded output of a live model call.
+- The simulated goal/draft/review controls are local to the marketing page. Accept/reject/reset changes only the displayed example. The window caption says “示例项目” and the footer explains that no real files change.
+- The drawing follows Storyflow's conversation/document arrangement; it is a responsive web demonstration rather than a pixel-identical replica of the desktop UI. A link opens the real supporting capture.
+- Project-file switching and clickable task references illustrate folder ownership and how the brief, character and prior chapter inform continuation. These are labelled sample references, not a recorded model citation trace. The demonstration does not install Skills or create a predefined Project folder structure. This follows accepted ADR 0007.
+- The Skill panel uses the existing `storyflow-skills-detail.webp`; the query card uses `storyflow-data-results.webp`; version history uses `storyflow-version-history.png`. Each image can be opened at full size. CSS cropping changes framing only; original assets remain unchanged.
+- The original promotional video is retained as an existing asset but no longer acts as the first-screen value demonstration. There is no autoplay dependency; reduced-motion users receive the same readable states.
+- Release summaries derive from the existing 0.21.0–0.21.3 release notes; public tags and dates were verified with GitHub on 2026-09-11. They are a curated publication snapshot, not a second live release-discovery service.
+
+## Implementation and rollout boundaries
+
+Reuse the existing React/Bun marketing build, tutorial, same-site navigation, installer metadata and root-relative assets. There is no new dependency, backend, model call or persisted state. The original incorrect proof substitutes and tutorial-as-changelog cards are removed from the main narrative; FAQ content stays available in the footer.
+
+The worktree already included the in-site tutorial and the previous landing redesign. They share the same entry point and stylesheet; the marketing commit includes that necessary local baseline so the checked-out commit can build independently. Unrelated Electron, locale and root README changes remain outside the commit.
+
+Only the marketing output changes. No data migration is required. Deployment is not performed by this task; normal deployment follows the existing marketing workflow after an authorized push. Review the material blockers before treating any deployment as closure of #39.
+
+## Verification record — 2026-09-11
+
+- Marketing typecheck and production build passed. The Bun marketing suite passed 8 tests / 77 assertions. The repository `bun run test` completed successfully: 5,778 passed, 11 skipped, 0 failed across the main run and isolated runs.
+- `qa.mjs` passed against the production preview at 1440, 768, 390 and 320 px: no horizontal overflow, all captures loaded, task/reference/Skill/review state changes, the three installer destinations, Enter/Tab/Escape and focus recovery, narrow-screen installation links, tutorial deep-link refresh/history, reduced motion and image failure fallback.
+- `design-reference/storyflow-1440.png`, `storyflow-390.png` and `qa-results.json` preserve the final browser evidence. The numerical record describes geometry and load state, not a fidelity score.
+- Additional keyboard inspection exercised hero goal/draft/review, accept/reject and the footer FAQ disclosure. Desktop capability-card framing and the narrow-screen project panel were visually inspected.
+- Standards and Spec reviewers rechecked and cleared the mobile download, context-reference and QA-coverage findings. External material gaps remain as listed above.

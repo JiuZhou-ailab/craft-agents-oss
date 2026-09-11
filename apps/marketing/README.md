@@ -2,10 +2,16 @@
 
 Storyflow landing page and release-download metadata.
 
-The page keeps the rhythm of `https://agents.craft.do/`: centered logo hero,
-three CTAs, product screenshots, FAQ, workflow sections, and compact explanatory
-cards. The copy and imagery are adapted for Storyflow's writer-focused desktop
-workflow.
+The landing page uses the archived Cursor homepage geometry with Storyflow's
+own brand, labelled writing demonstration, real product captures, and published
+release links. The demonstration is local to the page and never calls an Agent.
+Customer proof, testimonials, team materials and editorial highlights remain
+explicit acceptance gaps; see `implementation-notes.md` before calling the page
+a completed 1:1 replica.
+`/docs/` follows installation, project creation, the first writing task, and review,
+then keeps the existing screenshots as an interface reference. Tutorial copy must
+match current desktop labels and file behavior; screenshots illustrate an existing
+project rather than a default folder template.
 
 ## Downloads
 
@@ -25,6 +31,13 @@ The release workflow calls the same deployment after publishing release download
 - `implementation-notes.md` - Running implementation notes for current landing-page changes.
 - `promo-video/` - HyperFrames product promo composition and rendered assets.
 - `reference-assets/` - Local landing screenshots and visual reference assets.
-- `src/` - React landing page, download metadata, styles, and tests.
+- `src/App.tsx` - Landing page and same-site navigation.
+- `src/DocsPage.tsx` - First-project tutorial and interface reference.
+- `src/styles.css` / `src/docs.css` - Shared landing styles and tutorial layout.
+- `src/WritingDemo.tsx` / `src/writing-demo.css` - Local sample goal, draft, review and project-file demonstrations.
+- `src/downloads.ts` - Shared installer metadata for both pages.
+- `src/__tests__/` - Download, tutorial navigation, and rendering checks.
+- `qa-runbook.md` / `qa.mjs` - Public-page browser acceptance and download/tutorial regression checks.
+- `design-reference/` - Fixed Cursor reference, Storyflow verification captures and measured geometry; excluded from published assets.
 - `tsconfig.json` - TypeScript checks for the marketing app.
 - `vite.config.ts` - Vite build and preview configuration.

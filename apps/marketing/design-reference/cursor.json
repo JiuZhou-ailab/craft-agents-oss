@@ -1,0 +1,1442 @@
+{
+  "source": "https://cursor.com/",
+  "capturedAt": "2026-09-11T03:40:02.071Z",
+  "observations": [
+    {
+      "language": "zh",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "hero": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 52,
+            "width": 1425,
+            "height": 1053.3671875
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "112px 20px 67.2px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "class": "container",
+          "rect": {
+            "x": 62.5,
+            "y": 164,
+            "width": 1300,
+            "height": 874.171875
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "H1",
+          "class": "type-md-lg text-balance  mb-v1",
+          "rect": {
+            "x": 62.5,
+            "y": 164,
+            "width": 658.3125,
+            "height": 32.5
+          },
+          "fontSize": "26px",
+          "lineHeight": "32.5px",
+          "padding": "0px",
+          "margin": "0px 0px 22.4px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 62.5,
+            "y": 218.8984375,
+            "width": 186.71875,
+            "height": 43.2734375
+          },
+          "fontSize": "16px",
+          "lineHeight": "16px",
+          "padding": "12.48px 21.6px 12.8px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "fontSize": "16px",
+          "lineHeight": "16px",
+          "padding": "12.48px 21.6px 12.8px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        }
+      ],
+      "sections": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 52,
+            "width": 1425,
+            "height": 1053.3671875
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "112px 20px 67.2px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": []
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text pb-v1.5 pt-0",
+          "rect": {
+            "x": 0,
+            "y": 1105.3671875,
+            "width": 1425,
+            "height": 176.9921875
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "0px 20px 33.6px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "每天都深受构建世界级软件的团队信赖"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section section--flush-x",
+          "rect": {
+            "x": 0,
+            "y": 1282.359375,
+            "width": 1425,
+            "height": 3203.171875
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "67.2px 0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "让智能体把创意变成代码",
+            "Mission Control Interface",
+            "Trigger",
+            "View Behavior",
+            "自主工作，并行运行",
+            "覆盖所有工具，贯穿每一步",
+            "#feature-realtime-sync",
+            "将工作交给 AI 队友"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text overflow-hidden",
+          "rect": {
+            "x": 0,
+            "y": 4485.53125,
+            "width": 1425,
+            "height": 675.9765625
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "67.2px 20px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "构建软件的全新方式。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 5161.5078125,
+            "width": 1425,
+            "height": 738.875
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "67.2px 20px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "始终保持前沿",
+            "为每项任务使用最佳模型",
+            "用自主智能体构建",
+            "All Repos",
+            "打造经久不衰的软件"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "bg-theme-bg text-theme-text section",
+          "rect": {
+            "x": 0,
+            "y": 5900.3828125,
+            "width": 1425,
+            "height": 310.078125
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "67.2px 20px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "更新日志"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 6210.4609375,
+            "width": 1425,
+            "height": 694.390625
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "67.2px 20px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "Cursor 是一支致力于构建软件开发未来的应用研究团队。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 6904.8515625,
+            "width": 1425,
+            "height": 341.5078125
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "67.2px 20px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "近期亮点"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text section--headline",
+          "rect": {
+            "x": 0,
+            "y": 7246.359375,
+            "width": 1425,
+            "height": 346.4609375
+          },
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "padding": "67.2px 20px 134.4px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "立即试用 Cursor。"
+          ]
+        }
+      ],
+      "features": [
+        {
+          "card": {
+            "tag": "A",
+            "class": "card card--large card--feature grid-cursor col-span-full row-span-full gap-y-0 max-lg:grid-rows-subgrid",
+            "rect": {
+              "x": 62.5,
+              "y": 1349.5546875,
+              "width": 1300,
+              "height": 715
+            },
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "padding": "17.5px",
+            "margin": "0px",
+            "gap": "0px 10px",
+            "background": "rgb(242, 241, 237)",
+            "grid": "43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px 43.125px",
+            "borderRadius": "4px"
+          },
+          "children": [
+            {
+              "tag": "DIV",
+              "class": "col-span-full row-start-1 row-end-2 grid lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-1 lg:col-end-9 lg:pl-g0.25 lg:pr-g3",
+              "rect": {
+                "x": 80,
+                "y": 1367.0546875,
+                "width": 415,
+                "height": 680
+              },
+              "fontSize": "16px",
+              "lineHeight": "24px",
+              "padding": "0px 30px 0px 2.5px",
+              "margin": "0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "382.5px",
+              "borderRadius": "0px"
+            },
+            {
+              "tag": "DIV",
+              "class": "max-lg:mt-g1.75 col-span-full row-start-2 row-end-3 grid cursor-default items-end lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-9 lg:col-end-25",
+              "rect": {
+                "x": 505,
+                "y": 1367.0546875,
+                "width": 840,
+                "height": 680
+              },
+              "fontSize": "16px",
+              "lineHeight": "24px",
+              "padding": "0px",
+              "margin": "0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "none",
+              "borderRadius": "0px"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "zh",
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "hero": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 56,
+            "width": 753,
+            "height": 1035.9609375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "105px 18.75px 63px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "class": "container",
+          "rect": {
+            "x": 18.75,
+            "y": 161,
+            "width": 715.5,
+            "height": 867.9609375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "H1",
+          "class": "type-md-lg text-balance  mb-v1",
+          "rect": {
+            "x": 18.75,
+            "y": 161,
+            "width": 617.171875,
+            "height": 30.46875
+          },
+          "fontSize": "24.375px",
+          "lineHeight": "30.4688px",
+          "padding": "0px",
+          "margin": "0px 0px 21px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 18.75,
+            "y": 212.46875,
+            "width": 178.1796875,
+            "height": 43.9921875
+          },
+          "fontSize": "15px",
+          "lineHeight": "15px",
+          "padding": "13.35px 21.75px 13.65px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "fontSize": "15px",
+          "lineHeight": "15px",
+          "padding": "13.35px 21.75px 13.65px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        }
+      ],
+      "sections": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 56,
+            "width": 753,
+            "height": 1035.9609375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "105px 18.75px 63px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": []
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text pb-v1.5 pt-0",
+          "rect": {
+            "x": 0,
+            "y": 1091.9609375,
+            "width": 753,
+            "height": 269.0625
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "0px 18.75px 31.5px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "每天都深受构建世界级软件的团队信赖"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section section--flush-x",
+          "rect": {
+            "x": 0,
+            "y": 1361.0234375,
+            "width": 753,
+            "height": 3802.953125
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "让智能体把创意变成代码",
+            "Mission Control Interface",
+            "Trigger",
+            "View Behavior",
+            "自主工作，并行运行",
+            "覆盖所有工具，贯穿每一步",
+            "#feature-realtime-sync",
+            "将工作交给 AI 队友"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text overflow-hidden",
+          "rect": {
+            "x": 0,
+            "y": 5163.9765625,
+            "width": 753,
+            "height": 868.3125
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "构建软件的全新方式。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 6032.2890625,
+            "width": 753,
+            "height": 1762.2265625
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "始终保持前沿",
+            "为每项任务使用最佳模型",
+            "用自主智能体构建",
+            "All Repos",
+            "打造经久不衰的软件"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "bg-theme-bg text-theme-text section",
+          "rect": {
+            "x": 0,
+            "y": 7794.515625,
+            "width": 753,
+            "height": 290.71875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "更新日志"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 8085.234375,
+            "width": 753,
+            "height": 669.8046875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "Cursor 是一支致力于构建软件开发未来的应用研究团队。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 8755.0390625,
+            "width": 753,
+            "height": 320.1875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "近期亮点"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text section--headline",
+          "rect": {
+            "x": 0,
+            "y": 9075.2265625,
+            "width": 753,
+            "height": 328.2421875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px 126px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "立即试用 Cursor。"
+          ]
+        }
+      ],
+      "features": [
+        {
+          "card": {
+            "tag": "A",
+            "class": "card card--large card--feature grid-cursor col-span-full row-span-full gap-y-0 max-lg:grid-rows-subgrid",
+            "rect": {
+              "x": 18.75,
+              "y": 1424.0234375,
+              "width": 715.5,
+              "height": 823.9375
+            },
+            "fontSize": "15px",
+            "lineHeight": "22.5px",
+            "padding": "16.4062px",
+            "margin": "0px",
+            "gap": "0px 9.375px",
+            "background": "rgb(242, 241, 237)",
+            "grid": "19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px 19.4609px",
+            "borderRadius": "4px"
+          },
+          "children": [
+            {
+              "tag": "DIV",
+              "class": "col-span-full row-start-1 row-end-2 grid lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-1 lg:col-end-9 lg:pl-g0.25 lg:pr-g3",
+              "rect": {
+                "x": 35.15625,
+                "y": 1440.4296875,
+                "width": 682.6875,
+                "height": 90.125
+              },
+              "fontSize": "15px",
+              "lineHeight": "22.5px",
+              "padding": "0px",
+              "margin": "0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "682.688px",
+              "borderRadius": "0px"
+            },
+            {
+              "tag": "DIV",
+              "class": "max-lg:mt-g1.75 col-span-full row-start-2 row-end-3 grid cursor-default items-end lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-9 lg:col-end-25",
+              "rect": {
+                "x": 35.15625,
+                "y": 1546.9609375,
+                "width": 682.6875,
+                "height": 684.59375
+              },
+              "fontSize": "15px",
+              "lineHeight": "22.5px",
+              "padding": "0px",
+              "margin": "16.4062px 0px 0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "none",
+              "borderRadius": "0px"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "zh",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "hero": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 56,
+            "width": 375,
+            "height": 1066.4296875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "105px 18.75px 63px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "class": "container",
+          "rect": {
+            "x": 18.75,
+            "y": 161,
+            "width": 337.5,
+            "height": 898.4296875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "H1",
+          "class": "type-md-lg text-balance  mb-v1",
+          "rect": {
+            "x": 18.75,
+            "y": 161,
+            "width": 337.5,
+            "height": 60.9375
+          },
+          "fontSize": "24.375px",
+          "lineHeight": "30.4688px",
+          "padding": "0px",
+          "margin": "0px 0px 21px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "fontSize": "15px",
+          "lineHeight": "15px",
+          "padding": "13.35px 21.75px 13.65px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 18.75,
+            "y": 242.9375,
+            "width": 138.1171875,
+            "height": 43.9921875
+          },
+          "fontSize": "15px",
+          "lineHeight": "15px",
+          "padding": "13.35px 21.75px 13.65px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        }
+      ],
+      "sections": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 56,
+            "width": 375,
+            "height": 1066.4296875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "105px 18.75px 63px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": []
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text pb-v1.5 pt-0",
+          "rect": {
+            "x": 0,
+            "y": 1122.4296875,
+            "width": 375,
+            "height": 199.21875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "0px 18.75px 31.5px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "每天都深受构建世界级软件的团队信赖"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section section--flush-x",
+          "rect": {
+            "x": 0,
+            "y": 1321.6484375,
+            "width": 375,
+            "height": 3695.84375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "让智能体把创意变成代码",
+            "Mission Control Interface",
+            "Trigger",
+            "View Behavior",
+            "自主工作，并行运行",
+            "覆盖所有工具，贯穿每一步",
+            "#feature-realtime-sync",
+            "将工作交给 AI 队友"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text overflow-hidden",
+          "rect": {
+            "x": 0,
+            "y": 5017.4921875,
+            "width": 375,
+            "height": 823.3125
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "构建软件的全新方式。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 5840.8046875,
+            "width": 375,
+            "height": 1448.1171875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "始终保持前沿",
+            "为每项任务使用最佳模型",
+            "用自主智能体构建",
+            "All Repos",
+            "打造经久不衰的软件"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "bg-theme-bg text-theme-text section",
+          "rect": {
+            "x": 0,
+            "y": 7288.921875,
+            "width": 375,
+            "height": 313.21875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "更新日志"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 7602.140625,
+            "width": 375,
+            "height": 428.8515625
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "Cursor 是一支致力于构建软件开发未来的应用研究团队。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 8030.9921875,
+            "width": 375,
+            "height": 342.6875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "近期亮点"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text section--headline",
+          "rect": {
+            "x": 0,
+            "y": 8373.6796875,
+            "width": 375,
+            "height": 366.1171875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px 126px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "立即试用 Cursor。"
+          ]
+        }
+      ],
+      "features": [
+        {
+          "card": {
+            "tag": "A",
+            "class": "card card--large card--feature grid-cursor col-span-full row-span-full gap-y-0 max-lg:grid-rows-subgrid",
+            "rect": {
+              "x": 18.75,
+              "y": 1384.6484375,
+              "width": 337.5,
+              "height": 833.96875
+            },
+            "fontSize": "15px",
+            "lineHeight": "22.5px",
+            "padding": "12.5625px 14.0625px 14.0625px",
+            "margin": "0px",
+            "gap": "0px 9.375px",
+            "background": "rgb(242, 241, 237)",
+            "grid": "3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px 3.90625px",
+            "borderRadius": "4px"
+          },
+          "children": [
+            {
+              "tag": "DIV",
+              "class": "col-span-full row-start-1 row-end-2 grid lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-1 lg:col-end-9 lg:pl-g0.25 lg:pr-g3",
+              "rect": {
+                "x": 32.8125,
+                "y": 1397.2109375,
+                "width": 309.375,
+                "height": 104
+              },
+              "fontSize": "15px",
+              "lineHeight": "22.5px",
+              "padding": "0px",
+              "margin": "0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "309.375px",
+              "borderRadius": "0px"
+            },
+            {
+              "tag": "DIV",
+              "class": "max-lg:mt-g1.75 col-span-full row-start-2 row-end-3 grid cursor-default items-end lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-9 lg:col-end-25",
+              "rect": {
+                "x": 32.8125,
+                "y": 1517.6171875,
+                "width": 309.375,
+                "height": 686.9375
+              },
+              "fontSize": "15px",
+              "lineHeight": "22.5px",
+              "padding": "0px",
+              "margin": "16.4062px 0px 0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "none",
+              "borderRadius": "0px"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "language": "zh",
+      "viewport": {
+        "width": 320,
+        "height": 740
+      },
+      "hero": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 56,
+            "width": 305,
+            "height": 1096.8984375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "105px 18.75px 63px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "DIV",
+          "class": "container",
+          "rect": {
+            "x": 18.75,
+            "y": 161,
+            "width": 267.5,
+            "height": 928.8984375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "H1",
+          "class": "type-md-lg text-balance  mb-v1",
+          "rect": {
+            "x": 18.75,
+            "y": 161,
+            "width": 267.5,
+            "height": 91.40625
+          },
+          "fontSize": "24.375px",
+          "lineHeight": "30.4688px",
+          "padding": "0px",
+          "margin": "0px 0px 21px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "fontSize": "15px",
+          "lineHeight": "15px",
+          "padding": "13.35px 21.75px 13.65px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        },
+        {
+          "tag": "A",
+          "class": "btn",
+          "rect": {
+            "x": 18.75,
+            "y": 273.40625,
+            "width": 138.1171875,
+            "height": 43.9921875
+          },
+          "fontSize": "15px",
+          "lineHeight": "15px",
+          "padding": "13.35px 21.75px 13.65px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(38, 37, 30)",
+          "grid": "none",
+          "borderRadius": "1.67772e+07px"
+        }
+      ],
+      "sections": [
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 56,
+            "width": 305,
+            "height": 1096.8984375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "105px 18.75px 63px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": []
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text pb-v1.5 pt-0",
+          "rect": {
+            "x": 0,
+            "y": 1152.8984375,
+            "width": 305,
+            "height": 199.21875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "0px 18.75px 31.5px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "每天都深受构建世界级软件的团队信赖"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section section--flush-x",
+          "rect": {
+            "x": 0,
+            "y": 1352.1171875,
+            "width": 305,
+            "height": 3741.3125
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 0px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgba(0, 0, 0, 0)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "让智能体把创意变成代码",
+            "Mission Control Interface",
+            "Trigger",
+            "View Behavior",
+            "自主工作，并行运行",
+            "覆盖所有工具，贯穿每一步",
+            "#feature-realtime-sync",
+            "将工作交给 AI 队友"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text overflow-hidden",
+          "rect": {
+            "x": 0,
+            "y": 5093.4296875,
+            "width": 305,
+            "height": 886.3125
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "构建软件的全新方式。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 5979.7421875,
+            "width": 305,
+            "height": 1378.7421875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "始终保持前沿",
+            "为每项任务使用最佳模型",
+            "用自主智能体构建",
+            "All Repos",
+            "打造经久不衰的软件"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "bg-theme-bg text-theme-text section",
+          "rect": {
+            "x": 0,
+            "y": 7358.484375,
+            "width": 305,
+            "height": 313.21875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "更新日志"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 7671.703125,
+            "width": 305,
+            "height": 389.4765625
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "Cursor 是一支致力于构建软件开发未来的应用研究团队。"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text",
+          "rect": {
+            "x": 0,
+            "y": 8061.1796875,
+            "width": 305,
+            "height": 370.4375
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "近期亮点"
+          ]
+        },
+        {
+          "tag": "SECTION",
+          "class": "section bg-theme-bg text-theme-text section--headline",
+          "rect": {
+            "x": 0,
+            "y": 8431.6171875,
+            "width": 305,
+            "height": 366.1171875
+          },
+          "fontSize": "15px",
+          "lineHeight": "22.5px",
+          "padding": "63px 18.75px 126px",
+          "margin": "0px",
+          "gap": "normal",
+          "background": "rgb(247, 247, 244)",
+          "grid": "none",
+          "borderRadius": "0px",
+          "headings": [
+            "立即试用 Cursor。"
+          ]
+        }
+      ],
+      "features": [
+        {
+          "card": {
+            "tag": "A",
+            "class": "card card--large card--feature grid-cursor col-span-full row-span-full gap-y-0 max-lg:grid-rows-subgrid",
+            "rect": {
+              "x": 18.75,
+              "y": 1415.1171875,
+              "width": 267.5,
+              "height": 833.96875
+            },
+            "fontSize": "15px",
+            "lineHeight": "22.5px",
+            "padding": "12.5625px 14.0625px 14.0625px",
+            "margin": "0px",
+            "gap": "0px 9.375px",
+            "background": "rgb(242, 241, 237)",
+            "grid": "0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px 0.984375px",
+            "borderRadius": "4px"
+          },
+          "children": [
+            {
+              "tag": "DIV",
+              "class": "col-span-full row-start-1 row-end-2 grid lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-1 lg:col-end-9 lg:pl-g0.25 lg:pr-g3",
+              "rect": {
+                "x": 32.8125,
+                "y": 1427.6796875,
+                "width": 239.375,
+                "height": 104
+              },
+              "fontSize": "15px",
+              "lineHeight": "22.5px",
+              "padding": "0px",
+              "margin": "0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "239.375px",
+              "borderRadius": "0px"
+            },
+            {
+              "tag": "DIV",
+              "class": "max-lg:mt-g1.75 col-span-full row-start-2 row-end-3 grid cursor-default items-end lg:row-start-1 lg:row-end-3 lg:items-center lg:col-start-9 lg:col-end-25",
+              "rect": {
+                "x": 32.8125,
+                "y": 1548.0859375,
+                "width": 239.375,
+                "height": 686.9375
+              },
+              "fontSize": "15px",
+              "lineHeight": "22.5px",
+              "padding": "0px",
+              "margin": "16.4062px 0px 0px",
+              "gap": "normal",
+              "background": "rgba(0, 0, 0, 0)",
+              "grid": "none",
+              "borderRadius": "0px"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
