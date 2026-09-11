@@ -330,61 +330,6 @@ a.header-docs-button {
   top: 50px;
   transform: translateX(-50%);
 }
-.hero-secondary-window {
-  position: absolute;
-  width: 480px;
-  right: 32px;
-  bottom: 32px;
-  z-index: 3;
-}
-.hero-secondary-window .product-body {
-  padding: 16px 22px;
-}
-.hero-secondary-window .demo-review {
-  font-size: 14px;
-}
-
-.product-window {
-  background: var(--card);
-  border-radius: var(--radius-window);
-  box-shadow: var(--shadow-window);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.product-chrome {
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  height: 28px;
-  padding: 0 8px;
-}
-
-.product-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.product-dots i {
-  background: var(--border);
-  border-radius: 999px;
-  display: block;
-  height: 10px;
-  width: 10px;
-}
-
-.product-title {
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
-}
-
-.product-body {
-  min-height: 0;
-  overflow: hidden;
-}
 
 .feature-card {
   background: var(--card);
@@ -414,11 +359,6 @@ a.header-docs-button {
   display: flex;
   align-items: center;
   padding: 32px;
-}
-.feature-media > .writing-demo {
-  width: 100%;
-  height: 600px;
-  flex-shrink: 0;
 }
 
 .feature-copy {
@@ -652,29 +592,6 @@ a.header-docs-button {
   .download-popover {
     min-width: min(240px, calc(100vw - 40px));
   }
-}
-/* Bring the selected product window forward so its controls stay reachable. */
-.writing-active .hero-primary-window {
-  z-index: 4;
-}
-.review-window {
-  width: 100%;
-}
-.review-window .product-body {
-  padding: 28px;
-}
-.review-heading {
-  font-size: 20px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 18px;
-}
-.capture-source {
-  display: block;
-  margin-top: 24px;
-  font-size: 12px;
-  color: var(--muted);
-  text-decoration: underline;
 }
 .product-capture {
   width: 100%;
@@ -916,4 +833,39 @@ a.header-docs-button {
 .closing {
   padding-top: 67.2px;
   padding-bottom: 134.4px;
+}
+
+/* Current native captures replace the former hand-drawn product windows. */
+.feature-media > .product-tour {
+  height: 100%;
+}
+.hero-primary-window {
+  height: 620px;
+}
+.info-card .capture-skills img {
+  width: 1440px;
+  left: -430px;
+  top: -435px;
+}
+.info-card .capture-data img {
+  width: 1440px;
+  left: -310px;
+  top: -190px;
+}
+.info-card .capture-history img {
+  width: 1152px;
+  max-width: none;
+  position: relative;
+  left: -355px;
+  top: -247px;
+}
+@media (max-width: 760px) {
+  .hero-primary-window {
+    height: 680px;
+  }
+  .info-card .capture-skills img {
+    width: 1296px;
+    left: -387px;
+    top: -392px;
+  }
 }

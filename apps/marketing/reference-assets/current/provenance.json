@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-09-11T06:32:20.348Z",
+  "commit": "6f90aae8a47e5d35486582f30308ba0196fea344",
+  "version": "0.21.3",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "method": "Unmodified repo-built Electron renderer; isolated filesystem fixture; authored example conversation and tool trace; no model call; no UI injection.",
+  "files": [
+    "workspace.png",
+    "context.png",
+    "history.png",
+    "skills.png",
+    "sources.png",
+    "add-menu.png",
+    "review.png"
+  ]
+}

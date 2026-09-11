@@ -91,11 +91,11 @@ describe("downloadOptions", () => {
     });
   });
 
-  test("shows a writing goal and readable chapter before playing any media", () => {
+  test("shows native product evidence and captions before starting playback", () => {
     const html = renderToStaticMarkup(createElement(App));
-    expect(html).toContain('aria-label="写作演示"');
-    expect(html).toContain("让读者跟着主角一起发现黑洞");
-    expect(html).toContain("第 01 章 主播你刚才说什么，黑洞？");
+    expect(html).toContain('aria-label="写作实拍导览"');
+    expect(html).toContain("在左侧对话里交代目标");
+    expect(html).toContain("/reference-assets/current/workspace.png");
     expect(html).toContain("示例项目");
   });
 
@@ -137,15 +137,15 @@ describe("downloadOptions", () => {
 
       expect(html).toContain("从一个项目，写出第一份稿件");
       expect(html).toContain("这次先完成一件小事");
-      expect(html).toContain("图 0：Header 功能区");
+      expect(html).toContain("常用工具在哪里");
       expect(html).toContain("认识工作台");
       expect(html).toContain("2. 创建你的作品项目");
       expect(html).toContain("系统只建立空项目");
       expect(html).toContain("判断是否用对了");
       expect(html).toContain("初始给出的信息越明确越好");
-      expect(html).toContain("然后在对话框中打出");
-      expect(html).toContain("doc-00-header.png");
-      expect(html).toContain("doc-08-skill-menu.png");
+      expect(html).toContain("点击输入区的加号");
+      expect(html).toContain("current/workspace.png");
+      expect(html).toContain("current/add-menu.png");
       expect(html).not.toContain("https://ehyg6a9wjd.feishu.cn/wiki");
       expect(html).toContain('aria-current="page"');
       const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);

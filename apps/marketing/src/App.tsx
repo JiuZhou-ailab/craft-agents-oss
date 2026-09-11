@@ -1,4 +1,4 @@
-// input: Storyflow release links, local product screenshots, and promo video
+// input: Storyflow release links and current native product captures
 // output: Chinese product landing page and in-site tutorial navigation
 // pos: React surface for the public marketing route
 
@@ -6,18 +6,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { downloadOptions as releaseDownloadOptions } from "./downloads";
 import { DocsPage } from "./DocsPage";
-import {
-  WritingDemo,
-  ReviewExcerpt,
-  ProjectDemo,
-  SkillsDemo,
-} from "./WritingDemo";
+import { ProductTour, captureUrl } from "./ProductTour";
 
 const assets = {
-  dataResults: "/reference-assets/storyflow-data-results.webp",
-  skills: "/reference-assets/storyflow-skills-detail.webp",
-  reviewDiff: "/reference-assets/storyflow-review-diff.png",
-  versionHistory: "/reference-assets/storyflow-version-history.png",
+  dataResults: captureUrl("sources"),
+  skills: captureUrl("skills"),
+  versionHistory: captureUrl("history"),
 };
 
 const docsPath = "/docs/";
@@ -241,37 +235,7 @@ function DownloadMenu({ marked = false }: { marked?: boolean }) {
   );
 }
 
-function ProductWindow({
-  title,
-  children,
-  className = "",
-}: {
-  title: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <figure className={`product-window ${className}`.trim()}>
-      <div className="product-chrome">
-        <span className="product-dots" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-        <span className="product-title">{title}</span>
-      </div>
-      <div className="product-body">{children}</div>
-    </figure>
-  );
-}
-
 function Hero() {
-  const [writingActive, setWritingActive] = useState(false);
-  const activateWindow = (event: React.SyntheticEvent) => {
-    setWritingActive(
-      Boolean((event.target as Element).closest(".hero-primary-window")),
-    );
-  };
   return (
     <section className="section hero">
       <div className="container">
@@ -303,20 +267,14 @@ function Hero() {
             </a>
           </div>
         </div>
-        <div
-          className={`hero-stage${writingActive ? " writing-active" : ""}`}
-          onPointerDownCapture={activateWindow}
-          onFocusCapture={activateWindow}
-        >
+        <div className="hero-stage">
           <div className="hero-primary-window">
-            <WritingDemo />
+            <ProductTour
+              steps={["workspace", "context", "review"]}
+              label="写作实拍导览"
+              detail
+            />
           </div>
-          <ProductWindow
-            title="Storyflow · 改动审阅"
-            className="hero-secondary-window"
-          >
-            <ReviewExcerpt />
-          </ProductWindow>
         </div>
       </div>
     </section>
@@ -420,7 +378,13 @@ function LandingPage() {
         body="把章节目标交给 Agent，让正文在项目中形成，而你专注于创作中的判断。"
         href="/docs/#first-task"
         linkLabel="跟着教程开始 →"
-        media={<WritingDemo label="创作过程演示" />}
+        media={
+          <ProductTour
+            steps={["workspace", "context"]}
+            label="创作过程实拍"
+            detail
+          />
+        }
       />
 
       <FeatureBand
@@ -431,18 +395,11 @@ function LandingPage() {
         linkLabel="了解改动审阅 →"
         reverse
         media={
-          <ProductWindow title="Storyflow · 改动审阅" className="review-window">
-            <div className="review-heading">每处修改，由你决定</div>
-            <ReviewExcerpt />
-            <a
-              className="capture-source"
-              href={assets.reviewDiff}
-              target="_blank"
-              rel="noreferrer"
-            >
-              查看真实审阅界面 ↗
-            </a>
-          </ProductWindow>
+          <ProductTour
+            steps={["review", "history"]}
+            label="改动审阅实拍"
+            detail
+          />
         }
       />
 
@@ -452,7 +409,13 @@ function LandingPage() {
         body="让 Agent 带着作品的上下文继续写。正文、人物与创作要求，始终是你自己的文件。"
         href="/#workflow"
         linkLabel="理解产品 →"
-        media={<ProjectDemo />}
+        media={
+          <ProductTour
+            steps={["context", "workspace"]}
+            label="项目上下文实拍"
+            detail
+          />
+        }
       />
 
       <FeatureBand
@@ -462,7 +425,13 @@ function LandingPage() {
         href={docsPath}
         linkLabel="查看新手教程 →"
         reverse
-        media={<SkillsDemo />}
+        media={
+          <ProductTour
+            steps={["skills", "add-menu"]}
+            label="Skills 实拍"
+            detail
+          />
+        }
       />
 
       {/* Testimonials and team section require supplied, attributable materials. */}
@@ -490,7 +459,7 @@ function LandingPage() {
             </article>
             <article className="info-card">
               <h3>把资料带进创作</h3>
-              <p>在会话中查询榜单和资料，让参考内容服务于这次写作。</p>
+              <p>接入本地资料或外部服务，让参考内容服务于这次写作。</p>
               <a
                 className="text-arrow"
                 href="/docs/#header-tools"
@@ -500,7 +469,7 @@ function LandingPage() {
               </a>
               <ProductCapture
                 src={assets.dataResults}
-                alt="会话中的榜单查询结果"
+                alt="当前数据源详情与本地参考资料"
                 detail="capture-data"
               />
             </article>

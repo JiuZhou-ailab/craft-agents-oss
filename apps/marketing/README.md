@@ -3,8 +3,8 @@
 Storyflow landing page and release-download metadata.
 
 The landing page uses the archived Cursor homepage geometry with Storyflow's
-own brand, labelled writing demonstration, real product captures, and published
-release links. The demonstration is local to the page and never calls an Agent.
+own brand, annotated current Electron captures, and published
+release links. The screenshot tour is local to the page and never calls an Agent. Original screenshots come from the unmodified current Electron renderer with authored sample files and transcripts.
 Customer proof, testimonials, team materials and editorial highlights remain
 explicit acceptance gaps; see `implementation-notes.md` before calling the page
 a completed 1:1 replica.
@@ -34,7 +34,9 @@ The release workflow calls the same deployment after publishing release download
 - `src/App.tsx` - Landing page and same-site navigation.
 - `src/DocsPage.tsx` - First-project tutorial and interface reference.
 - `src/styles.css` / `src/docs.css` - Shared landing styles and tutorial layout.
-- `src/WritingDemo.tsx` / `src/writing-demo.css` - Local sample goal, draft, review and project-file demonstrations.
+- `src/ProductTour.tsx` / `src/product-tour.css` - Shared native screenshot tour, captions, focus regions and playback.
+- `capture-product.ts` - Reproducible isolated Electron capture using the existing desktop harness.
+- `reference-assets/current/` - Original current product captures and provenance.
 - `src/downloads.ts` - Shared installer metadata for both pages.
 - `src/__tests__/` - Download, tutorial navigation, and rendering checks.
 - `qa-runbook.md` / `qa.mjs` - Public-page browser acceptance and download/tutorial regression checks.

@@ -377,3 +377,14 @@
 .docs-hero h1 {
   text-wrap: balance;
 }
+
+.docs-tour {
+  width: 100%;
+  height: 650px;
+  margin: 28px 0;
+}
+@media (max-width: 760px) {
+  .docs-tour {
+    height: 560px;
+  }
+}

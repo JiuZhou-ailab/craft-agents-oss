@@ -19,87 +19,86 @@ await page.cdp("Emulation.setDeviceMetricsOverride", {
   deviceScaleFactor: 1,
   mobile: false,
 });
-await page.waitForSelector('section[aria-label="写作演示"]');
-await page.click('section[aria-label="写作演示"] button:has-text("改动审阅")');
-await page.click('section[aria-label="写作演示"] button:has-text("接受改动")');
-assert.match(
-  await page.evaluate(
-    () => document.querySelector('section[aria-label="写作演示"]').textContent,
-  ),
-  /演示：已保留这处改动/,
+await page.waitForSelector('section[aria-label="写作实拍导览"]');
+await page.click(
+  'section[aria-label="写作实拍导览"] button:has-text("播放导览")',
 );
-await page.click('section[aria-label="写作演示"] button:has-text("重新审阅")');
-await page.click('section[aria-label="写作演示"] button:has-text("拒绝改动")');
-assert.match(
-  await page.evaluate(
-    () => document.querySelector('section[aria-label="写作演示"]').textContent,
-  ),
-  /演示：已恢复原文/,
-);
-await page.click('section[aria-label="写作演示"] button:has-text("创作目标")');
-assert.match(
-  await page.evaluate(
-    () => document.querySelector('section[aria-label="写作演示"]').textContent,
-  ),
-  /第一章的创作目标/,
-);
-await page.click('section[aria-label="写作演示"] button:has-text("正文成果")');
-assert.match(
-  await page.evaluate(
-    () => document.querySelector('section[aria-label="写作演示"]').textContent,
-  ),
-  /第 01 章 主播你刚才说什么，黑洞？/,
+await page.waitForFunction(
+  () =>
+    document
+      .querySelector(
+        'section[aria-label="写作实拍导览"] .tour-tabs button[aria-pressed="true"]',
+      )
+      .textContent.includes("引用项目文件"),
+  undefined,
+  { timeout: 10000 },
 );
 await page.click(
-  'section[aria-label="项目文件演示"] .project-files button:has-text("人物.md")',
+  'section[aria-label="写作实拍导览"] button:has-text("暂停导览")',
+);
+const pausedCapture = await page.evaluate(() =>
+  document
+    .querySelector('section[aria-label="写作实拍导览"] image')
+    .getAttribute("href"),
+);
+await new Promise((resolve) => setTimeout(resolve, 6200));
+assert.equal(
+  await page.evaluate(() =>
+    document
+      .querySelector('section[aria-label="写作实拍导览"] image')
+      .getAttribute("href"),
+  ),
+  pausedCapture,
+);
+for (const title of ["引用项目文件", "审阅具体改动", "目标与正文"]) {
+  await page.click(
+    `section[aria-label="写作实拍导览"] .tour-tabs button:has-text("${title}")`,
+  );
+  assert.equal(
+    await page.evaluate(
+      (title) =>
+        [
+          ...document.querySelectorAll(
+            'section[aria-label="写作实拍导览"] .tour-tabs button',
+          ),
+        ]
+          .find((b) => b.textContent.includes(title))
+          .getAttribute("aria-pressed"),
+      title,
+    ),
+    "true",
+  );
+}
+await page.click(
+  'section[aria-label="写作实拍导览"] button:has-text("查看全貌")',
+);
+await page.click(
+  'section[aria-label="写作实拍导览"] button:has-text("放大标注")',
 );
 assert.match(
   await page.evaluate(
     () =>
-      document.querySelector('section[aria-label="项目文件演示"]').textContent,
+      document.querySelector('section[aria-label="写作实拍导览"] .tour-camera')
+        .style.transform,
   ),
-  /苏白/,
+  /scale\([2-9]|scale\(1\./,
 );
 await page.click(
-  'section[aria-label="项目文件演示"] .project-files button:has-text("创作要求.md")',
-);
-assert.match(
-  await page.evaluate(
-    () =>
-      document.querySelector('section[aria-label="项目文件演示"]').textContent,
-  ),
-  /语气要求/,
+  'section[aria-label="写作实拍导览"] button:has-text("查看全貌")',
 );
 await page.click(
-  'section[aria-label="Skills 方法演示"] button:has-text("使用示例")',
+  'section[aria-label="Skills 实拍"] .tour-tabs button:has-text("把方法带入任务")',
 );
 assert.match(
-  await page.evaluate(
-    () =>
-      document.querySelector('section[aria-label="Skills 方法演示"]')
-        .textContent,
+  await page.evaluate(() =>
+    document
+      .querySelector('section[aria-label="Skills 实拍"] image')
+      .getAttribute("href"),
   ),
-  /先给出依据/,
+  /add-menu.png/,
 );
 await page.click(
-  'section[aria-label="Skills 方法演示"] button:has-text("方法说明")',
-);
-assert.match(
-  await page.evaluate(
-    () =>
-      document.querySelector('section[aria-label="Skills 方法演示"]')
-        .textContent,
-  ),
-  /Reading/,
-);
-await page.click(
-  'aside[aria-label="续写任务的引用依据"] button:has-text("人物.md")',
-);
-assert.match(
-  await page.evaluate(
-    () => document.querySelector(".project-demo .demo-paper h3").textContent,
-  ),
-  /苏白/,
+  'section[aria-label="Skills 实拍"] .tour-tabs button:has-text("查看写作方法")',
 );
 await page.evaluate(() => document.querySelector("#downloads button").focus());
 await page.press("#downloads button", "Enter");
@@ -243,6 +242,15 @@ for (const width of [1440, 768, 390, 320]) {
       expectedInstallers,
     );
   }
+  const screenshotUrls = await page.evaluate(() =>
+    [...document.querySelectorAll(".product-tour image")].map((image) =>
+      image.getAttribute("href"),
+    ),
+  );
+  for (const url of new Set(screenshotUrls)) {
+    const response = await page.fetch(url);
+    assert.equal(response.ok, true, `Native capture loads: ${url}`);
+  }
   await page.goto(`${base}/docs/`);
   assert.equal(
     await page.evaluate(
@@ -258,17 +266,24 @@ await page.cdp("Emulation.setEmulatedMedia", {
   features: [{ name: "prefers-reduced-motion", value: "reduce" }],
 });
 await page.goto(base);
-await page.click('section[aria-label="写作演示"] button:has-text("创作目标")');
-assert.match(
+assert.equal(
   await page.evaluate(
-    () => document.querySelector('section[aria-label="写作演示"]').textContent,
+    () =>
+      getComputedStyle(document.querySelector(".tour-camera"))
+        .transitionDuration,
   ),
-  /第一章的创作目标/,
+  "0s",
+);
+assert.equal(
+  await page.evaluate(
+    () => getComputedStyle(document.querySelector(".tour-play")).display,
+  ),
+  "none",
 );
 await page.cdp("Emulation.setEmulatedMedia", { features: [] });
 await page.cdp("Network.enable");
 await page.cdp("Network.setBlockedURLs", {
-  urls: ["*storyflow-skills-detail.webp*"],
+  urls: ["*/current/skills.png"],
 });
 await page.reload();
 await page.evaluate(() => document.querySelector("#skills").scrollIntoView());
@@ -298,7 +313,7 @@ if (config.output) {
   );
 }
 console.log(
-  "PASS: demo states, review decisions, project files, downloads, deep links/history, four viewport widths, reduced motion, and failed-media fallback.",
+  "PASS: native screenshot steps, zoom, annotations, downloads, deep links/history, four viewport widths, reduced motion, and failed-media fallback.",
 );
 console.log(observations);
 await page.cdp("Network.setCacheDisabled", { cacheDisabled: false });

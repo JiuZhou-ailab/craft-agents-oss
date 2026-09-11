@@ -17,53 +17,48 @@ The fully rendered baseline includes changelog and editorial highlights. Earlier
 | Feature copy / media | About 1:2 | About 1:2 |
 | Feature media height | 680px | 680px |
 
-These are calibration observations, not a new design token API. At narrow widths, readable demo content reflows rather than scaling down an entire desktop screenshot.
+These are calibration observations, not a new design token API. At narrow widths, captions reflow and enlarged screenshot details remain horizontally scrollable. Every scene also offers the original full image.
 
-## Section mapping and outstanding materials
+## Current revision — authentic product UI
 
-**This is an implementation of the available product sections, not a completed 1:1 homepage. Issue #39 must remain open.** No source for customer endorsements, testimonials, team photography, or editorial articles was supplied during this implementation. An explicit request for those sources was made; absence of a reply is not approval to invent, replace, or drop their requirements.
+User feedback requested closer agreement with the real Storyflow UI, fresh annotated captures, and the UI/UX rhythm of <https://cursor.com/cn/home>. That page was inspected again on 2026-09-11 with ego-browser. Its compact navigation, warm neutral surfaces, full-width product stage, alternating feature bands and local demo state transitions remain the reference. The header/H1/stage geometry above is unchanged.
 
-| Reference section / purpose | Storyflow mapping | State / difference |
+The former hand-drawn writing, review, project and Skill components are removed. `ProductTour` shows original screenshots from the current built Electron renderer. Scene tabs, numbered outlines and captions are explicitly website annotations; they do not pretend to be desktop controls. Screenshot changes fade for 320ms and focusing a region transitions over 520ms. Optional six-second playback pauses offscreen, while the picture is hovered or another control is focused, and under reduced motion. No motion library or provider call was added.
+
+## Capture provenance and refresh
+
+`reference-assets/current/provenance.json` records the source commit, build version, capture time and dimensions. `capture-product.ts` reuses `e2e/perf/launch.ts` and the existing fixture generator. It creates an isolated sample project with real Markdown files, an authored conversation, a sample Edit trace, a local source and a Skill. Version creation uses the real workspace-version API. It runs the unmodified application and waits for layout geometry to settle before capture; it does not inject replacement UI or edit screenshot pixels. Original images are linked from every tour. A refresh first captures to a staging directory; only a complete generation replaces the previous images and provenance.
+
+These are genuine UI captures with **illustrative content**, not recordings of model-generated work. No model is configured or invoked; the original offline state can therefore show “不可用”. They contain no real user conversation or credentials. The capture process only changes its temporary fixture and removes it afterward.
+
+| Capture | Actual surface | Explanation |
 | --- | --- | --- |
-| Header / navigation and acquisition | Existing Storyflow logo, product anchors, tutorial, download | Implemented. No fictional pricing, sign-in or sales destinations. |
-| Hero / show the Agent working and the result | Readable writing goal, chapter excerpt, review; overlapping writing and review windows | Implemented as a deterministic, labelled web demonstration, not a running Agent or desktop screenshot. |
-| Customer Logo garden / external trust | Requires real customer marks and attributable sources | **Blocked on material.** No file categories, empty cards, fake marks or public placeholder text. No claim that this slot is complete. |
-| Feature 1 / task becomes work | Goal, chapter, and review states | Implemented. Storyflow content replaces coding tasks. |
-| Feature 2 / delegated work and control | Review a concrete proposed change, accept, reject, reset | Implemented Storyflow control story; does not claim Cursor cloud/parallel capabilities. |
-| Feature 3 / connected context | Follow a continuation task’s file references to creative requirements, character and chapter content | Implemented. Example files belong to an existing sample Project, not a new-project template. |
-| Feature 4 / reusable work | Readable Skill method and task-example states | Implemented as a local switchable method demonstration, with a link to the real supporting capture. Storyflow Skills replaces the AI-teammate/Slack story; no Slack capability is claimed. |
-| Testimonials / external evidence | Requires real attributable customer quotations | **Blocked on material.** FAQ is retained as footer help and is not counted as testimonial delivery. |
-| Three capability cards / broaden the demonstrated capabilities | Skills, source results, local version history, each with corresponding real media | Implemented for existing Storyflow capabilities, without inventing enterprise or model guarantees. |
-| Changelog / evidence of ongoing development | Four published releases and links | Implemented from checked release notes and GitHub release tags. |
-| Team / who builds the product | Requires a factual team introduction and suitable original image | **Blocked on material.** Version history is not used as a substitute. |
-| Editorial highlights / deepen the product story | Requires published Storyflow articles | **Blocked on material.** Tutorial cards are not a substitute. |
-| Closing CTA / start using the product | Download on desktop, tutorial on mobile | Implemented. No account or sales flow added. |
-| Footer / useful destinations | Existing product/tutorial links and factual FAQ | Implemented using available destinations; no fake legal or company pages. |
+| workspace | Conversation, document and right-hand directory | Task goal, file links and editable result |
+| context | Character document opened from a conversation link | Related files in the same project |
+| review | Turn change-summary card and right-hand review | Actual `Accept` and `Reject` labels; inserted and removed text |
+| skills | Current local Skill detail | Method, file editing and “立即使用” |
+| add-menu | Actual input plus-menu and Skill submenu | Select a method for a task |
+| sources | Current local source detail dialog | Connection path and guide, not a made-up query result |
+| history | Actual version-management dialog | A saved local snapshot and restore action |
 
-Missing sections are not padded with blank space to make a full-page screenshot seem aligned. Consequently absolute positions of later sections and total page height differ. This is an explicit material gap, not passed fidelity acceptance. Completing those requirements needs the listed material or a maintenance decision changing the spec.
+All former tutorial screenshot references now use these current captures. Instructions name the current left-side entry points, right-side directory and plus-menu behavior. Mobile detail views are horizontally scrollable and retain a full-image option; they do not fabricate a mobile desktop client.
 
-## Product material provenance
+## Scope and outstanding material
 
-- The first-chapter excerpt in the web demonstration is transcribed from the existing Storyflow editor capture. The request, creative brief, character notes and proposed edit are labelled illustrative content; they are not claimed to be the recorded output of a live model call.
-- The simulated goal/draft/review controls are local to the marketing page. Accept/reject/reset changes only the displayed example. The window caption says “示例项目” and the footer explains that no real files change.
-- The drawing follows Storyflow's conversation/document arrangement; it is a responsive web demonstration rather than a pixel-identical replica of the desktop UI. A link opens the real supporting capture.
-- Project-file switching and clickable task references illustrate folder ownership and how the brief, character and prior chapter inform continuation. These are labelled sample references, not a recorded model citation trace. The demonstration does not install Skills or create a predefined Project folder structure. This follows accepted ADR 0007.
-- The Skill panel uses the existing `storyflow-skills-detail.webp`; the query card uses `storyflow-data-results.webp`; version history uses `storyflow-version-history.png`. Each image can be opened at full size. CSS cropping changes framing only; original assets remain unchanged.
-- The original promotional video is retained as an existing asset but no longer acts as the first-screen value demonstration. There is no autoplay dependency; reduced-motion users receive the same readable states.
-- Release summaries derive from the existing 0.21.0–0.21.3 release notes; public tags and dates were verified with GitHub on 2026-09-11. They are a curated publication snapshot, not a second live release-discovery service.
+Only marketing code, documentation and capture artifacts change. The actual Electron UI is not redesigned in this task. Existing downloads, public anchors, tutorial navigation and release links remain. Old source assets are retained as archival material but no longer used by the homepage or tutorial.
 
-## Implementation and rollout boundaries
+Customer marks, attributable testimonials, team material and editorial articles remain unavailable. Issue #39 stays open and this revision does not claim full-homepage 1:1 sign-off. Completing those sections still needs authentic material or an explicit change to the spec.
 
-Reuse the existing React/Bun marketing build, tutorial, same-site navigation, installer metadata and root-relative assets. There is no new dependency, backend, model call or persisted state. The original incorrect proof substitutes and tutorial-as-changelog cards are removed from the main narrative; FAQ content stays available in the footer.
+## Verification
 
-The worktree already included the in-site tutorial and the previous landing redesign. They share the same entry point and stylesheet; the marketing commit includes that necessary local baseline so the checked-out commit can build independently. Unrelated Electron, locale and root README changes remain outside the commit.
+The fresh Electron capture completed for all seven surfaces. Marketing typecheck, build and the eight existing Bun tests passed. Browser verification covers the current image steps, focus transforms, original links, actual installer URLs, Enter/Tab/Escape, mobile download routing, tutorial history/deep links, four viewport widths, reduced motion and media failures. Screenshot fidelity is inspected separately from these programmatic checks.
 
-Only the marketing output changes. No data migration is required. Deployment is not performed by this task; normal deployment follows the existing marketing workflow after an authorized push. Review the material blockers before treating any deployment as closure of #39.
+Final checks: repository `bun run test` completed with 5,778 passing, 11 skipped and 0 failed tests. The later playback correction passed marketing typechecking and was rechecked by both review axes; the browser run verifies it without manually moving focus off the Play button.
 
-## Verification record — 2026-09-11
+### Standards review
 
-- Marketing typecheck and production build passed. The Bun marketing suite passed 8 tests / 77 assertions. The repository `bun run test` completed successfully: 5,778 passed, 11 skipped, 0 failed across the main run and isolated runs.
-- `qa.mjs` passed against the production preview at 1440, 768, 390 and 320 px: no horizontal overflow, all captures loaded, task/reference/Skill/review state changes, the three installer destinations, Enter/Tab/Escape and focus recovery, narrow-screen installation links, tutorial deep-link refresh/history, reduced motion and image failure fallback.
-- `design-reference/storyflow-1440.png`, `storyflow-390.png` and `qa-results.json` preserve the final browser evidence. The numerical record describes geometry and load state, not a fidelity score.
-- Additional keyboard inspection exercised hero goal/draft/review, accept/reject and the footer FAQ disclosure. Desktop capability-card framing and the narrow-screen project panel were visually inspected.
-- Standards and Spec reviewers rechecked and cleared the mobile download, context-reference and QA-coverage findings. External material gaps remain as listed above.
+The playback focus and incomplete-generation publication findings were corrected and rechecked. No remaining actionable Standards findings.
+
+### Spec review
+
+Current screenshots, separate annotations and updated tutorial behavior satisfy this refinement. The playback finding was corrected and rechecked. No remaining actionable findings for this refinement; the pre-existing external-material gaps remain.
