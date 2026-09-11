@@ -183,22 +183,30 @@ describe("downloadOptions", () => {
     try {
       const html = renderToStaticMarkup(createElement(App));
 
-      expect(html).toContain("从一个项目，写出第一份稿件");
+      expect(html).toContain("跟着做，写出你的第一段故事");
       expect(html).toContain("这次先完成一件小事");
       expect(html).toContain("常用工具在哪里");
       expect(html).toContain('<details class="docs-more" open="">');
       expect(html).toContain('aria-label="本页目录"');
       expect(html).toContain('id="project-options"');
       expect(html).toContain("认识工作台");
-      expect(html).toContain("2. 创建你的作品项目");
-      expect(html).toContain("系统只建立空项目");
-      expect(html).toContain("判断是否用对了");
-      expect(html).toContain("初始给出的信息越明确越好");
+      expect(html).toContain("创建你的作品项目");
+      expect(html).toContain("添加本地项目");
+      expect(html).toContain("离开教程前，自己试一次");
+      expect(html).toContain("把练习换成自己的故事");
       expect(html).toContain("点击输入区的加号");
+      expect(html).toContain("询问运行");
+      expect(html).toContain("个人资料");
+      expect(html).toContain("完成标志");
+      expect(html).toContain("保存版本，再打开一次");
+      expect(html).toContain('href="#help-file"');
+      expect(html.match(/class="prompt-example"/g)).toHaveLength(4);
+      expect(html.match(/aria-label="复制：/g)).toHaveLength(4);
       expect(html).toContain('class="tour-outline"');
       expect(html).toContain('class="tour-number"');
       expect(html).toContain("current/workspace.png");
       expect(html).toContain("current/add-menu.png");
+      expect(html).not.toContain("立即使用");
       expect(html).not.toContain("https://ehyg6a9wjd.feishu.cn/wiki");
       expect(html).toContain('aria-current="page"');
       const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);
@@ -214,6 +222,9 @@ describe("downloadOptions", () => {
         "create-project",
         "first-task",
         "review-changes",
+        "save-return",
+        "checklist",
+        "troubleshooting",
         "header-tools",
       ];
       for (const step of steps) expect(ids).toContain(step);

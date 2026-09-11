@@ -53,3 +53,10 @@ No installer download, installation, login, paid provider request or real Projec
 ## On-site release archive
 
 Open `/changelog/`: all 24 existing versions render their full notes, newest first, without GitHub links. Select v0.10.6 in the version directory, refresh its anchor URL, and confirm the oldest entry remains visible; browser Back returns to the previous page position. Check the version directory and article text at 1440px and 390px widths. Adding a numeric version file under `apps/electron/resources/release-notes/` must include it in the next build; `next.md` stays excluded.
+
+
+## Beginner walkthrough
+
+Follow `/docs/` from installation to reopening a saved file. Verify the current desktop entry labels against ActivityRail, AccountSettingsSection, permission controls and version management. The example consistently uses the 黑洞直播 project, 创作要求.md and 第01章.md. All five main steps must state what to do and how to recognize completion; recovery links and both tables of contents must land on visible content.
+
+Click all four copy buttons and compare the complete multiline text with their displayed prompts. Simulate clipboard denial and confirm a manual-copy message appears without losing the prompt. `qa.mjs` performs these assertions with a temporary clipboard stub and restores it afterward. Check keyboard focus, mobile wrapping and tutorial screenshot controls. This website QA does not send requests to a model or prove the quality of generated prose.

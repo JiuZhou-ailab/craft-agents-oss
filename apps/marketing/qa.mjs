@@ -163,6 +163,34 @@ assert.equal(
   true,
 );
 await page.goto(`${base}/docs/#first-task`);
+// Exercise both clipboard outcomes without changing the user's clipboard.
+assert.deepEqual(await page.evaluate(async () => {
+  const own = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const copied = [];
+  const blocks = [...document.querySelectorAll(".prompt-example")];
+  try {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+      writeText: async (value) => { copied.push(value); },
+    }});
+    for (const block of blocks) {
+      block.querySelector("button").click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    const preserved = blocks.every((block, i) => copied[i] === block.querySelector("pre").textContent);
+    const feedback = blocks.every(block => block.querySelector('[role="status"]').textContent.includes("已复制"));
+    navigator.clipboard.writeText = async () => { throw new Error("Clipboard denied for QA"); };
+    blocks[0].querySelector("button").click();
+    const deadline = performance.now() + 2000;
+    while (!blocks[0].textContent.includes("手动复制") && performance.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    return { count: blocks.length, preserved, feedback, fallback: blocks[0].textContent.includes("手动复制") };
+  } finally {
+    if (own) Object.defineProperty(navigator, "clipboard", own);
+    else delete navigator.clipboard;
+  }
+}), { count: 4, preserved: true, feedback: true, fallback: true });
+
 await page.waitForFunction(
   () =>
     Math.abs(
@@ -451,7 +479,7 @@ if (config.output) {
   );
 }
 console.log(
-  "PASS: standalone changelog and history, expanded tutorial navigation and heading outline, all-platform downloads and contact, clean 16:10 previews, playback/zoom, four viewport widths, reduced motion, and failed-media fallback.",
+  "PASS: five-step tutorial and copy success/fallback, standalone changelog and history, expanded tutorial navigation and heading outline, all-platform downloads and contact, clean 16:10 previews, playback/zoom, four viewport widths, reduced motion, and failed-media fallback.",
 );
 console.log(observations);
 await page.cdp("Network.setCacheDisabled", { cacheDisabled: false });

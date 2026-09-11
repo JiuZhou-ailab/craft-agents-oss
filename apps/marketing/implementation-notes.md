@@ -83,3 +83,13 @@ Independent release history, expanded reference navigation, a right-side heading
 The changelog now embeds all 24 versioned desktop release notes as complete on-site articles with permanent version anchors. Both production and development use the same build-time Markdown source; new version files trigger the independent marketing deployment on main. Drafts are excluded and historical files remain in the archive. No runtime GitHub request is needed to read notes.
 
 Validation: 26 related tests, marketing typecheck/build, Vite data parity, and browser QA at all four widths passed. Desktop and mobile archive layouts were visually inspected. Standards review caught replacement-string interpretation of literal dollar sequences; callback replacement and JSON round-trip checks resolved it. Standards and Spec reviews have no remaining blockers. Earlier unrelated desktop test evidence above belongs to the preceding revision.
+
+
+## Beginner teaching revision
+
+The tutorial now follows one complete practice instead of a general feature overview: confirm a model reply, add a real folder as a project, save creation requirements, write a short opening, inspect one targeted edit, and preserve/reopen the result. The five main steps include explicit completion signals, four copyable prompts and symptom-based recovery. Optional reference sections and existing anchor IDs remain; repeated screenshot tours and duplicated planning checklists are consolidated into the relevant action steps. Existing native screenshots illustrate control positions rather than promising identical model output.
+
+Desktop source verification covers the profile sign-in entry, native-folder project registration, project-scoped task creation, permission-mode menu, file review and version controls. No desktop behavior is changed and no model request is part of website QA.
+
+
+Validation for this revision: marketing typecheck/build, 10 marketing tests, browser QA at 1440/768/390/320 px, copy success and denied-clipboard fallback, and the Chinese punctuation gate passed. Desktop/mobile prompt and completion-check layouts were visually inspected. Spec review identified an unpublished skill-detail action; it was removed from the tutorial and shared caption in favor of the released input-plus menu. Standards and Spec have no remaining findings.

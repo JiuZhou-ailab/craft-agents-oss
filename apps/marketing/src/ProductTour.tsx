@@ -25,7 +25,7 @@ export const captures = {
   },
   skills: {
     title: "查看写作方法",
-    text: "在 Skill 详情中阅读检查顺序。用「编辑文件」调整方法，再点「立即使用」带入任务。",
+    text: "在 Skill 详情中阅读检查顺序。用「编辑文件」调整方法，再从输入框加号选择这项技能。",
     focus: [430, 420, 810, 300],
     mark: [465, 455, 750, 245],
   },
@@ -197,7 +197,7 @@ export function ProductTour({
       <div className="tour-caption" aria-live={playing ? "off" : "polite"}>
         {annotated && (
           <p>
-            <span className="tour-number">1</span>
+            <span className="tour-number">1</span>{" "}
             {capture.text}
           </p>
         )}

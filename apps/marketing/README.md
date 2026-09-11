@@ -9,8 +9,7 @@ Customer proof, testimonials, team materials and editorial highlights remain
 explicit acceptance gaps; see `implementation-notes.md` before calling the page
 a completed 1:1 replica.
 `/changelog/` contains the full version history with permanent `#vX.Y.Z` anchors. Both the Bun build and Vite development load every numeric versioned Markdown file from `apps/electron/resources/release-notes/`; `next.md` and prerelease drafts are excluded. Markdown renders safely at build time and is embedded in the site HTML, so reading history never depends on GitHub or a live API. Existing version files remain the archive; add new versions without replacing older files. Header and footer link to the page; the old `/#changelog` anchor remains at the footer entry.
-`/docs/` follows installation, project creation, the first writing task, and review,
-then keeps the existing screenshots as an interface reference. Tutorial copy must
+`/docs/` teaches one five-step practice: install/sign in and confirm a reply, add a local project folder, write requirements and a short opening, review one targeted edit, then save a version and reopen the file. Each step includes a completion signal. Four copyable prompts preserve multiline text and offer a manual-copy fallback. Symptom-based help links lead to recovery instructions and contact details; advanced references follow the practice. Repeated screenshots are consolidated at their relevant steps. Tutorial copy must
 match current desktop labels and file behavior; screenshots illustrate an existing
 project rather than a default folder template. Its topic navigation starts expanded; on wide screens, a separate right sidebar derives the page outline from the actual h2/h3 headings and tracks the current reading position.
 
@@ -33,7 +32,7 @@ Changes to versioned release-note Markdown on `main` also trigger this deploymen
 - `promo-video/` - HyperFrames product promo composition and rendered assets.
 - `reference-assets/` - Local landing screenshots and visual reference assets.
 - `src/App.tsx` - Landing page and same-site navigation.
-- `src/DocsPage.tsx` - First-project tutorial, topic navigation and derived page-heading outline.
+- `src/DocsPage.tsx` - Five-step writing practice, copyable prompts, recovery paths and derived page-heading outline.
 - `release-notes.ts` - Build-time loader and Markdown renderer shared by Bun and Vite.
 - `src/ChangelogPage.tsx` - Full on-site release archive and version navigation.
 - `src/styles.css` / `src/docs.css` - Shared landing styles and tutorial layout.
