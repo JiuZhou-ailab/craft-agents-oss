@@ -8,13 +8,15 @@ import {
   releaseAssetFiles,
   updateManifestFiles,
 } from "@storyflow/release-assets";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { App } from "../App";
 import { ChangelogPage } from "../ChangelogPage";
+import { embedReleaseNotes, readReleaseNotes } from "../../release-notes";
 
 import {
   defaultDownloadBaseUrl,
@@ -129,15 +131,45 @@ describe("downloadOptions", () => {
       expect(ids).toContain(target);
   });
 
-  test("renders release history on its own page", () => {
-    const html = renderToStaticMarkup(createElement(ChangelogPage));
-    expect(html).toContain(
-      '<h1 class="section-heading" id="changelog-title">更新日志</h1>',
-    );
-    expect(html).toContain(
-      'href="https://github.com/JiuZhou-ailab/storyflow/releases/tag/v0.21.3"',
-    );
-    expect(html.match(/class="release-card"/g)).toHaveLength(4);
+  test("keeps every version's full release notes on site, excluding drafts", () => {
+    const releases = readReleaseNotes();
+    const html = renderToStaticMarkup(createElement(ChangelogPage, { releases }));
+    expect(html).toContain('<h1 class="section-heading" id="changelog-title">更新日志</h1>');
+    expect(releases.length).toBeGreaterThanOrEqual(24);
+    expect(releases.map(({ version }) => version)).toContain("0.21.3");
+    expect(releases[releases.length - 1]?.version).toBe("0.10.6");
+    expect(html.match(/class="release-entry"/g)).toHaveLength(releases.length);
+    for (const { version } of releases) {
+      expect(html).toContain(`href="#v${version}"`);
+      expect(html).toContain(`id="v${version}"`);
+    }
+    expect(html).toContain("刷新页面、切换项目或重新连接后");
+    expect(html).toContain("<strong>待回答问题可恢复</strong>");
+    expect(html).toContain("<h3>对话与工具</h3>");
+    expect(html).not.toContain("github.com");
+    expect(html).not.toContain("最新动态");
+    expect(html.match(/<h1 /g)).toHaveLength(1);
+    const embedded = embedReleaseNotes("<!-- release-notes -->");
+    expect(JSON.parse(embedded.replace(/^.*?application\/json">/, "").replace(/<\/script>$/, ""))).toEqual(releases);
+    const literal = [{ version: "1.0.0", html: "保留 $& $` $' </script> 内容" }];
+    const safeEmbedded = embedReleaseNotes("<!-- release-notes -->", literal);
+    expect(safeEmbedded.match(/<\/script>/g)).toHaveLength(1);
+    expect(JSON.parse(safeEmbedded.replace(/^.*?application\/json">/, "").replace(/<\/script>$/, ""))).toEqual(literal);
+  });
+
+  test("automatically includes future version files, orders numerically and omits drafts", () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "marketing-notes-"));
+    try {
+      for (const version of ["0.9.0", "0.22.0", "0.100.0", "next", "0.101.0-beta"]) {
+        writeFileSync(resolve(directory, `${version}.md`), "# 最新动态\n\n完整内容 **保留**。\n\n<script>alert(1)</script>");
+      }
+      const releases = readReleaseNotes(directory);
+      expect(releases.map(({ version }) => version)).toEqual(["0.100.0", "0.22.0", "0.9.0"]);
+      expect(releases[0]?.html).toContain("<strong>保留</strong>");
+      expect(releases[0]?.html).not.toContain("<script>");
+    } finally {
+      rmSync(directory, { recursive: true });
+    }
   });
 
   test("renders the documentation as an in-site page", () => {

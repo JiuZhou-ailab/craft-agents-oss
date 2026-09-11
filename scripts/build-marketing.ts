@@ -1,9 +1,10 @@
-// input: apps/marketing React source, HTML shell, and static marketing assets
+// input: apps/marketing React source, HTML shell, versioned release notes, and static marketing assets
 // output: Static production assets in apps/marketing/dist
 // pos: Build script for the public marketing landing page
 
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
+import { embedReleaseNotes } from "../apps/marketing/release-notes";
 
 const rootDir = join(import.meta.dir, "..");
 const appDir = join(rootDir, "apps", "marketing");
@@ -60,7 +61,7 @@ if (!jsOutput) {
 
 const jsAsset = `/assets/${basename(jsOutput.path)}`;
 const cssAsset = cssOutput ? `/assets/${basename(cssOutput.path)}` : undefined;
-let html = readFileSync(htmlPath, "utf8");
+let html = embedReleaseNotes(readFileSync(htmlPath, "utf8"));
 
 html = html.replace(
   '<script type="module" src="/src/main.tsx"></script>',

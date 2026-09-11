@@ -108,6 +108,7 @@ describe('macOS release configuration', () => {
     expect(marketingWorkflow).toContain('workflow_dispatch:');
     expect(marketingWorkflow).toContain('workflow_call:');
     expect(marketingWorkflow).toContain('- "apps/marketing/**"');
+    expect(marketingWorkflow).toContain('- "apps/electron/resources/release-notes/*.md"');
     expect(marketingWorkflow).toContain('- "scripts/build-marketing.ts"');
     expect(marketingWorkflow).toContain('group: deploy-marketing-production');
     expect(marketingWorkflow).toContain('cancel-in-progress: false');

@@ -6,11 +6,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { embedReleaseNotes } from "./release-notes";
 
 const appDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), { name: "release-notes", transformIndexHtml: (html) => embedReleaseNotes(html) }],
   root: appDir,
   base: "./",
   resolve: {

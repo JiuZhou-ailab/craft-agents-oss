@@ -49,3 +49,7 @@ The browser smoke test does not award a visual-fidelity score. Document differen
 ## Boundaries
 
 No installer download, installation, login, paid provider request or real Project write is needed for these checks. Marketing-page typechecking/build and the existing Bun regression suite are separate from the repository-wide test command, whose result is reported separately in the implementation handoff.
+
+## On-site release archive
+
+Open `/changelog/`: all 24 existing versions render their full notes, newest first, without GitHub links. Select v0.10.6 in the version directory, refresh its anchor URL, and confirm the oldest entry remains visible; browser Back returns to the previous page position. Check the version directory and article text at 1440px and 390px widths. Adding a numeric version file under `apps/electron/resources/release-notes/` must include it in the next build; `next.md` stays excluded.

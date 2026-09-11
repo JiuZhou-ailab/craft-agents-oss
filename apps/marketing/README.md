@@ -4,11 +4,11 @@ Storyflow landing page and release-download metadata.
 
 The landing page uses the archived Cursor homepage geometry with Storyflow's
 own brand, clean current Electron previews, and published
-release links. The screenshot tour is local to the page and never calls an Agent. Original 4320 × 2700 screenshots come from the unmodified current Electron renderer at a 1440 × 900 viewport and 3× pixel density, with authored sample files and transcripts. Landing previews keep the native 16:10 ratio; annotations and explanatory captions belong only to the tutorial.
+release history. The screenshot tour is local to the page and never calls an Agent. Original 4320 × 2700 screenshots come from the unmodified current Electron renderer at a 1440 × 900 viewport and 3× pixel density, with authored sample files and transcripts. Landing previews keep the native 16:10 ratio; annotations and explanatory captions belong only to the tutorial.
 Customer proof, testimonials, team materials and editorial highlights remain
 explicit acceptance gaps; see `implementation-notes.md` before calling the page
 a completed 1:1 replica.
-`/changelog/` contains the curated release history and links to full published notes. Header and footer link to the page; the old `/#changelog` anchor remains at the footer entry.
+`/changelog/` contains the full version history with permanent `#vX.Y.Z` anchors. Both the Bun build and Vite development load every numeric versioned Markdown file from `apps/electron/resources/release-notes/`; `next.md` and prerelease drafts are excluded. Markdown renders safely at build time and is embedded in the site HTML, so reading history never depends on GitHub or a live API. Existing version files remain the archive; add new versions without replacing older files. Header and footer link to the page; the old `/#changelog` anchor remains at the footer entry.
 `/docs/` follows installation, project creation, the first writing task, and review,
 then keeps the existing screenshots as an interface reference. Tutorial copy must
 match current desktop labels and file behavior; screenshots illustrate an existing
@@ -24,7 +24,7 @@ prefix. The marketing page intentionally does not know the current release versi
 ## Deployment
 
 Changes to this app on `main` deploy through `.github/workflows/deploy-marketing.yml`.
-The release workflow calls the same deployment after publishing release downloads.
+Changes to versioned release-note Markdown on `main` also trigger this deployment. The desktop release workflow remains independent.
 
 ## Files
 
@@ -34,7 +34,8 @@ The release workflow calls the same deployment after publishing release download
 - `reference-assets/` - Local landing screenshots and visual reference assets.
 - `src/App.tsx` - Landing page and same-site navigation.
 - `src/DocsPage.tsx` - First-project tutorial, topic navigation and derived page-heading outline.
-- `src/ChangelogPage.tsx` - Standalone curated release history and published-note links.
+- `release-notes.ts` - Build-time loader and Markdown renderer shared by Bun and Vite.
+- `src/ChangelogPage.tsx` - Full on-site release archive and version navigation.
 - `src/styles.css` / `src/docs.css` - Shared landing styles and tutorial layout.
 - `src/ProductTour.tsx` / `src/product-tour.css` - Clean landing previews and annotated tutorial tours with focus regions and playback.
 - `capture-product.ts` - Reproducible isolated Electron capture using the existing desktop harness.

@@ -222,10 +222,20 @@ assert.equal(
   await page.evaluate(() => document.querySelector("h1").textContent),
   "更新日志",
 );
-assert.equal(
-  await page.evaluate(() => document.querySelectorAll(".release-card").length),
-  4,
+assert.ok(
+  await page.evaluate(() => document.querySelectorAll(".release-entry").length >= 24),
 );
+assert.ok(await page.evaluate(() => document.querySelector(".release-content").textContent.includes("待回答问题可恢复")));
+assert.equal(await page.evaluate(() => document.querySelectorAll('.changelog a[href*="github.com"]').length), 0);
+await page.click('.release-nav a[href="#v0.10.6"]');
+await page.waitForURL("**/changelog/#v0.10.6");
+await page.reload();
+assert.ok(await page.evaluate(() => {
+  const entry = document.getElementById("v0.10.6");
+  return entry.getBoundingClientRect().top >= 0 && entry.getBoundingClientRect().top < 150;
+}));
+await page.evaluate(() => history.back());
+await page.waitForURL("**/changelog/");
 assert.equal(
   await page.evaluate(() => document.querySelectorAll(".product-tour").length),
   0,

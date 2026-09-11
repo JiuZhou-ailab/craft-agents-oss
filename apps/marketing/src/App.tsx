@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { downloadOptions as releaseDownloadOptions } from "./downloads";
 import { DocsPage } from "./DocsPage";
-import { ChangelogPage } from "./ChangelogPage";
+import { ChangelogPage, type ReleaseNote } from "./ChangelogPage";
 import { ProductTour, captureUrl } from "./ProductTour";
 
 const assets = {
@@ -561,7 +561,7 @@ function scrollToPageHash(hash: string) {
   });
 }
 
-export function App() {
+export function App({ releaseNotes = [] }: { releaseNotes?: ReleaseNote[] }) {
   const [pageTarget, setPageTarget] = useState<PageTarget>(() =>
     getCurrentPageTarget(),
   );
@@ -643,7 +643,7 @@ export function App() {
         {isDocsPage ? (
           <DocsPage />
         ) : isChangelogPage ? (
-          <ChangelogPage />
+          <ChangelogPage releases={releaseNotes} />
         ) : (
           <LandingPage />
         )}

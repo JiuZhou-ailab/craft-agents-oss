@@ -76,3 +76,10 @@ The independent release page now uses h1 → h2 heading levels. The review findi
 ### Spec review
 
 Independent release history, expanded reference navigation, a right-side heading outline, explicit macOS / Windows download labels and the supplied footer contact satisfy this refinement. Historical external-material gaps remain outside this refinement.
+
+
+## On-site changelog correction
+
+The changelog now embeds all 24 versioned desktop release notes as complete on-site articles with permanent version anchors. Both production and development use the same build-time Markdown source; new version files trigger the independent marketing deployment on main. Drafts are excluded and historical files remain in the archive. No runtime GitHub request is needed to read notes.
+
+Validation: 26 related tests, marketing typecheck/build, Vite data parity, and browser QA at all four widths passed. Desktop and mobile archive layouts were visually inspected. Standards review caught replacement-string interpretation of literal dollar sequences; callback replacement and JSON round-trip checks resolved it. Standards and Spec reviews have no remaining blockers. Earlier unrelated desktop test evidence above belongs to the preceding revision.

@@ -1,4 +1,4 @@
-# input: Landing source changes, Cloudflare Pages credentials, and release workflow calls
+# input: Website and versioned release-note changes, Cloudflare Pages credentials
 # output: Tested production landing build deployed to Cloudflare Pages
 # pos: Canonical deployment boundary for apps/marketing
 
@@ -10,6 +10,7 @@ on:
       - main
     paths:
       - "apps/marketing/**"
+      - "apps/electron/resources/release-notes/*.md"
       - "scripts/build-marketing.ts"
       - "package.json"
       - "bun.lock"
