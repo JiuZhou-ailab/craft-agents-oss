@@ -15,6 +15,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { App } from "../App";
+import { DocsPage } from "../DocsPage";
+import { docsChapters, findDocsChapter, resolveLegacyDocsTarget } from "../docs-content";
 import { ChangelogPage } from "../ChangelogPage";
 import { embedReleaseNotes, readReleaseNotes } from "../../release-notes";
 
@@ -172,75 +174,59 @@ describe("downloadOptions", () => {
     }
   });
 
-  test("renders the documentation as an in-site page", () => {
-    const originalWindow = globalThis.window;
-    Object.defineProperty(globalThis, "window", {
-      configurable: true,
-      writable: true,
-      value: { location: { pathname: "/docs" } },
-    });
-
-    try {
-      const html = renderToStaticMarkup(createElement(App));
-
-      expect(html).toContain("跟着做，写出你的第一段故事");
-      expect(html).toContain("这次先完成一件小事");
-      expect(html).toContain("常用工具在哪里");
+  test("renders only the selected chapter and preserves all tutorial content and links", () => {
+    let promptCount = 0;
+    for (const chapter of docsChapters) {
+      const html = renderToStaticMarkup(createElement(DocsPage, { pathname: chapter.path }));
+      expect(html).toContain(`<h1>${chapter.title}</h1>`);
       expect(html).toContain('<details class="docs-more" open="">');
       expect(html).toContain('aria-label="本页目录"');
-      expect(html).toContain('id="project-options"');
-      expect(html).toContain("认识工作台");
-      expect(html).toContain("创建你的作品项目");
-      expect(html).toContain("添加本地项目");
-      expect(html).toContain("离开教程前，自己试一次");
-      expect(html).toContain("把练习换成自己的故事");
-      expect(html).toContain("点击输入区的加号");
-      expect(html).toContain("询问运行");
-      expect(html).toContain("个人资料");
-      expect(html).toContain("完成标志");
-      expect(html).toContain("保存版本，再打开一次");
-      expect(html).toContain('href="#help-file"');
-      expect(html.match(/class="prompt-example"/g)).toHaveLength(4);
-      expect(html.match(/aria-label="复制：/g)).toHaveLength(4);
-      expect(html).toContain('class="tour-outline"');
-      expect(html).toContain('class="tour-number"');
-      expect(html).toContain("current/workspace.png");
-      expect(html).toContain("current/add-menu.png");
-      expect(html).not.toContain("立即使用");
-      expect(html).not.toContain("https://ehyg6a9wjd.feishu.cn/wiki");
-      expect(html).toContain('aria-current="page"');
-      const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((match) => match[1]);
+      expect(html).toContain(`href="${chapter.path}" data-storyflow-page-link="true" aria-current="page"`);
+      const ids = [...html.matchAll(/ id="([^"]+)"/g)].map(match => match[1]);
       expect(new Set(ids).size).toBe(ids.length);
-      for (const [, target] of html.matchAll(/href="#([^"]+)"/g)) {
-        expect(ids).toContain(target);
+      for (const item of docsChapters) {
+        for (const anchor of item.anchors) {
+          if (item === chapter) expect(ids).toContain(anchor);
+          else expect(ids).not.toContain(anchor);
+        }
       }
-      for (const option of downloadOptions) {
-        expect(html).toContain(`href="${option.href}"`);
+      for (const [, href] of html.matchAll(/href="(\/docs\/[^"]*)"/g)) {
+        const url = new URL(href, "https://example.com");
+        const destination = findDocsChapter(url.pathname);
+        expect(destination).toBeDefined();
+        if (url.hash) expect(destination?.anchors).toContain(url.hash.slice(1));
       }
-      const steps = [
-        "install",
-        "create-project",
-        "first-task",
-        "review-changes",
-        "save-return",
-        "checklist",
-        "troubleshooting",
-        "header-tools",
-      ];
-      for (const step of steps) expect(ids).toContain(step);
-      expect(steps.map((id) => ids.indexOf(id))).toEqual(
-        steps.map((id) => ids.indexOf(id)).sort((a, b) => a - b),
-      );
+      promptCount += (html.match(/class="prompt-example"/g) ?? []).length;
+      expect(html).not.toContain("立即使用");
+      const index = docsChapters.indexOf(chapter);
+      if (index > 0) expect(html).toContain(`rel="prev" href="${docsChapters[index - 1]!.path}"`);
+      if (index < docsChapters.length - 1) expect(html).toContain(`rel="next" href="${docsChapters[index + 1]!.path}"`);
+    }
+    expect(promptCount).toBe(4);
+    const install = renderToStaticMarkup(createElement(DocsPage, { pathname: "/docs/install/" }));
+    for (const option of downloadOptions) expect(install).toContain(`href="${option.href}"`);
+  });
+
+  test("resolves old tutorial bookmarks and keeps nested routes in the tutorial", () => {
+    const originalWindow = globalThis.window;
+    try {
+      for (const chapter of docsChapters) {
+        for (const anchor of chapter.anchors) {
+          expect(resolveLegacyDocsTarget({ pathname: "/docs/", hash: `#${anchor}` }))
+            .toEqual({ pathname: chapter.path, hash: `#${anchor}` });
+        }
+        Object.defineProperty(globalThis, "window", { configurable: true, writable: true, value: { location: { pathname: chapter.path, hash: "" } } });
+        expect(renderToStaticMarkup(createElement(App))).toContain(`<h1>${chapter.title}</h1>`);
+      }
+      Object.defineProperty(globalThis, "window", { configurable: true, writable: true, value: { location: { pathname: "/docs/missing/", hash: "" } } });
+      expect(renderToStaticMarkup(createElement(App))).toContain("没有找到这个教程页面");
+      for (const hash of ["#missing", "#%ZZ"]) {
+        expect(resolveLegacyDocsTarget({ pathname: "/docs/", hash })).toEqual({ pathname: "/docs/", hash });
+      }
+      expect(resolveLegacyDocsTarget({ pathname: "/changelog/", hash: "#install" })).toEqual({ pathname: "/changelog/", hash: "#install" });
     } finally {
-      if (originalWindow === undefined) {
-        delete (globalThis as { window?: unknown }).window;
-      } else {
-        Object.defineProperty(globalThis, "window", {
-          configurable: true,
-          writable: true,
-          value: originalWindow,
-        });
-      }
+      if (originalWindow === undefined) delete (globalThis as { window?: unknown }).window;
+      else Object.defineProperty(globalThis, "window", { configurable: true, writable: true, value: originalWindow });
     }
   });
 
@@ -267,6 +253,7 @@ describe("downloadOptions", () => {
     );
     expect(redirects).toContain("/docs /docs/ 301");
     expect(redirects).toContain("/docs/ /index.html 200");
+    expect(redirects).toContain("/docs/* /index.html 200");
     expect(redirects).toContain("/changelog /changelog/ 301");
     expect(redirects).toContain("/changelog/ /index.html 200");
   });

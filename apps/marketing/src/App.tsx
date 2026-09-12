@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { downloadOptions as releaseDownloadOptions } from "./downloads";
 import { DocsPage } from "./DocsPage";
+import { findDocsChapter, resolveLegacyDocsTarget } from "./docs-content";
 import { ChangelogPage, type ReleaseNote } from "./ChangelogPage";
 import { ProductTour, captureUrl } from "./ProductTour";
 
@@ -172,7 +173,7 @@ function Header({
           </a>
           <a
             className="button button-primary button-sm header-download-mobile"
-            href="/docs/#install"
+            href="/docs/install/#install"
             data-storyflow-page-link="true"
           >
             下载
@@ -521,10 +522,10 @@ function getCurrentPageTarget(): PageTarget {
     return { pathname: landingPath, hash: "" };
   }
 
-  return {
+  return resolveLegacyDocsTarget({
     pathname: window.location.pathname,
-    hash: window.location.hash,
-  };
+    hash: window.location.hash ?? "",
+  });
 }
 
 function normalizePagePath(pathname: string) {
@@ -533,12 +534,12 @@ function normalizePagePath(pathname: string) {
 }
 
 function isDocsPagePath(pathname: string) {
-  return normalizePagePath(pathname) === "/docs";
+  return normalizePagePath(pathname) === "/docs" || pathname.startsWith("/docs/");
 }
 
 function isHandledPagePath(pathname: string) {
   const normalized = normalizePagePath(pathname);
-  return [landingPath, "/docs", "/changelog"].includes(normalized);
+  return [landingPath, "/changelog"].includes(normalized) || isDocsPagePath(pathname);
 }
 
 function scrollToPageHash(hash: string) {
@@ -566,16 +567,21 @@ export function App({ releaseNotes = [] }: { releaseNotes?: ReleaseNote[] }) {
     getCurrentPageTarget(),
   );
   const isDocsPage = isDocsPagePath(pageTarget.pathname);
+  const docsChapter = isDocsPage ? findDocsChapter(pageTarget.pathname) : undefined;
   const isChangelogPage =
     normalizePagePath(pageTarget.pathname) === "/changelog";
 
   useEffect(() => {
     document.title = isDocsPage
-      ? "Storyflow 新手教程 - 从项目到第一份稿件"
+      ? `${docsChapter?.title ?? "页面未找到"} · Storyflow 新手教程`
       : isChangelogPage
         ? "Storyflow 更新日志"
         : "Storyflow - 小说创作者的 AI 桌面工作台";
-  }, [isDocsPage, isChangelogPage]);
+  }, [isDocsPage, isChangelogPage, docsChapter]);
+
+  useEffect(() => {
+    document.getElementById("main-content")?.focus({ preventScroll: true });
+  }, [pageTarget.pathname]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -587,6 +593,9 @@ export function App({ releaseNotes = [] }: { releaseNotes?: ReleaseNote[] }) {
   }, []);
 
   useEffect(() => {
+    if (pageTarget.pathname !== window.location.pathname) {
+      window.history.replaceState(null, "", `${pageTarget.pathname}${window.location.search}${pageTarget.hash}`);
+    }
     scrollToPageHash(pageTarget.hash);
   }, [pageTarget]);
 
@@ -619,11 +628,11 @@ export function App({ releaseNotes = [] }: { releaseNotes?: ReleaseNote[] }) {
 
     event.preventDefault();
 
-    const nextTarget = {
+    const nextTarget = resolveLegacyDocsTarget({
       pathname: targetUrl.pathname,
       hash: targetUrl.hash,
-    };
-    const nextUrl = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+    });
+    const nextUrl = `${nextTarget.pathname}${targetUrl.search}${nextTarget.hash}`;
     const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
     if (nextUrl !== currentUrl) {
@@ -641,7 +650,7 @@ export function App({ releaseNotes = [] }: { releaseNotes?: ReleaseNote[] }) {
       </a>
       <main className="main-content" id="main-content" tabIndex={-1}>
         {isDocsPage ? (
-          <DocsPage />
+          <DocsPage key={pageTarget.pathname} pathname={pageTarget.pathname} />
         ) : isChangelogPage ? (
           <ChangelogPage releases={releaseNotes} />
         ) : (
@@ -662,7 +671,7 @@ export function App({ releaseNotes = [] }: { releaseNotes?: ReleaseNote[] }) {
             <a href="/#review" data-storyflow-page-link="true">
               改动审阅
             </a>
-            <a href="/docs/#install" data-storyflow-page-link="true">
+            <a href="/docs/install/#install" data-storyflow-page-link="true">
               下载桌面版
             </a>
           </div>

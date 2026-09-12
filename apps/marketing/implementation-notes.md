@@ -93,3 +93,11 @@ Desktop source verification covers the profile sign-in entry, native-folder proj
 
 
 Validation for this revision: marketing typecheck/build, 10 marketing tests, browser QA at 1440/768/390/320 px, copy success and denied-clipboard fallback, and the Chinese punctuation gate passed. Desktop/mobile prompt and completion-check layouts were visually inspected. Spec review identified an unpublished skill-detail action; it was removed from the tutorial and shared caption in favor of the released input-plus menu. Standards and Spec have no remaining findings.
+
+
+## Tutorial chapter separation
+
+The single long article is now 11 route-addressable chapters: index, five practice steps, self-check, troubleshooting and three reference groups. `docs-content.tsx` owns chapter content, paths and historical anchors; `DocsPage` mounts only the selected chapter with a current-page heading outline and previous/next navigation. Existing exercise text, prompts and screenshots are preserved. Old root tutorial bookmarks map to chapter URLs via history replacement, including the original fragment; all tutorial subpaths support direct loads through the Pages rewrite.
+
+
+Validation: 11 marketing tests cover chapter-body isolation, all declared legacy anchors, cross-chapter links, pagination and missing routes. Typecheck/build and browser QA passed for direct chapter URLs, refresh, back/forward, current-page outline, copy success/failure and four viewport widths. A legacy bookmark with a query string retained both its query and fragment. Desktop/mobile chapter layouts were visually inspected. Standards and Spec reviews reported no remaining findings.

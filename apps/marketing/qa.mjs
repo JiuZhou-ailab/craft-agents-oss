@@ -162,7 +162,27 @@ assert.equal(
   ),
   true,
 );
-await page.goto(`${base}/docs/#first-task`);
+await page.goto(`${base}/docs/`);
+assert.equal(await page.evaluate(() => document.querySelectorAll("#install, #first-task, #troubleshooting").length), 0);
+const chapterPaths = await page.evaluate(() => [...document.querySelectorAll('.docs-toc a')].map(a => new URL(a.href).pathname));
+assert.equal(chapterPaths.length, 11);
+for (const path of chapterPaths) {
+  await page.goto(`${base}${path}`);
+  await page.waitForFunction(() => document.querySelectorAll('.docs-page-toc a').length === document.querySelectorAll('.docs-page h2[id], .docs-page h3[id]').length);
+  assert.equal(await page.evaluate(() => document.querySelector('.docs-toc a[aria-current="page"]').getAttribute('href')), path);
+  assert.ok(await page.evaluate(() => document.title.startsWith(document.querySelector('h1').textContent)));
+}
+await page.goto(`${base}/docs/`);
+await page.click('.docs-pagination a[rel="next"]');
+await page.waitForURL("**/docs/install/");
+await page.click('.docs-pagination a[rel="next"]');
+await page.waitForURL("**/docs/create-project/");
+await page.evaluate(() => history.back());
+await page.waitForURL("**/docs/install/");
+await page.evaluate(() => history.forward());
+await page.waitForURL("**/docs/create-project/");
+for (const [route, count] of [["first-task", 2], ["review-changes", 1], ["troubleshooting", 1]]) {
+  await page.goto(`${base}/docs/${route}/`);
 // Exercise both clipboard outcomes without changing the user's clipboard.
 assert.deepEqual(await page.evaluate(async () => {
   const own = Object.getOwnPropertyDescriptor(navigator, "clipboard");
@@ -174,7 +194,10 @@ assert.deepEqual(await page.evaluate(async () => {
     }});
     for (const block of blocks) {
       block.querySelector("button").click();
-      await new Promise(resolve => setTimeout(resolve, 0));
+      const deadline = performance.now() + 2000;
+      while (!block.querySelector('[role="status"]').textContent.includes("已复制") && performance.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
     }
     const preserved = blocks.every((block, i) => copied[i] === block.querySelector("pre").textContent);
     const feedback = blocks.every(block => block.querySelector('[role="status"]').textContent.includes("已复制"));
@@ -189,7 +212,16 @@ assert.deepEqual(await page.evaluate(async () => {
     if (own) Object.defineProperty(navigator, "clipboard", own);
     else delete navigator.clipboard;
   }
-}), { count: 4, preserved: true, feedback: true, fallback: true });
+}), { count, preserved: true, feedback: true, fallback: true });
+
+}
+await page.goto(`${base}/docs/#first-task`);
+await page.waitForURL("**/docs/first-task/#first-task");
+await page.click('.docs-checkpoint a[href="/docs/troubleshooting/#help-file"]');
+await page.waitForURL("**/docs/troubleshooting/#help-file");
+assert.equal(await page.evaluate(() => document.querySelectorAll('#first-task').length), 0);
+await page.evaluate(() => history.back());
+await page.waitForURL("**/docs/first-task/#first-task");
 
 await page.waitForFunction(
   () =>
@@ -220,8 +252,11 @@ await page.waitForFunction(
     document.querySelectorAll(".docs-page-toc a").length ===
     document.querySelectorAll(".docs-page h2[id], .docs-page h3[id]").length,
 );
+await page.click('.docs-toc a[href="/docs/create-project/"]');
+await page.waitForURL("**/docs/create-project/");
+assert.equal(await page.evaluate(() => document.querySelectorAll('#first-task, .prompt-example').length), 0);
 await page.click('.docs-page-toc a[href="#project-options"]');
-await page.waitForURL("**/docs/#project-options");
+await page.waitForURL("**/docs/create-project/#project-options");
 await page.waitForFunction(
   () =>
     document
@@ -237,6 +272,8 @@ assert.ok(
       ) < 4,
   ),
 );
+await page.goto(`${base}/docs/#project-options`);
+await page.waitForURL("**/docs/create-project/#project-options");
 await page.reload();
 await page.waitForFunction(
   () =>
@@ -271,12 +308,12 @@ assert.equal(
 await page.reload();
 assert.equal(await page.evaluate(() => document.title), "Storyflow 更新日志");
 await page.evaluate(() => history.back());
-await page.waitForURL("**/docs/#project-options");
+await page.waitForURL("**/docs/create-project/#project-options");
 await page.goto(`${base}/docs/#first-task`);
 await page.click('header a:has-text("理解产品")');
 await page.waitForURL("**/#workflow");
 await page.evaluate(() => history.back());
-await page.waitForURL("**/docs/#first-task");
+await page.waitForURL("**/docs/first-task/#first-task");
 await page.evaluate(() => history.forward());
 await page.waitForURL("**/#workflow");
 const observations = [];
@@ -382,7 +419,7 @@ for (const width of [1440, 768, 390, 320]) {
   }
   if (width < 768) {
     await page.click("header a.header-download-mobile");
-    await page.waitForURL("**/docs/#install");
+    await page.waitForURL("**/docs/install/#install");
     await page.waitForFunction(
       () =>
         Math.abs(
@@ -407,7 +444,7 @@ for (const width of [1440, 768, 390, 320]) {
     const response = await page.fetch(url);
     assert.equal(response.ok, true, `Native capture loads: ${url}`);
   }
-  await page.goto(`${base}/docs/`);
+  await page.goto(`${base}/docs/first-task/`);
   assert.equal(
     await page.evaluate(
       () =>
@@ -479,7 +516,7 @@ if (config.output) {
   );
 }
 console.log(
-  "PASS: five-step tutorial and copy success/fallback, standalone changelog and history, expanded tutorial navigation and heading outline, all-platform downloads and contact, clean 16:10 previews, playback/zoom, four viewport widths, reduced motion, and failed-media fallback.",
+  "PASS: separate tutorial chapter routes, legacy bookmarks and pagination, five-step tutorial and copy success/fallback, standalone changelog and history, expanded tutorial navigation and heading outline, all-platform downloads and contact, clean 16:10 previews, playback/zoom, four viewport widths, reduced motion, and failed-media fallback.",
 );
 console.log(observations);
 await page.cdp("Network.setCacheDisabled", { cacheDisabled: false });

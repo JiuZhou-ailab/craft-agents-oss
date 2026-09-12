@@ -473,3 +473,31 @@
 .docs-page .prompt-status { font-size: 12px; color: var(--muted); margin: 12px 0 0; }
 .docs-caption { font-size: 13px; line-height: 1.7; color: var(--muted); }
 .docs-section-copy details > p { margin-top: 12px; }
+
+.docs-nav-section + .docs-nav-section { margin-top: 24px; }
+.docs-toc a[aria-current="page"] {
+  color: var(--foreground);
+  font-weight: 600;
+  background: var(--card);
+  border-radius: 4px;
+}
+.docs-pagination {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.docs-pagination a { padding: 16px; border: 1px solid var(--border); border-radius: 6px; }
+.docs-pagination a:hover { background: var(--card); }
+.docs-pagination a[rel="next"] { text-align: right; }
+.docs-pagination span { display: block; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.docs-pagination strong { font-size: 15px; font-weight: 500; }
+.docs-page > .docs-section:first-child { margin-top: 0; padding-top: 0; }
+@media (max-width: 760px) {
+  .docs-nav-section { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .docs-nav-section p { grid-column: 1 / -1; }
+  .docs-pagination { gap: 8px; }
+  .docs-pagination a { padding: 12px; }
+}
